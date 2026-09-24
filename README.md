@@ -21,13 +21,15 @@ rfig 是一个面向 macOS zsh 的终端补全菜单。输入命令时，它会�
 
 ### 下载二进制安装（无需 Rust）
 
-从 [最新发布页](https://github.com/tamia6/rfig/releases/latest)下载 `install-binary.sh` 和 `rfig-macos-universal`，放在同一目录（也可以把二进制留在 `~/Downloads`），然后运行：
+从 [最新发布页](https://github.com/tamia6/rfig/releases/latest)下载 `rfig-v0.1.2-macos-universal.tar.gz`。下载位置不限，解压后运行包内的安装脚本：
 
 ```sh
-sh install-binary.sh
+tar -xzf rfig-v0.1.2-macos-universal.tar.gz
+cd rfig-v0.1.2
+sh install.sh
 ```
 
-脚本会校验下载文件，把二进制移动到 `~/.local/bin/rfig`，安装 zsh 集成并运行 `rfig setup`。只下载脚本也可以：缺少的文件会从对应版本的 GitHub Release 自动获取。如果 `~/.local/bin` 不在 `$PATH`，脚本会在 zsh 配置中添加它。
+安装包内含通用二进制、`install.sh` 和 zsh 集成脚本。`install.sh` 会校验文件，把二进制移动到 `~/.local/bin/rfig`，并运行 `rfig setup`。如果 `~/.local/bin` 不在 `$PATH`，脚本会在 zsh 配置中添加它。
 
 ### 从源码安装
 
@@ -37,7 +39,7 @@ sh install-binary.sh
 ./install.sh
 ```
 
-安装脚本把程序放到 `~/.local/bin/rfig`，再执行 `rfig setup`。请确保 `~/.local/bin` 位于 `$PATH` 中。
+同一个 `install.sh` 在源码目录中会用 Cargo 编译，再放到 `~/.local/bin/rfig` 并运行 `rfig setup`。
 
 ### Homebrew 安装
 

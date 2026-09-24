@@ -17,15 +17,17 @@ jobs:
           rustup target add x86_64-apple-darwin
           cargo build --release --locked --target aarch64-apple-darwin
           cargo build --release --locked --target x86_64-apple-darwin
-          mkdir dist
+          bundle="dist/rfig-$GITHUB_REF_NAME"
+          mkdir -p "$bundle"
           lipo -create \
             target/aarch64-apple-darwin/release/rfig \
             target/x86_64-apple-darwin/release/rfig \
-            -output dist/rfig-macos-universal
-          chmod 755 dist/rfig-macos-universal
-          cp install-binary.sh rfig.zsh dist/
-          (cd dist && shasum -a 256 rfig-macos-universal rfig.zsh > SHA256SUMS)
+            -output "$bundle/rfig"
+          chmod 755 "$bundle/rfig"
+          cp install.sh rfig.zsh LICENSE "$bundle/"
+          (cd "$bundle" && shasum -a 256 rfig rfig.zsh LICENSE > SHA256SUMS)
+          tar -czf "dist/rfig-$GITHUB_REF_NAME-macos-universal.tar.gz" -C dist "rfig-$GITHUB_REF_NAME"
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/* --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
+        run: gh release create "$GITHUB_REF_NAME" "dist/rfig-$GITHUB_REF_NAME-macos-universal.tar.gz" --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
