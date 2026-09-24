@@ -17,7 +17,17 @@ rfig 是一个面向 macOS zsh 的终端补全菜单。输入命令时，它会�
 
 ## 安装
 
-当前支持 zsh。两种安装方式都需要在安装后打开新的 zsh 终端。
+当前支持 macOS zsh。安装后打开新的 zsh 终端即可使用。
+
+### 下载二进制安装（无需 Rust）
+
+从 [最新发布页](https://github.com/tamia6/rfig/releases/latest)下载 `install-binary.sh` 和 `rfig-macos-universal`，放在同一目录（也可以把二进制留在 `~/Downloads`），然后运行：
+
+```sh
+sh install-binary.sh
+```
+
+脚本会校验下载文件，把二进制移动到 `~/.local/bin/rfig`，安装 zsh 集成并运行 `rfig setup`。只下载脚本也可以：缺少的文件会从对应版本的 GitHub Release 自动获取。如果 `~/.local/bin` 不在 `$PATH`，脚本会在 zsh 配置中添加它。
 
 ### 从源码安装
 

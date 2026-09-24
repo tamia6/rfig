@@ -1,0 +1,31 @@
+name: Release binaries
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build universal binary
+        run: |
+          rustup target add x86_64-apple-darwin
+          cargo build --release --locked --target aarch64-apple-darwin
+          cargo build --release --locked --target x86_64-apple-darwin
+          mkdir dist
+          lipo -create \
+            target/aarch64-apple-darwin/release/rfig \
+            target/x86_64-apple-darwin/release/rfig \
+            -output dist/rfig-macos-universal
+          chmod 755 dist/rfig-macos-universal
+          cp install-binary.sh rfig.zsh dist/
+          (cd dist && shasum -a 256 rfig-macos-universal rfig.zsh > SHA256SUMS)
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
