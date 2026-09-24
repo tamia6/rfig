@@ -40,6 +40,8 @@ rfig setup
 
 `rfig setup` 会根据当前 `$PATH` 扫描命令，读取 zsh 补全定义，在 `~/.zshrc`（或 `$ZDOTDIR/.zshrc`）加入 shell 集成，并在后台分析帮助信息。可重复运行，更新命令目录时不会重复添加 `source` 行。
 
+如果之前用 `./install.sh` 安装过，`~/.local/bin/rfig` 可能排在 Homebrew 前面。可用 `command -v rfig` 检查；若要配置 Homebrew 版本，运行 `"$(brew --prefix rfig)/bin/rfig" setup`。
+
 安装时先扫描 `$PATH` 中的可执行命令，随后在后台分析具有 zsh 补全定义的命令。扫描结束即可使用基础补全，不必等待分析完成。
 
 ## 使用
