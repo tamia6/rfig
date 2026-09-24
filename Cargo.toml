@@ -1,0 +1,12 @@
+[package]
+name = "rfig"
+version = "0.1.0"
+edition = "2021"
+description = "Inline terminal command completion for zsh"
+license = "MIT"
+repository = "https://github.com/tamia6/rfig"
+homepage = "https://github.com/tamia6/rfig"
+
+[dependencies]
+crossterm = { version = "0.28", features = ["use-dev-tty"] }
+unicode-width = "0.2"

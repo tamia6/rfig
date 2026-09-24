@@ -1,0 +1,26 @@
+# Replace the source URL and SHA256 with values from an immutable public release.
+class Rfig < Formula
+  desc "Inline terminal command completion for zsh"
+  homepage "@HOMEPAGE@"
+  url "@SOURCE_ARCHIVE_URL@"
+  sha256 "@SOURCE_SHA256@"
+  license "MIT"
+
+  depends_on "rust" => :build
+
+  def install
+    system "cargo", "install", *std_cargo_args
+    pkgshare.install "rfig.zsh"
+  end
+
+  def caveats
+    <<~EOS
+      Run `rfig setup` to scan your commands and enable zsh integration.
+      Open a new zsh terminal afterward.
+    EOS
+  end
+
+  test do
+    assert_match "setup", shell_output("#{bin}/rfig", 2)
+  end
+end
