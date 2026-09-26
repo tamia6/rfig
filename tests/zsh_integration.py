@@ -33,6 +33,16 @@ def wait_for(fd, needle, timeout=5):
     raise AssertionError(f"waiting for {needle!r}; output ended with {output[-300:]!r}")
 
 
+def wait_for_file(fd, path, timeout=5):
+    deadline = time.monotonic() + timeout
+    while not path.exists() and time.monotonic() < deadline:
+        if select.select([fd], [], [], 0.05)[0]:
+            output = os.read(fd, 65536)
+            if b"\x1b[6n" in output:
+                os.write(fd, CURSOR_REPLY)
+    assert path.exists(), f"waiting for {path.name}"
+
+
 with tempfile.TemporaryDirectory() as temp:
     home = pathlib.Path(temp)
     (home / ".local/bin").mkdir(parents=True)
@@ -50,17 +60,122 @@ with tempfile.TemporaryDirectory() as temp:
     plain = home / "bin/rfigplain"
     plain.write_text("#!/bin/sh\nexit 0\n")
     plain.chmod(0o755)
+    for name in ("rfiglatefixture", "rfiggenfixture", "rfiggroupfixture", "rfigshellfixture", "rfigfishfixture", "rfigbashfixture", "rfigprotocolfixture"):
+        tool = home / "bin" / name
+        if name == "rfiggenfixture":
+            tool.write_text(
+                '#!/bin/sh\n'
+                'if [ "$1" = "--help" ]; then printf "Commands:\\n  completion  Generate completion\\n"; exit; fi\n'
+                'if [ "$1" = "completion" ] && [ "$2" = "zsh" ]; then\n'
+                '  printf "#compdef rfiggenfixture\\n_rfiggenfixture() { compadd generated-one generated-two; }\\ncompdef _rfiggenfixture rfiggenfixture\\n"; fi\n'
+            )
+        elif name == "rfiggroupfixture":
+            tool.write_text(
+                '#!/bin/sh\n'
+                'if [ "$1" = "--help" ]; then printf "Basic Commands (Beginner):\\n  completion  Generate completion\\n"; exit; fi\n'
+                'if [ "$1" = "completion" ] && [ "$2" = "zsh" ]; then\n'
+                '  printf "#compdef rfiggroupfixture\\n_rfiggroupfixture() { compadd grouped-one grouped-two; }\\ncompdef _rfiggroupfixture rfiggroupfixture\\n"; fi\n'
+            )
+        elif name == "rfigshellfixture":
+            tool.write_text(
+                '#!/bin/sh\n'
+                'if [ "$1" = "--help" ]; then printf "Commands:\\n  completion: Generate completion\\n"; exit; fi\n'
+                'if [ "$1" = "completion" ] && [ "$2" = "zsh" ]; then printf "# bash completion\\n"; exit; fi\n'
+                'if [ "$1" = "completion" ] && [ "$2" = "-s" ] && [ "$3" = "zsh" ]; then\n'
+                '  printf "#compdef rfigshellfixture\\n_rfigshellfixture() { compadd shell-one shell-two; }\\ncompdef _rfigshellfixture rfigshellfixture\\n"; fi\n'
+            )
+        elif name == "rfigprotocolfixture":
+            tool.write_text(
+                '#!/bin/sh\n'
+                'if [ "$1" = "--help" ]; then printf "Available Commands:\\n  run  Run\\nFlags:\\n  --help  Help\\n"; exit; fi\n'
+                'if [ "$1" = "__complete" ]; then\n'
+                '  if [ "$2" = "run" ]; then printf "nested-protocol\\n:0\\n"; '
+                'else printf "protocol-one\\nprotocol-two\\n:0\\n"; fi; fi\n'
+            )
+        else:
+            tool.write_text("#!/bin/sh\nexit 0\n")
+        tool.chmod(0o755)
+    late_dir = home / "late-fpath"
+    late_dir.mkdir()
+    (late_dir / "_rfiglatefixture").write_text("#compdef rfiglatefixture\n_rfiglatefixture() { compadd late-one late-two; }\n_rfiglatefixture \"$@\"\n")
+    fish_dir = home / ".config/fish/completions"
+    fish_dir.mkdir(parents=True)
+    (fish_dir / "rfigfishfixture.fish").write_text(
+        "complete -c rfigfishfixture -f -n 'not __fish_seen_subcommand_from fish-one' -a 'fish-one fish-two'\n"
+        "complete -c rfigfishfixture -f -n '__fish_seen_subcommand_from fish-one' -a 'nested-fish'\n"
+    )
+    bash_dir = home / ".local/share/bash-completion/completions"
+    bash_dir.mkdir(parents=True)
+    (bash_dir / "rfigbashfixture").write_text(
+        '_rfigbashfixture() { local choices="bash-one bash-two"; [[ ${COMP_WORDS[1]} == bash-one && $COMP_CWORD -gt 1 ]] && choices="nested-bash"; COMPREPLY=( $(compgen -W "$choices" -- "$2") ); }\n'
+        'complete -F _rfigbashfixture rfigbashfixture\n'
+    )
+    for name, help_text in (
+        ("rfighelpusage", "Usage:\\n  rfighelpusage setup   Configure\\n  rfighelpusage start   Start\\n"),
+        ("rfighelpsection", "Available Commands:\\n  build   Build\\n  deploy  Deploy\\n"),
+    ):
+        fixture_help = home / "bin" / name
+        fixture_help.write_text(f'#!/bin/sh\nprintf "{help_text}"\n')
+        fixture_help.chmod(0o755)
+    short_help = home / "bin/rfighelpshort"
+    short_help.write_text(
+        '#!/bin/sh\n'
+        'if [ "$1" = "--help" ]; then printf "  --verbose  Print details\\n"; '
+        'else printf "Commands:\\n  inspect  Inspect\\n  reset  Reset\\n"; fi\n'
+    )
+    short_help.chmod(0o755)
+    branch_fixture = home / "bin/rfigbranchfixture"
+    branch_fixture.write_text("#!/bin/sh\nexit 0\n")
+    branch_fixture.chmod(0o755)
+    option_help = home / "bin/rfigoptionhelp"
+    option_help.write_text(
+        '#!/bin/sh\n'
+        'if [ "$1" = "--help" ]; then printf \'Use "rfigoptionhelp options" for a list of global options.\\n\'; '
+        'elif [ "$1" = "options" ]; then printf "    --cache-dir=\x27\x27: cache path\\n    --verbose: verbose output\\n"; fi\n'
+    )
+    option_help.chmod(0o755)
     repo = home / "repo"
     repo.mkdir()
     subprocess.run(["git", "init", "-q", str(repo)], check=True)
     subprocess.run(["git", "-C", str(repo), "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-q", "--allow-empty", "-m", "init"], check=True)
     subprocess.run(["git", "-C", str(repo), "branch", "feature-rfig"], check=True)
+    (repo / "tracked.txt").write_text("tracked\n")
+    subprocess.run(["git", "-C", str(repo), "add", "tracked.txt"], check=True)
+    subprocess.run(["git", "-C", str(repo), "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-q", "-m", "tracked"], check=True)
+    (repo / "tracked.txt").write_text("modified\n")
     shutil.copy(ROOT / "target/debug/rfig", home / ".local/bin/rfig")
     (home / ".config/rfig").mkdir(parents=True)
     shutil.copy(ROOT / "rfig.zsh", home / ".config/rfig/rfig.zsh")
     setup_env = dict(os.environ, HOME=temp, SHELL="/bin/zsh", PATH=str(home / "bin"))
     for _ in range(2):
         subprocess.run([str(home / ".local/bin/rfig"), "setup"], env=setup_env, check=True)
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline:
+        status = home / ".config/rfig/enrich.status"
+        if status.exists() and status.read_text().startswith("done\n"):
+            break
+        time.sleep(0.05)
+    else:
+        raise AssertionError("setup background enrichment did not finish")
+    for name in ("rfiggenfixture", "rfiggroupfixture", "rfigshellfixture", "rfigprotocolfixture"):
+        subprocess.run([str(home / ".local/bin/rfig"), "analyze", name], env=setup_env, check=True)
+    generated = home / ".config/rfig/generated/rfiggenfixture.zsh"
+    deadline = time.monotonic() + 10
+    while not generated.exists() and time.monotonic() < deadline:
+        time.sleep(0.02)
+    assert generated.exists(), "explicit analysis must discover completion generators"
+    for name in ("rfiggroupfixture", "rfigshellfixture"):
+        expected = home / f".config/rfig/generated/{name}.zsh"
+        deadline = time.monotonic() + 10
+        while not expected.exists() and time.monotonic() < deadline:
+            time.sleep(0.02)
+        assert expected.exists(), f"analysis must discover the generator format used by {name}"
+    protocol = home / ".config/rfig/protocol/rfigprotocolfixture"
+    deadline = time.monotonic() + 10
+    while not protocol.exists() and time.monotonic() < deadline:
+        time.sleep(0.02)
+    assert protocol.exists(), "explicit analysis must discover command completion protocols"
+    assert "rfigfishfixture" in (home / ".config/rfig/commands.txt").read_text().splitlines()
     assert (home / ".zshrc").read_text().count('source "' + str(home / ".config/rfig/rfig.zsh") + '"') == 1
     assert "rfigfixture" in (home / ".config/rfig/commands.txt").read_text().splitlines()
     with tempfile.TemporaryDirectory() as brew_temp:
@@ -80,14 +195,9 @@ with tempfile.TemporaryDirectory() as temp:
         brew_env = dict(os.environ, HOME=brew_temp, ZDOTDIR=str(brew_rc_dir), SHELL="/bin/zsh", PATH=str(brew_bin))
         subprocess.run([str(brew_prefix / "bin/rfig"), "setup"], env=brew_env, check=True)
         assert (brew_rc_dir / ".zshrc").read_text().strip() == f'source "{brew_prefix / "share/rfig/rfig.zsh"}"'
-        if "brew" in (brew_home / ".config/rfig/supported.txt").read_text().splitlines():
-            analyzed = brew_home / ".config/rfig/options/brew.tsv"
-            deadline = time.monotonic() + 5
-            while not analyzed.exists() and time.monotonic() < deadline:
-                time.sleep(0.01)
-            assert analyzed.exists(), "background analysis must finish before cleanup"
+        assert "brew" in (brew_home / ".config/rfig/commands.txt").read_text().splitlines()
     (home / ".zshrc").write_text(
-        f"PROMPT=$'RFIG-TOP\\nRFIG> '\nautoload -Uz compinit; compinit -D\nsource {ROOT / 'rfig.zsh'}\n"
+        f"PROMPT=$'RFIG-TOP\\nRFIG> '\nautoload -Uz compinit; compinit -D\nfpath+=( {late_dir} )\nsource {ROOT / 'rfig.zsh'}\n"
         f"git() {{ print -r -- \"$*\" > {home / 'args'}; }}\n"
         "_rfigfixture() {\n"
         "  if (( CURRENT == 2 )); then\n"
@@ -100,12 +210,25 @@ with tempfile.TemporaryDirectory() as temp:
         "rfigdisplay() { print RFIG_RESULT; }\n"
         "_rfigdisplay_completions() { compadd alpha beta; }\n"
         "compdef _rfigdisplay_completions rfigdisplay\n"
+        "_rfig_branch_values() { compadd feature-rfig; }\n"
+        "_rfig_file_values() { compadd biz-center; }\n"
+        "_rfig_branch_completion() { _alternative 'branches:branch:_rfig_branch_values' 'files:file:_rfig_file_values'; }\n"
+        "compdef _rfig_branch_completion rfigbranchfixture\n"
         f"_rfig_snapshot() {{ print -rl -- \"${{_rfig_hits[@]}}\" > {home / 'hits'}; }}\n"
         "zle -N _rfig_snapshot\nbindkey '^X' _rfig_snapshot\n"
     )
-    child_path=f"{home / 'bin'}:{os.environ['PATH']}"
+    child_path=f"{home / '.local/bin'}:{home / 'bin'}:{os.environ['PATH']}"
     subprocess.run([str(home / ".local/bin/rfig"), "init"], env=dict(os.environ, HOME=temp, PATH=child_path), check=True)
     assert "git" in (home / ".config/rfig/supported.txt").read_text().splitlines()
+    subprocess.run([str(home / ".local/bin/rfig"), "analyze", "rfigoptionhelp"], env=dict(os.environ, HOME=temp, PATH=child_path), check=True)
+    subprocess.run([str(home / ".local/bin/rfig"), "analyze", "rfig"], env=dict(os.environ, HOME=temp, PATH=child_path), check=True)
+    assert "--cache-dir\toption" in (home / ".config/rfig/options/rfigoptionhelp.tsv").read_text()
+    for name, candidate in (("rfigfishfixture", "fish-two"), ("rfigbashfixture", "bash-two"), ("rfigprotocolfixture", "protocol-two")):
+        response = subprocess.check_output([str(home / ".local/bin/rfig"), "external", name, name + " "], env=dict(os.environ, HOME=temp, PATH=child_path), text=True)
+        assert response.startswith("provider\n") and candidate in response, (name, response)
+    for name, branch, expected in (("rfigfishfixture", "fish-one", "nested-fish"), ("rfigbashfixture", "bash-one", "nested-bash"), ("rfigprotocolfixture", "run", "nested-protocol")):
+        response = subprocess.check_output([str(home / ".local/bin/rfig"), "external", name, f"{name} {branch} "], env=dict(os.environ, HOME=temp, PATH=child_path), text=True)
+        assert expected in response, (name, response)
     pid, fd = pty.fork()
     if pid == 0:
         os.environ.pop("NO_COLOR", None)
@@ -115,14 +238,58 @@ with tempfile.TemporaryDirectory() as temp:
         fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 24, 100, 0, 0))
         wait_for(fd, b"RFIG> ")
 
+        (home / "hits").unlink(missing_ok=True)
+        os.write(fd, b"rfig\x18")
+        wait_for_file(fd, home / "hits")
+        assert any(row.startswith("analyze\t") for row in (home / "hits").read_text().splitlines())
+        os.write(fd, b"\x15")
+
+        for name, expected in (("rfiglatefixture", "late-two"), ("rfiggenfixture", "generated-two"), ("rfiggroupfixture", "grouped-two"), ("rfigshellfixture", "shell-two"), ("rfigprotocolfixture", "protocol-two"), ("rfigfishfixture", "fish-two"), ("rfigbashfixture", "bash-two")):
+            (home / "hits").unlink(missing_ok=True)
+            os.write(fd, name.encode())
+            rendered = wait_for(fd, expected.encode())
+            assert b"record=''" not in rendered, f"completion leaked a local variable for {name}"
+            os.write(fd, b"\x18")
+            wait_for_file(fd, home / "hits")
+            assert any(row.startswith(expected + "\t") for row in (home / "hits").read_text().splitlines()), name
+            os.write(fd, b"\x15")
+            time.sleep(0.05)
+
+        for name, branch, expected in (("rfigprotocolfixture", "run", "nested-protocol"), ("rfigfishfixture", "fish-one", "nested-fish"), ("rfigbashfixture", "bash-one", "nested-bash")):
+            (home / "hits").unlink(missing_ok=True)
+            os.write(fd, f"{name} {branch} ".encode())
+            os.write(fd, b"\x18")
+            wait_for_file(fd, home / "hits")
+            assert any(row.startswith(expected + "\t") for row in (home / "hits").read_text().splitlines()), name
+            os.write(fd, b"\x15")
+            time.sleep(0.05)
+
         for typed in (b"rfigplain", b"rfigplain "):
             (home / "hits").unlink(missing_ok=True)
             os.write(fd, typed + b"\x18")
+            wait_for_file(fd, home / "hits")
+            hits = (home / "hits").read_text()
+            assert hits == "\n", f"unsupported commands must not show unrelated matches: {hits[:250]!r}"
+            os.write(fd, b"\x15")
+
+        for command, expected, visible in (
+            ("rfighelpusage", "setup", "start"),
+            ("rfighelpsection", "build", "deploy"),
+            ("rfighelpshort", "inspect", "reset"),
+        ):
+            (home / "hits").unlink(missing_ok=True)
+            os.write(fd, command.encode())
+            rendered = wait_for(fd, visible.encode())
+            assert b"record=''" not in rendered, f"completion leaked a local variable for {command}"
+            os.write(fd, b"\x18")
             deadline = time.monotonic() + 5
             while not (home / "hits").exists() and time.monotonic() < deadline:
                 time.sleep(0.01)
-            hits = (home / "hits").read_text()
-            assert hits == "\n", f"unsupported commands must not show unrelated matches: {hits[:250]!r}"
+            hits = (home / "hits").read_text().splitlines()
+            assert any(line.startswith(expected + "\t") and line.endswith("\tsubcommand") for line in hits), hits
+            if command == "rfighelpusage":
+                os.write(fd, b"\x1b[C")
+                wait_for(fd, b"RFIG> rfighelpusage setup")
             os.write(fd, b"\x15")
 
         (home / "hits").unlink(missing_ok=True)
@@ -158,7 +325,7 @@ with tempfile.TemporaryDirectory() as temp:
         assert any(line.startswith("--as\t") and line.endswith("\toption") for line in hits.splitlines()), hits[:500]
         assert any(line.startswith("--cache-dir\t") and line.endswith("\toption") for line in hits.splitlines()), hits[:500]
         assert any(line.startswith("--env=\t") and line.endswith("\toption") for line in hits.splitlines()), hits[:500]
-        assert any(line.startswith("--verbose\t") and line.endswith("\toption") for line in hits.splitlines()), hits[:500]
+        assert any(line.startswith("--verbose\t") and line.endswith("\tflag") for line in hits.splitlines()), hits[:500]
         assert "-v\t-v\t\tflag" in hits, hits[:500]
         subprocess.run([str(home / ".local/bin/rfig"), "analyze", "rfigfixture"], env=dict(os.environ, HOME=temp, PATH=child_path), check=True)
         assert "--verbose\tflag" in (home / ".config/rfig/options/rfigfixture.tsv").read_text()
@@ -217,14 +384,27 @@ with tempfile.TemporaryDirectory() as temp:
             time.sleep(0.01)
         checkout_hits = (home / "hits").read_text().splitlines()
         assert any(line.startswith("feature-rfig\t") and line.endswith("\targument") for line in checkout_hits), checkout_hits[:20]
+        assert not any(line.startswith("tracked.txt\t") for line in checkout_hits), checkout_hits[:20]
+        os.write(fd, b"\x15")
+
+        (home / "hits").unlink(missing_ok=True)
+        os.write(fd, b"git checkout -- ")
+        wait_for(fd, "●".encode())
+        os.write(fd, b"\x18")
+        deadline = time.monotonic() + 5
+        while not (home / "hits").exists() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert any(line.startswith("tracked.txt\t") for line in (home / "hits").read_text().splitlines())
         os.write(fd, b"\x15")
 
         (repo / "biz-center").mkdir()
         completion_fixture = home / "checkout-completion.zsh"
         completion_fixture.write_text(
+            "_rfig_git_branch() { compadd feature-rfig; }\n"
+            "_rfig_git_file() { compadd biz-center; }\n"
             "_rfig_git_test() {\n"
             "  if [[ ${words[2]-} == checkout && $CURRENT == 3 ]]; then\n"
-            "    compadd -- feature-rfig biz-center\n"
+            "    _alternative 'branches:branch:_rfig_git_branch' 'files:file:_rfig_git_file'\n"
             "  else\n"
             "    _git \"$@\"\n"
             "  fi\n"
@@ -243,6 +423,16 @@ with tempfile.TemporaryDirectory() as temp:
         checkout_hits = (home / "hits").read_text().splitlines()
         assert any(line.startswith("feature-rfig\t") for line in checkout_hits), checkout_hits
         assert not any(line.startswith("biz-center\t") for line in checkout_hits), checkout_hits
+        os.write(fd, b"\x15")
+
+        (home / "hits").unlink(missing_ok=True)
+        os.write(fd, b"rfigbranchfixture ")
+        wait_for(fd, "●".encode())
+        os.write(fd, b"\x18")
+        wait_for_file(fd, home / "hits")
+        branch_hits = (home / "hits").read_text().splitlines()
+        assert any(line.startswith("feature-rfig\t") for line in branch_hits), branch_hits
+        assert not any(line.startswith("biz-center\t") for line in branch_hits), branch_hits
         os.write(fd, b"\x15")
 
         if shutil.which("tmux"):
@@ -336,3 +526,7 @@ with tempfile.TemporaryDirectory() as temp:
         os.close(fd)
         os.kill(pid, signal.SIGKILL)
         os.waitpid(pid, 0)
+    for name, cached in (("rfiggenfixture", generated), ("rfigprotocolfixture", protocol)):
+        (home / "bin" / name).write_text("#!/bin/sh\nexit 0\n")
+        subprocess.run([str(home / ".local/bin/rfig"), "analyze", name], env=dict(os.environ, HOME=temp, PATH=child_path), check=True)
+        assert not cached.exists(), f"stale completion cache for {name}"

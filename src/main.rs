@@ -2,7 +2,9 @@ use std::{
     collections::{HashMap, HashSet},
     env, fs,
     io::{self, BufWriter, Read, Write},
+    os::fd::AsRawFd,
     os::unix::fs::PermissionsExt,
+    os::unix::process::CommandExt,
     path::{Path, PathBuf},
     process::{Command, Stdio},
     thread,
@@ -17,6 +19,19 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode},
 };
 use unicode_width::UnicodeWidthChar;
+
+unsafe extern "C" {
+    fn flock(fd: i32, operation: i32) -> i32;
+    fn setsid() -> i32;
+    fn kill(pid: i32, signal: i32) -> i32;
+    fn setrlimit(resource: i32, limit: *const ResourceLimit) -> i32;
+}
+
+#[repr(C)]
+struct ResourceLimit {
+    current: u64,
+    maximum: u64,
+}
 
 const GIT: &[(&str, &str)] = &[
     ("add", "暂存文件"),
@@ -40,6 +55,42 @@ const GIT: &[(&str, &str)] = &[
     ("switch", "切换分支"),
     ("tag", "管理标签"),
 ];
+
+const HELP: &str = "Usage: rfig <command> [arguments]
+
+Inline command completion for zsh. Suggestions appear as you type.
+
+Commands:
+  setup                 Scan commands, install zsh integration, and enrich in the background
+  init                  Refresh the local command catalog
+  analyze <command>     Refresh completion data for one command
+  completion zsh        Print the zsh completion definition for rfig
+
+Options:
+  -h, --help            Show this help
+
+Examples:
+  rfig setup
+  rfig analyze kubectl
+  rfig completion zsh
+";
+
+const ZSH_COMPLETION: &str = r#"#compdef rfig
+_rfig() {
+  if (( CURRENT == 2 )); then
+    compadd -- setup init analyze completion
+  elif (( CURRENT == 3 )) && [[ $words[2] == analyze ]]; then
+    local file="$HOME/.config/rfig/commands.txt"
+    [[ -r $file ]] || return
+    local -a available
+    available=(${(f)"$(<"$file")"})
+    compadd -- "${available[@]}"
+  elif (( CURRENT == 3 )) && [[ $words[2] == completion ]]; then
+    compadd -- zsh
+  fi
+}
+compdef _rfig rfig
+"#;
 
 #[derive(Clone, Debug)]
 struct Candidate {
@@ -80,8 +131,7 @@ fn initialize_catalog() -> io::Result<()> {
             if name.chars().any(char::is_control) {
                 continue;
             }
-            if entry
-                .metadata()
+            if fs::metadata(entry.path())
                 .is_ok_and(|meta| meta.is_file() && meta.permissions().mode() & 0o111 != 0)
             {
                 names.push(name);
@@ -101,14 +151,81 @@ fn initialize_catalog() -> io::Result<()> {
         .map(|output| String::from_utf8_lossy(&output.stdout).into_owned())
         .unwrap_or_default();
     let defined: HashSet<_> = definitions.lines().collect();
-    let supported: Vec<_> = names
+    let home = env::var_os("HOME")
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "HOME is not set"))?;
+    let home = PathBuf::from(home);
+    let mut supported: Vec<_> = names
         .iter()
         .filter(|name| defined.contains(name.as_str()))
         .cloned()
         .collect();
-    let home = env::var_os("HOME")
-        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "HOME is not set"))?;
-    let directory = PathBuf::from(home).join(".config/rfig");
+    let xdg_config = env::var_os("XDG_CONFIG_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home.join(".config"));
+    let xdg_data = env::var_os("XDG_DATA_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home.join(".local/share"));
+    let completion_dirs = [
+        xdg_config.join("fish/completions"),
+        xdg_data.join("fish/vendor_completions.d"),
+        xdg_data.join("bash-completion/completions"),
+        home.join(".bash_completion.d"),
+        PathBuf::from("/opt/homebrew/etc/fish/completions"),
+        PathBuf::from("/opt/homebrew/share/fish/vendor_completions.d"),
+        PathBuf::from("/opt/homebrew/etc/bash_completion.d"),
+        PathBuf::from("/usr/local/etc/fish/completions"),
+        PathBuf::from("/usr/local/share/fish/vendor_completions.d"),
+        PathBuf::from("/usr/local/etc/bash_completion.d"),
+        PathBuf::from("/usr/share/fish/vendor_completions.d"),
+        PathBuf::from("/usr/share/bash-completion/completions"),
+        PathBuf::from("/etc/bash_completion.d"),
+    ];
+    for directory in completion_dirs {
+        let Ok(entries) = fs::read_dir(directory) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let Some(file) = entry.file_name().to_str().map(str::to_owned) else {
+                continue;
+            };
+            let command = file
+                .strip_suffix(".fish")
+                .or_else(|| file.strip_suffix(".bash"))
+                .unwrap_or(&file);
+            if names
+                .binary_search_by(|name| name.as_str().cmp(command))
+                .is_ok()
+            {
+                supported.push(command.to_owned());
+            }
+        }
+    }
+    for directory in [
+        home.join(".zsh/completions"),
+        PathBuf::from("/opt/homebrew/share/zsh/site-functions"),
+        PathBuf::from("/usr/local/share/zsh/site-functions"),
+    ] {
+        let Ok(entries) = fs::read_dir(directory) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let Some(file) = entry.file_name().to_str().map(str::to_owned) else {
+                continue;
+            };
+            let Some(command) = file.strip_prefix('_') else {
+                continue;
+            };
+            if names
+                .binary_search_by(|name| name.as_str().cmp(command))
+                .is_ok()
+            {
+                supported.push(command.to_owned());
+            }
+        }
+    }
+    supported.sort_unstable();
+    supported.dedup();
+    let directory = home.join(".config/rfig");
     fs::create_dir_all(&directory)?;
     fs::write(directory.join("commands.txt"), names.join("\n") + "\n")?;
     fs::write(directory.join("supported.txt"), supported.join("\n") + "\n")
@@ -130,20 +247,18 @@ fn setup() -> io::Result<()> {
             .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "HOME is not set"))?,
     );
     let local_script = home.join(".config/rfig/rfig.zsh");
-    let brew_prefix = Command::new("brew")
-        .args(["--prefix", "rfig"])
-        .output()
-        .ok()
-        .filter(|output| output.status.success())
-        .map(|output| PathBuf::from(String::from_utf8_lossy(&output.stdout).trim()));
-    let script =
-        if env::current_exe()?.starts_with(home.join(".local/bin")) && local_script.is_file() {
-            local_script.clone()
-        } else {
-            brew_prefix
-                .map(|prefix| prefix.join("share/rfig/rfig.zsh"))
-                .unwrap_or_else(|| local_script.clone())
-        };
+    let executable = env::current_exe()?;
+    let bundled_script = executable
+        .parent()
+        .and_then(Path::parent)
+        .map(|prefix| prefix.join("share/rfig/rfig.zsh"));
+    let script = if executable.starts_with(home.join(".local/bin")) && local_script.is_file() {
+        local_script.clone()
+    } else {
+        bundled_script
+            .filter(|path| path.is_file())
+            .unwrap_or_else(|| local_script.clone())
+    };
     if !script.is_file() {
         return Err(io::Error::new(
             io::ErrorKind::NotFound,
@@ -175,13 +290,23 @@ fn setup() -> io::Result<()> {
         }
         writeln!(file, "{source}")?;
     }
-    Command::new(env::current_exe()?)
-        .arg("analyze")
+    let mut worker = Command::new(env::current_exe()?);
+    worker
+        .arg("enrich-background")
         .stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()?;
-    println!("rfig is ready. Open a new zsh terminal to use autocomplete.");
+        .stderr(Stdio::null());
+    unsafe {
+        worker.pre_exec(|| {
+            if setsid() < 0 {
+                Err(io::Error::last_os_error())
+            } else {
+                Ok(())
+            }
+        });
+    }
+    worker.spawn()?;
+    println!("rfig is ready. Completion enrichment is running in the background; open a new zsh terminal.");
     Ok(())
 }
 
@@ -248,21 +373,111 @@ fn parse_help_options(help: &str) -> HashMap<String, &'static str> {
     kinds
 }
 
-fn help_output(name: &str, args: &[&str], scratch: &Path) -> io::Result<String> {
+fn parse_help_subcommands<'a>(name: &str, help: &'a str) -> Vec<&'a str> {
+    let mut commands = Vec::new();
+    let mut in_section = false;
+    for line in help.lines() {
+        let trimmed = line.trim();
+        if trimmed
+            .strip_suffix(':')
+            .is_some_and(|heading| heading.to_ascii_lowercase().contains("command"))
+        {
+            in_section = true;
+            continue;
+        }
+        let candidate = if in_section {
+            if line.is_empty() || !line.starts_with(char::is_whitespace) || trimmed.ends_with(':') {
+                in_section = false;
+                None
+            } else {
+                trimmed
+                    .split_whitespace()
+                    .next()
+                    .map(|word| word.trim_end_matches(':'))
+            }
+        } else {
+            trimmed
+                .strip_prefix(name)
+                .and_then(|rest| rest.strip_prefix(char::is_whitespace))
+                .and_then(|rest| rest.split_whitespace().next())
+                .filter(|_| line.starts_with(char::is_whitespace))
+        };
+        if let Some(command) = candidate.filter(|value| {
+            value.starts_with(char::is_alphanumeric)
+                && value
+                    .chars()
+                    .all(|ch| ch.is_ascii_alphanumeric() || ch == '-' || ch == '_')
+        }) {
+            if !commands.contains(&command) {
+                commands.push(command);
+            }
+        }
+    }
+    commands
+}
+
+fn help_advertises_option_command(name: &str, help: &str) -> bool {
+    let invocation = format!("\"{name} options\"");
+    help.lines()
+        .any(|line| line.trim_start().starts_with("Use ") && line.contains(&invocation))
+}
+
+fn help_output(
+    name: &str,
+    args: &[&str],
+    scratch: &Path,
+    background_safe: bool,
+) -> io::Result<String> {
     let output = fs::File::create(scratch)?;
-    let mut child = Command::new(name)
+    let mut command = if background_safe {
+        let mut sandbox = Command::new("/usr/bin/sandbox-exec");
+        sandbox.args([
+            "-p",
+            "(version 1) (allow default) (deny file-write*) (deny network*)",
+            name,
+        ]);
+        sandbox
+    } else {
+        Command::new(name)
+    };
+    if background_safe {
+        command.current_dir(scratch.parent().unwrap());
+    }
+    command
         .args(args)
         .stdin(Stdio::null())
         .stdout(Stdio::from(output.try_clone()?))
-        .stderr(Stdio::from(output))
-        .spawn()?;
+        .stderr(Stdio::from(output));
+    unsafe {
+        command.pre_exec(|| {
+            let file = ResourceLimit {
+                current: 512 * 1024,
+                maximum: 512 * 1024,
+            };
+            let cpu = ResourceLimit {
+                current: 2,
+                maximum: 2,
+            };
+            if setsid() < 0 || setrlimit(1, &file) < 0 || setrlimit(0, &cpu) < 0 {
+                Err(io::Error::last_os_error())
+            } else {
+                Ok(())
+            }
+        });
+    }
+    let mut child = command.spawn()?;
     let deadline = Instant::now() + Duration::from_millis(500);
     loop {
         if child.try_wait()?.is_some() {
+            unsafe {
+                kill(-(child.id() as i32), 9);
+            }
             break;
         }
         if Instant::now() >= deadline {
-            let _ = child.kill();
+            unsafe {
+                kill(-(child.id() as i32), 9);
+            }
             let _ = child.wait();
             return Err(io::Error::new(io::ErrorKind::TimedOut, "help timed out"));
         }
@@ -275,27 +490,168 @@ fn help_output(name: &str, args: &[&str], scratch: &Path) -> io::Result<String> 
     Ok(String::from_utf8_lossy(&bytes).into_owned())
 }
 
+fn safe_command_name(name: &str) -> bool {
+    !name.is_empty()
+        && name
+            .bytes()
+            .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, b'-' | b'_' | b'.' | b'+'))
+}
+
+fn system_service_path(path: &Path) -> bool {
+    ["/sbin", "/usr/sbin", "/usr/libexec", "/System"]
+        .iter()
+        .any(|root| path.starts_with(root))
+}
+
+fn command_is_system_service(name: &str) -> bool {
+    env::split_paths(&env::var_os("PATH").unwrap_or_default())
+        .map(|directory| directory.join(name))
+        .find(|path| fs::metadata(path).is_ok_and(|meta| meta.is_file()))
+        .and_then(|path| fs::canonicalize(path).ok())
+        .is_some_and(|path| system_service_path(&path))
+}
+
+fn cache_generated_completion(name: &str, help: &str, directory: &Path, scratch: &Path) -> bool {
+    if !safe_command_name(name) {
+        return false;
+    }
+    for generator in ["completion", "completions", "generate-completion"] {
+        let advertised = help.lines().any(|line| {
+            line.starts_with(char::is_whitespace)
+                && line
+                    .trim_start()
+                    .strip_prefix(generator)
+                    .is_some_and(|rest| {
+                        rest.starts_with(char::is_whitespace) || rest.starts_with(':')
+                    })
+        });
+        if !advertised {
+            continue;
+        }
+        for arguments in [
+            vec![generator, "zsh"],
+            vec![generator, "-s", "zsh"],
+            vec![generator, "--shell", "zsh"],
+            vec![generator, "--shell=zsh"],
+        ] {
+            let Ok(script) = help_output(name, &arguments, scratch, true) else {
+                continue;
+            };
+            if !script
+                .lines()
+                .next()
+                .is_some_and(|line| line.starts_with("#compdef "))
+                || !script.contains("compdef ")
+                || !script.contains(&format!(" {name}"))
+            {
+                continue;
+            }
+            if fs::create_dir_all(directory).is_err() {
+                return false;
+            }
+            let temporary = directory.join(format!(".{name}-{}", std::process::id()));
+            let valid = fs::write(&temporary, script).is_ok()
+                && Command::new("/bin/zsh")
+                    .arg("-n")
+                    .arg(&temporary)
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .status()
+                    .is_ok_and(|status| status.success());
+            if valid && fs::rename(&temporary, directory.join(format!("{name}.zsh"))).is_ok() {
+                return true;
+            }
+            let _ = fs::remove_file(temporary);
+        }
+    }
+    false
+}
+
+fn cache_completion_protocol(name: &str, help: &str, directory: &Path, scratch: &Path) -> bool {
+    if !safe_command_name(name)
+        || !help.contains("Available Commands:")
+        || !(help.contains("Flags:") || help.contains("Global Flags:"))
+    {
+        return false;
+    }
+    let Ok(output) = help_output(name, &["__complete", ""], scratch, true) else {
+        return false;
+    };
+    if !output.lines().any(|line| {
+        line.strip_prefix(':')
+            .is_some_and(|number| number.parse::<u32>().is_ok())
+    }) {
+        return false;
+    }
+    if fs::create_dir_all(directory).is_ok() {
+        return fs::write(directory.join(name), "cobra\n").is_ok();
+    }
+    false
+}
+
 fn analyze_command(name: &str, directory: &Path) -> io::Result<usize> {
-    if name.contains('/') || name.chars().any(char::is_control) {
+    if !safe_command_name(name) {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             "invalid command name",
         ));
     }
+    if command_is_system_service(name) {
+        return Err(io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            "refusing to execute a macOS system service for completion",
+        ));
+    }
     fs::create_dir_all(directory)?;
     let scratch = directory.join(format!(".help-{}", std::process::id()));
-    let mut kinds = help_output(name, &["--help"], &scratch)
-        .map(|help| parse_help_options(&help))
-        .unwrap_or_default();
-    if kinds.is_empty() {
-        if let Ok(help) = help_output(name, &["-h"], &scratch) {
-            kinds = parse_help_options(&help);
+    let first_help = help_output(name, &["--help"], &scratch, true);
+    let mut help = first_help.as_ref().cloned().unwrap_or_default();
+    let mut got_help = first_help.is_ok();
+    let mut separate_options = help_advertises_option_command(name, &help);
+    let mut kinds = parse_help_options(&help);
+    if kinds.is_empty() || parse_help_subcommands(name, &help).is_empty() {
+        if let Ok(short_help) = help_output(name, &["-h"], &scratch, true) {
+            got_help = true;
+            separate_options |= help_advertises_option_command(name, &short_help);
+            if kinds.is_empty() {
+                kinds = parse_help_options(&short_help);
+            }
+            if parse_help_subcommands(name, &help).is_empty()
+                && !parse_help_subcommands(name, &short_help).is_empty()
+            {
+                help = short_help;
+            }
         }
     }
-    if name == "kubectl" {
-        if let Ok(help) = help_output(name, &["options"], &scratch) {
+    if separate_options {
+        if let Ok(help) = help_output(name, &["options"], &scratch, true) {
             kinds.extend(parse_help_options(&help));
         }
+    }
+    if !got_help || (kinds.is_empty() && parse_help_subcommands(name, &help).is_empty()) {
+        let _ = fs::remove_file(&scratch);
+        if !got_help {
+            return Err(io::Error::new(io::ErrorKind::TimedOut, "help unavailable"));
+        }
+        let config = directory.parent().unwrap();
+        for stale in [
+            directory.join(format!("{name}.tsv")),
+            config.join("fallback").join(format!("{name}.tsv")),
+            config.join("generated").join(format!("{name}.zsh")),
+            config.join("protocol").join(name),
+        ] {
+            let _ = fs::remove_file(stale);
+        }
+        fs::create_dir_all(config.join("fallback"))?;
+        fs::write(config.join("fallback").join(format!("{name}.tsv")), "")?;
+        return Ok(0);
+    }
+    let config = directory.parent().unwrap();
+    if !cache_generated_completion(name, &help, &config.join("generated"), &scratch) && got_help {
+        let _ = fs::remove_file(config.join("generated").join(format!("{name}.zsh")));
+    }
+    if !cache_completion_protocol(name, &help, &config.join("protocol"), &scratch) && got_help {
+        let _ = fs::remove_file(config.join("protocol").join(name));
     }
     let _ = fs::remove_file(&scratch);
     let mut entries: Vec<_> = kinds.into_iter().collect();
@@ -307,33 +663,238 @@ fn analyze_command(name: &str, directory: &Path) -> io::Result<usize> {
     let temporary = directory.join(format!(".{name}-{}", std::process::id()));
     fs::write(&temporary, result)?;
     fs::rename(temporary, directory.join(format!("{name}.tsv")))?;
-    Ok(entries.len())
+    let fallback = directory.parent().unwrap().join("fallback");
+    fs::create_dir_all(&fallback)?;
+    let subcommands = parse_help_subcommands(name, &help);
+    let mut result = subcommands
+        .iter()
+        .map(|command| format!("{command}\tsubcommand\n"))
+        .collect::<String>();
+    for (option, kind) in &entries {
+        result.push_str(&format!("{option}\t{kind}\n"));
+    }
+    let temporary = fallback.join(format!(".{name}-{}", std::process::id()));
+    fs::write(&temporary, result)?;
+    fs::rename(temporary, fallback.join(format!("{name}.tsv")))?;
+    Ok(entries.len() + subcommands.len())
 }
 
 fn analyze_catalog(name: Option<&str>) -> io::Result<()> {
+    let name = name.ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "specify one command: rfig analyze <command>",
+        )
+    })?;
     let home = env::var_os("HOME")
         .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "HOME is not set"))?;
-    let config = PathBuf::from(home).join(".config/rfig");
-    let directory = config.join("options");
-    if let Some(name) = name {
-        println!(
-            "{name}: {} options analyzed",
-            analyze_command(name, &directory)?
-        );
+    let directory = PathBuf::from(home).join(".config/rfig/options");
+    println!(
+        "{name}: {} candidates analyzed",
+        analyze_command(name, &directory)?
+    );
+    Ok(())
+}
+
+fn enrich_background() -> io::Result<()> {
+    let home = PathBuf::from(
+        env::var_os("HOME")
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "HOME is not set"))?,
+    );
+    let resolved_home = fs::canonicalize(&home)?;
+    let config = home.join(".config/rfig");
+    let lock = fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open(config.join("enrich.lock"))?;
+    // One worker per installation, even when setup is run from multiple terminals.
+    if unsafe { flock(lock.as_raw_fd(), 2 | 4) } != 0 {
         return Ok(());
     }
-    let supported = fs::read_to_string(config.join("supported.txt"))?;
-    let mut names: Vec<_> = supported.lines().collect();
-    names.sort_unstable_by_key(|name| {
-        (
-            !matches!(*name, "kubectl" | "brew" | "docker" | "git"),
-            *name,
-        )
-    });
-    for name in names {
-        let _ = analyze_command(name, &directory);
+    let commands = fs::read_to_string(config.join("commands.txt"))?;
+    let supported: HashSet<String> = fs::read_to_string(config.join("supported.txt"))
+        .unwrap_or_default()
+        .lines()
+        .map(str::to_owned)
+        .collect();
+    let mut done = 0;
+    let mut skipped = 0;
+    let mut failed = 0;
+    for name in commands.lines() {
+        if !safe_command_name(name) || supported.contains(name) {
+            skipped += 1;
+            continue;
+        }
+        let executable = env::split_paths(&env::var_os("PATH").unwrap_or_default())
+            .map(|directory| directory.join(name))
+            .find(|path| {
+                fs::metadata(path)
+                    .is_ok_and(|meta| meta.is_file() && meta.permissions().mode() & 0o111 != 0)
+            });
+        let Some(path) = executable.and_then(|path| fs::canonicalize(path).ok()) else {
+            skipped += 1;
+            continue;
+        };
+        if system_service_path(&path)
+            || path.starts_with("/bin")
+            || path.starts_with("/usr/bin")
+            || path.starts_with("/Library")
+            || path.starts_with("/Applications")
+            || !([
+                "bin",
+                ".local",
+                ".cargo",
+                "go/bin",
+                "Library/pnpm",
+                ".nix-profile",
+            ]
+            .iter()
+            .any(|root| path.starts_with(resolved_home.join(root)))
+                || path.starts_with("/opt/homebrew")
+                || path.starts_with("/usr/local")
+                || path.starts_with("/opt/podman"))
+        {
+            skipped += 1;
+            continue;
+        }
+        let cached = config.join("fallback").join(format!("{name}.tsv"));
+        if fs::metadata(&cached)
+            .ok()
+            .zip(fs::metadata(&path).ok())
+            .is_some_and(|(cache, binary)| cache.modified().ok() >= binary.modified().ok())
+        {
+            skipped += 1;
+            continue;
+        }
+        if analyze_command(name, &config.join("options")).is_ok() {
+            done += 1
+        } else {
+            failed += 1
+        }
+        let _ = fs::write(
+            config.join("enrich.status"),
+            format!("running\n{done} analyzed\n{skipped} skipped\n{failed} failed\n{name}\n"),
+        );
     }
-    Ok(())
+    fs::write(
+        config.join("enrich.status"),
+        format!("done\n{done} analyzed\n{skipped} skipped\n{failed} failed\n"),
+    )
+}
+
+fn external_completion(name: &str, line: &str) -> io::Result<Option<String>> {
+    if !safe_command_name(name) || line.chars().any(char::is_control) {
+        return Ok(None);
+    }
+    let home = PathBuf::from(env::var_os("HOME").unwrap_or_default());
+    let xdg_config = env::var_os("XDG_CONFIG_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home.join(".config"));
+    let xdg_data = env::var_os("XDG_DATA_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home.join(".local/share"));
+    let fish_paths = [
+        xdg_config.join("fish/completions"),
+        PathBuf::from("/opt/homebrew/etc/fish/completions"),
+        PathBuf::from("/usr/local/etc/fish/completions"),
+        xdg_data.join("fish/vendor_completions.d"),
+        PathBuf::from("/opt/homebrew/share/fish/vendor_completions.d"),
+        PathBuf::from("/usr/local/share/fish/vendor_completions.d"),
+        PathBuf::from("/usr/share/fish/vendor_completions.d"),
+    ];
+    let config = home.join(".config/rfig");
+    fs::create_dir_all(&config)?;
+    let scratch = config.join(format!(".external-{}", std::process::id()));
+    if fs::read_to_string(config.join("protocol").join(name))
+        .ok()
+        .as_deref()
+        == Some("cobra\n")
+    {
+        let arguments: Vec<_> = line.split_whitespace().skip(1).collect();
+        let mut args = vec!["__complete"];
+        args.extend(arguments);
+        if line.ends_with(' ') || line == name {
+            args.push("");
+        }
+        let result = help_output(name, &args, &scratch, false);
+        let _ = fs::remove_file(&scratch);
+        if let Ok(output) = result {
+            let mut records = Vec::new();
+            let mut directive = false;
+            for record in output.lines() {
+                if record
+                    .strip_prefix(':')
+                    .is_some_and(|number| number.parse::<u32>().is_ok())
+                {
+                    directive = true;
+                    break;
+                }
+                records.push(record);
+            }
+            if directive {
+                return Ok(Some(records.join("\n")));
+            }
+        }
+    }
+    let fish_file = format!("{name}.fish");
+    if fish_paths.iter().any(|dir| dir.join(&fish_file).is_file()) {
+        let result = help_output(
+            "fish",
+            &["-c", "complete -C \"$argv[1]\" 2>/dev/null", "--", line],
+            &scratch,
+            false,
+        );
+        let _ = fs::remove_file(&scratch);
+        return Ok(result.ok());
+    }
+    let bash_paths = [
+        xdg_data.join("bash-completion/completions"),
+        home.join(".bash_completion.d"),
+        PathBuf::from("/opt/homebrew/etc/bash_completion.d"),
+        PathBuf::from("/usr/local/etc/bash_completion.d"),
+        PathBuf::from("/usr/share/bash-completion/completions"),
+        PathBuf::from("/etc/bash_completion.d"),
+    ];
+    let Some(file) = bash_paths
+        .iter()
+        .flat_map(|dir| [dir.join(name), dir.join(format!("{name}.bash"))])
+        .find(|file| file.is_file())
+    else {
+        return Ok(None);
+    };
+    const BASH_BRIDGE: &str = r#"
+        for base in /opt/homebrew/etc/profile.d/bash_completion.sh /usr/local/etc/profile.d/bash_completion.sh /usr/share/bash-completion/bash_completion; do
+          if [[ -r $base ]]; then source "$base" >/dev/null 2>&1; break; fi
+        done
+        source "$1" >/dev/null 2>&1 || exit 0
+        spec=$(complete -p "$2" 2>/dev/null) || exit 0
+        [[ $spec =~ -F[[:space:]]+([a-zA-Z_][a-zA-Z_0-9]*) ]] || exit 0
+        handler=${BASH_REMATCH[1]}
+        COMP_LINE=$3 COMP_POINT=${#3} COMP_TYPE=9
+        read -r -a COMP_WORDS <<< "$COMP_LINE"
+        [[ $COMP_LINE == *' ' ]] && COMP_WORDS+=( '' )
+        COMP_CWORD=$(( ${#COMP_WORDS[@]} - 1 ))
+        COMPREPLY=()
+        "$handler" "$2" "${COMP_WORDS[COMP_CWORD]}" "${COMP_WORDS[COMP_CWORD-1]}" >/dev/null 2>&1
+        printf '%s\n' "${COMPREPLY[@]}"
+    "#;
+    let result = help_output(
+        "/bin/bash",
+        &[
+            "--noprofile",
+            "--norc",
+            "-c",
+            BASH_BRIDGE,
+            "rfig",
+            &file.to_string_lossy(),
+            name,
+            line,
+        ],
+        &scratch,
+        false,
+    );
+    let _ = fs::remove_file(&scratch);
+    Ok(result.ok())
 }
 
 fn complete(line: &str, cursor: usize) -> Option<Vec<Candidate>> {
@@ -451,13 +1012,7 @@ fn native_candidates(line: &str, start_chars: usize, records: &str) -> Vec<Candi
                     None
                 }
             })
-            .unwrap_or_else(|| {
-                if line.starts_with("git checkout ") {
-                    "分支或文件".into()
-                } else {
-                    "补全候选".into()
-                }
-            });
+            .unwrap_or_else(|| "补全候选".into());
         candidates.push(Candidate {
             label: label.into(),
             description,
@@ -687,16 +1242,71 @@ fn run() -> io::Result<i32> {
     let mut args = env::args();
     let _ = args.next();
     match args.next().as_deref() {
+        None | Some("-h" | "--help" | "help") => {
+            print!("{HELP}");
+            return Ok(0);
+        }
+        Some("completion") => {
+            let shell = args.next();
+            if matches!(shell.as_deref(), Some("-h" | "--help")) {
+                print!("{HELP}");
+                return Ok(0);
+            }
+            if shell.as_deref() != Some("zsh") {
+                eprintln!("usage: rfig completion zsh");
+                return Ok(2);
+            }
+            print!("{ZSH_COMPLETION}");
+            return Ok(0);
+        }
         Some("setup") => {
+            if matches!(args.next().as_deref(), Some("-h" | "--help")) {
+                print!("{HELP}");
+                return Ok(0);
+            }
             setup()?;
             return Ok(0);
         }
         Some("init") => {
+            if matches!(args.next().as_deref(), Some("-h" | "--help")) {
+                print!("{HELP}");
+                return Ok(0);
+            }
             initialize_catalog()?;
             return Ok(0);
         }
         Some("analyze") => {
-            analyze_catalog(args.next().as_deref())?;
+            let name = args.next();
+            if matches!(name.as_deref(), Some("-h" | "--help")) {
+                print!("{HELP}");
+                return Ok(0);
+            }
+            analyze_catalog(name.as_deref())?;
+            return Ok(0);
+        }
+        Some("enrich-background") => {
+            enrich_background()?;
+            return Ok(0);
+        }
+        Some("external") => {
+            let (Some(name), Some(line)) = (args.next(), args.next()) else {
+                return Ok(2);
+            };
+            if let Some(output) = external_completion(&name, &line)? {
+                println!("provider");
+                let prefix = line.split_whitespace().last().unwrap_or("");
+                let prefix = if line.ends_with(' ') { "" } else { prefix };
+                for record in output.lines() {
+                    let (label, description) = record.split_once('\t').unwrap_or((record, ""));
+                    if label.starts_with(prefix)
+                        && !label.is_empty()
+                        && !label.chars().any(char::is_control)
+                        && !description.chars().any(char::is_control)
+                    {
+                        println!("{label}\t{description}");
+                    }
+                }
+            }
             return Ok(0);
         }
         Some("position") => {
@@ -706,7 +1316,7 @@ fn run() -> io::Result<i32> {
         }
         Some("pick") => {}
         _ => {
-            eprintln!("usage: rfig <setup|init|analyze|pick>");
+            eprintln!("{HELP}");
             return Ok(2);
         }
     }
@@ -759,6 +1369,13 @@ mod tests {
     use super::*;
 
     #[test]
+    fn system_services_are_not_help_probed() {
+        assert!(system_service_path(Path::new("/usr/sbin/bluetoothd")));
+        assert!(system_service_path(Path::new("/System/Library/example")));
+        assert!(!system_service_path(Path::new("/opt/homebrew/bin/gh")));
+    }
+
+    #[test]
     fn help_marks_value_options_and_boolean_switches() {
         let help = "    --as='': Username to impersonate\n    --cache-dir='/tmp': Default cache directory\n    --disable-compression=false: Disable compression\n    --role <role>  Role\n    --verbose  Print details\n";
         let kinds = parse_help_options(help);
@@ -767,6 +1384,33 @@ mod tests {
         assert_eq!(kinds.get("--disable-compression"), Some(&"flag"));
         assert_eq!(kinds.get("--role"), Some(&"option"));
         assert_eq!(kinds.get("--verbose"), Some(&"flag"));
+    }
+
+    #[test]
+    fn help_lists_subcommands_in_usage_and_command_sections() {
+        let usage = "Usage:\n  tool setup   Interactive setup\n  tool start [--port <port>]\n  tool --help\n";
+        assert_eq!(
+            parse_help_subcommands("tool", usage),
+            vec!["setup", "start"]
+        );
+
+        let section = "Available Commands:\n  build       Build things\n  deploy      Deploy things\n\nFlags:\n  -h, --help  Help\n";
+        assert_eq!(
+            parse_help_subcommands("other", section),
+            vec!["build", "deploy"]
+        );
+    }
+
+    #[test]
+    fn help_advertises_separate_global_options() {
+        assert!(help_advertises_option_command(
+            "tool",
+            "Use \"tool options\" for a list of global command-line options."
+        ));
+        assert!(!help_advertises_option_command(
+            "other",
+            "Use \"tool options\" for a list of global command-line options."
+        ));
     }
 
     #[test]

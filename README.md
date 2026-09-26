@@ -4,7 +4,7 @@ rfig 是一个面向 macOS zsh 的终端补全菜单。输入命令时，它会�
 
 ![rfig 在 zsh 中自动补全 Git 命令和目录路径的演示](assets/rfig-demo.gif)
 
-候选来自当前 zsh 会话的补全定义，因此分支、路径等动态内容会随环境变化。rfig 不内置一份固定的命令补全库。
+候选优先来自当前 zsh 会话的补全定义，也可复用本机安装的 zsh、Fish、Bash 补全脚本和命令自身的补全入口，因此分支、路径等动态内容会随环境变化。rfig 不内置一份固定的命令补全库。
 
 ## 功能列表
 
@@ -13,7 +13,8 @@ rfig 是一个面向 macOS zsh 的终端补全菜单。输入命令时，它会�
 | 输入时自动显示补全菜单 | ✅ | 不需要按 `Tab` |
 | 多级动态补全 | ✅ | 使用当前 zsh 的补全定义，例如 Git 分支和文件路径 |
 | 分类图标与终端主题配色 | ✅ | 区分命令、子命令、参数、选项和开关 |
-| 本机命令扫描与后台分析 | ✅ | 安装时扫描，并尝试从帮助信息改进选项分类 |
+| 本机命令扫描与后台分析 | ✅ | 安装时扫描可执行文件和 zsh/Fish/Bash 补全定义；后台逐个验证和补齐候选 |
+| 复用本机补全脚本 | ✅ | 当前 zsh 定义优先；可发现尚未注册的 zsh 脚本，复用 Fish/Bash 定义 |
 | 全终端支持 | ⏳ | 当前仅 zsh 集成 ✅；其他 Shell 与终端环境留待后续实现，现阶段优先完善 zsh |
 | 按使用习惯调整排序 | ✅ | 记录选中项和执行过的命令，常用候选在同类选项中前排 |
 
@@ -52,15 +53,17 @@ brew install tamia6/tap/rfig
 rfig setup
 ```
 
-`rfig setup` 会根据当前 `$PATH` 扫描命令，读取 zsh 补全定义，在 `~/.zshrc`（或 `$ZDOTDIR/.zshrc`）加入 shell 集成，并在后台分析帮助信息。可重复运行，更新命令目录时不会重复添加 `source` 行。
+`rfig setup` 会根据当前 `$PATH` 扫描可执行命令（包括符号链接），索引 zsh 已注册定义及本机 Fish/Bash 补全脚本，在 `~/.zshrc`（或 `$ZDOTDIR/.zshrc`）加入 shell 集成，并启动后台优化。可重复运行；后台任务不会并发执行，更新命令目录也不会重复添加 `source` 行。
 
 如果之前用 `./install.sh` 安装过，`~/.local/bin/rfig` 可能排在 Homebrew 前面。可用 `command -v rfig` 检查；若要配置 Homebrew 版本，运行 `"$(brew --prefix rfig)/bin/rfig" setup`。
 
-安装时先扫描 `$PATH` 中的可执行命令，随后在后台分析具有 zsh 补全定义的命令。扫描结束即可使用基础补全，不必等待分析完成。
+安装会快速返回。后台先跳过已有补全定义的命令，再对常见用户安装目录中的命令逐个读取 `--help` / `-h` 并验证补全生成器。系统目录和未知来源目录仍会进入命令目录，但不会自动执行；后台命令在 macOS 沙盒中禁止写文件和访问网络，每次运行限时 500 毫秒，并限制 CPU 时间和输出大小。输入时只读取已生成的帮助缓存；后台尚未完成的命令可能暂时没有候选。可运行 `cat ~/.config/rfig/enrich.status` 查看进度，或用 `rfig analyze <命令>` 单独更新缓存。第三方程序即使传入 `--help` 也可能有副作用，这些隔离措施不能保证其绝对安全。
 
 ## 使用
 
-例如，输入 `git` 时会出现子命令；选中 `checkout` 后，只提示当前仓库的本地或远端分支。需要检出文件时，输入 `git checkout -- ` 可使用路径补全。输入 `kubectl --` 会看到选项，后台分析完成后可进一步区分带值选项与布尔开关。
+运行 `rfig -h` 或 `rfig --help` 可查看命令、参数和示例；`rfig setup --help` 只显示帮助，不会重新扫描。rfig 自身也支持输入时补全：首级显示公开命令，`rfig analyze ` 后显示本机扫描到的命令名。
+
+例如，输入 `git` 时会出现子命令；选中 `checkout` 后，只提示当前仓库的本地或远端分支。需要检出文件时，输入 `git checkout -- ` 可使用路径补全。输入 `kubectl --` 会看到选项；对单个命令运行 `rfig analyze kubectl` 后可进一步区分带值选项与布尔开关。
 
 | 按键 | 行为 |
 | --- | --- |
@@ -79,29 +82,31 @@ rfig setup
 | 带值选项 | `◇` | 蓝色 |
 | 布尔开关 | `⚑` | 黄色 |
 
-颜色取自终端的 ANSI 调色板；选中项由图标前的 `→` 指针和青色文字标识。上下切换时，箭头会短暂右跳并变粗，当前选项和相邻选项会右移、加粗后复位，模拟程序坞的回弹效果。后台尚未分析到的选项暂按前缀分类：`--` 显示为 `◇`，单 `-` 显示为 `⚑`。
+颜色取自终端的 ANSI 调色板；选中项由图标前的 `→` 指针和青色文字标识。上下切换时，箭头会短暂右跳并变粗，当前选项和相邻选项会右移、加粗后复位，模拟程序坞的回弹效果。尚未分析到的选项暂按前缀分类：`--` 显示为 `◇`，单 `-` 显示为 `⚑`。
 
 ## 补全来源与本地数据
 
-rfig 实时读取当前 zsh 的补全定义。若命令没有补全定义，就不会显示该命令的候选；当前 shell 中加载的自定义补全也可以使用。补全层级由命令自身的定义决定，没有固定层数。
+rfig 的候选顺序是：当前 zsh 已注册的定义 → `$fpath` 中尚未注册的 zsh 脚本 → 命令生成的 zsh 脚本 → 已识别的命令补全协议（目前支持 Cobra `__complete`）→ 已安装的 Fish/Bash 补全脚本 → `--help` / `-h` 解析缓存。Fish 与 Bash 脚本在输入时执行，因此它们提供的动态参数也能随当前目录或命令上下文变化；这并不意味着 rfig 已集成到 Fish 或 Bash 的交互提示符。没有可用来源时不显示菜单。
 
 安装和分析会在本机保存以下数据：
 
 | 路径 | 用途 |
 | --- | --- |
 | `~/.config/rfig/commands.txt` | 安装时扫描到的可执行命令名 |
-| `~/.config/rfig/supported.txt` | 同时具有 zsh 补全定义的命令名，供批量分析使用 |
+| `~/.config/rfig/supported.txt` | 扫描到的 zsh 已注册定义及 Fish/Bash 补全脚本对应的命令名 |
+| `~/.config/rfig/generated/*.zsh` | 后台从命令自身的补全生成入口获取的 zsh 脚本 |
+| `~/.config/rfig/protocol/*` | 后台识别出的命令补全协议 |
 | `~/.config/rfig/options/*.tsv` | 帮助信息分析出的选项类别 |
+| `~/.config/rfig/fallback/*.tsv` | 没有 zsh 补全定义时，从帮助信息提取的候选 |
 | `~/.config/rfig/usage.log` | 本地的候选选择与命令执行记录，用于调整排序 |
 
-后台分析会对支持的命令尝试 `--help`，必要时尝试 `-h`；`kubectl` 的全局选项还会读取 `kubectl options`。每次查询限时 500 毫秒，结果逐个写入缓存；正在使用的 zsh 会话会在后续输入时读取新结果。帮助信息不足时，分类仍可能不准确。
+后台对没有现成补全定义的用户安装命令尝试 `--help`，必要时尝试 `-h`；若帮助文本明确指出独立的全局选项列表，也会读取该列表。它会检测 `completion zsh`、`completion -s zsh`、`completion --shell zsh` 等生成器并检查脚本语法，也会识别 Cobra `__complete`。缓存早于可执行文件修改时间时，下次运行 `setup` 会重新分析。系统目录中的命令仍可通过原生补全定义使用，但不会在后台执行。Fish/Bash 动态补全在输入时由对应 Shell 生成，可能仍有少量开销。
 
 手动更新：
 
 ```sh
-rfig setup             # PATH 变化后重新扫描并后台分析
-rfig analyze           # 前台重新分析所有受支持命令
-rfig analyze kubectl   # 只更新一个命令
+rfig setup             # PATH 变化后重新扫描，并启动串行后台优化
+rfig analyze kubectl   # 明确更新一个命令的帮助和生成器缓存
 ```
 
 排序记录只保存在本机；删除 `~/.config/rfig/usage.log` 即可重置使用习惯。
@@ -117,4 +122,6 @@ cargo test
 cargo build
 python3 tests/zsh_integration.py
 python3 tests/zsh_usage.py
+python3 tests/setup_safety.py
+python3 tests/self_completion.py
 ```

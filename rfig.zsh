@@ -7,6 +7,7 @@ zmodload zsh/stat
 
 typeset -gaU _rfig_hits
 typeset -gA _rfig_option_kinds
+typeset -gA _rfig_branch_candidates
 typeset -gA _rfig_usage
 _rfig_usage=()
 typeset -g _rfig_option_source='' _rfig_option_stamp=''
@@ -94,6 +95,9 @@ _rfig_compadd() {
   for (( index = 1; index <= $#hits; index++ )); do
     item=$hits[index]
     [[ -n $item && $item != *$'\n'* && $item != *$'\t'* ]] || continue
+    if [[ ${curtag-} == *branch* || ${curtag-} == heads* || ${curtag-} == *-heads* ]]; then
+      _rfig_branch_candidates[$item]=1
+    fi
     if [[ -n ${_rfig_option_kinds[$item]-} ]]; then
       kind=${_rfig_option_kinds[$item]}
     elif [[ $item == --?* ]]; then
@@ -114,6 +118,7 @@ _rfig_compadd() {
 
 _rfig_capture() {
   _rfig_hits=()
+  _rfig_branch_candidates=()
   typeset -g _rfig_start=$(( CURSOR - ${#PREFIX} ))
   local previous=${functions[compadd]-} had_previous=$+functions[compadd]
   functions[compadd]=$functions[_rfig_compadd]
@@ -197,10 +202,11 @@ _rfig_preview() {
   POSTDISPLAY=''
   region_highlight=(${region_highlight:#*memo=rfig})
   _rfig_hits=()
+  _rfig_branch_candidates=()
   _rfig_injected=0
   [[ -n $BUFFER && $BUFFER != *$'\n'* ]] || return
 
-  local original_buffer=$BUFFER original_cursor=$CURSOR command_name=${BUFFER%% *}
+  local original_buffer=$BUFFER original_cursor=$CURSOR command_name=${BUFFER%% *} record
   local option_file="$HOME/.config/rfig/options/$command_name.tsv" stamp=''
   local -A file_stat
   if [[ $command_name != */* ]] && zstat -H file_stat "$option_file" 2>/dev/null; then
@@ -218,37 +224,75 @@ _rfig_preview() {
     _rfig_option_source=$command_name
     _rfig_option_stamp=$stamp
   fi
+  if (( $+commands[$command_name] )) && [[ -z ${_comps[$command_name]-} ]] && [[ $command_name != *[^a-zA-Z0-9_.+-]* ]]; then
+    local completion_dir
+    for completion_dir in "${fpath[@]}"; do
+      if [[ -r "$completion_dir/_$command_name" ]]; then
+        autoload -Uz "_$command_name"
+        compdef "_$command_name" "$command_name"
+        break
+      fi
+    done
+    if [[ -z ${_comps[$command_name]-} && -r "$HOME/.config/rfig/generated/$command_name.zsh" ]]; then
+      source "$HOME/.config/rfig/generated/$command_name.zsh" 2>/dev/null
+    fi
+  fi
   if (( $+commands[$command_name] )) && [[ -z ${_comps[$command_name]-} ]]; then
-    return
+    local remainder=${original_buffer#$command_name} fallback="$HOME/.config/rfig/fallback/$command_name.tsv"
+    [[ $original_cursor == ${#original_buffer} && ( -z $remainder || $remainder == ' '* ) ]] || return
+    remainder=${remainder#' '}
+    local typed=${remainder##*' '}
+    typeset -g _rfig_start=$(( original_cursor - ${#typed} ))
+    [[ $original_buffer == $command_name ]] && _rfig_injected=1
+    local external='' item kind description
+    if (( $+commands[rfig] )); then
+      local completion_line=$original_buffer
+      (( _rfig_injected )) && completion_line+=' '
+      external=$(command rfig external "$command_name" "$completion_line" 2>/dev/null)
+    fi
+    local -a external_lines=( ${(f)external} )
+    if [[ ${external_lines[1]-} == provider ]]; then
+      for record in "${external_lines[@]:1}"; do
+        item=${record%%$'\t'*}
+        description=${record#*$'\t'}
+        [[ $record == *$'\t'* ]] || description=''
+        [[ -n $item && $item == "$typed"* ]] || continue
+        if [[ $item == --* ]]; then kind=option
+        elif [[ $item == -* ]]; then kind=flag
+        elif [[ $remainder != *' '* ]]; then kind=subcommand
+        else kind=argument
+        fi
+        _rfig_hits+=( "$item"$'\t'"${(q)item}"$'\t'"$description"$'\t'"$kind" )
+      done
+    else
+      [[ $remainder != *' '* ]] || return
+      [[ -r $fallback ]] || return
+      while IFS=$'\t' read -r item kind; do
+        [[ -n $item && $item == "$remainder"* && ( $kind == subcommand || $kind == option || $kind == flag ) ]] || continue
+        _rfig_hits+=( "$item"$'\t'"${(q)item}"$'\t'$'\t'"$kind" )
+      done < "$fallback"
+    fi
+  else
+    if [[ $BUFFER == $command_name && $CURSOR == ${#BUFFER} && -n ${_comps[$command_name]-} ]]; then
+      BUFFER+=' '
+      CURSOR=${#BUFFER}
+      _rfig_injected=1
+    fi
+    zle _rfig_capture
+    BUFFER=$original_buffer
+    CURSOR=$original_cursor
   fi
-  if [[ $BUFFER == $command_name && $CURSOR == ${#BUFFER} && -n ${_comps[$command_name]-} ]]; then
-    BUFFER+=' '
-    CURSOR=${#BUFFER}
-    _rfig_injected=1
-  fi
-  zle _rfig_capture
-  BUFFER=$original_buffer
-  CURSOR=$original_cursor
 
   (( $#_rfig_hits )) || return
   local -a subcommands flags
-  local record label typed_prefix=${original_buffer[$((_rfig_start + 1)),$original_cursor]}
-  if [[ $original_buffer == 'git checkout '* ]]; then
-    local current=${original_buffer#git checkout }
-    if [[ $current != *' '* && $current != -* ]]; then
-      local -A branches
-      local branch
-      for branch in ${(f)"$(command git for-each-ref --format='%(refname:short)' refs/heads refs/remotes 2>/dev/null)"}; do
-        [[ -n $branch && $branch != */HEAD ]] && branches[$branch]=1
-      done
-      local -a branch_hits
-      for record in "${_rfig_hits[@]}"; do
-        label=${record%%$'\t'*}
-        [[ $label == -* || -n ${branches[$label]-} ]] && branch_hits+=( "$record" )
-      done
-      _rfig_hits=( "${branch_hits[@]}" )
-      (( $#_rfig_hits )) || return
-    fi
+  local label typed_prefix=${original_buffer[$((_rfig_start + 1)),$original_cursor]}
+  if (( $#_rfig_branch_candidates )); then
+    local -a branch_hits
+    for record in "${_rfig_hits[@]}"; do
+      label=${record%%$'\t'*}
+      [[ $label == -* || -n ${_rfig_branch_candidates[$label]-} ]] && branch_hits+=( "$record" )
+    done
+    _rfig_hits=( "${branch_hits[@]}" )
   fi
   for record in "${_rfig_hits[@]}"; do
     label=${record%%$'\t'*}
