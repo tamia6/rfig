@@ -174,6 +174,8 @@ with tempfile.TemporaryDirectory() as temp:
 
         os.write(fd, b"rfigfixture")
         wait_for(fd, "→".encode())
+        os.write(fd, b"\x1b[B")  # zeta was just used, so select alpha explicitly.
+        time.sleep(0.1)
         os.write(fd, b"\x1b[C")
         wait_for(fd, b"RFIG> rfigfixture alpha")
         (home / "hits").unlink(missing_ok=True)

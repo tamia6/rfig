@@ -7,8 +7,79 @@ zmodload zsh/stat
 
 typeset -gaU _rfig_hits
 typeset -gA _rfig_option_kinds
+typeset -gA _rfig_usage
+_rfig_usage=()
 typeset -g _rfig_option_source='' _rfig_option_stamp=''
 typeset -gi _rfig_selected=1 _rfig_pulse=0 _rfig_injected=0
+
+_rfig_load_usage() {
+  local kind context label key weight
+  local file="$HOME/.config/rfig/usage.log"
+  [[ -r $file ]] || return
+  while IFS=$'\x1f' read -r kind context label; do
+    [[ ( $kind == C || $kind == R ) && -n $label ]] || continue
+    key="$context"$'\x1f'"$label"
+    weight=1
+    [[ $kind == C ]] && weight=3
+    _rfig_usage[$key]=$(( ${_rfig_usage[$key]:-0} + weight ))
+  done < "$file"
+}
+_rfig_load_usage
+
+_rfig_record() {
+  local kind=$1 context=$2 label=$3 key weight=1
+  [[ -n $label && $context != *$'\n'* && $context != *$'\r'* && $context != *$'\x1f'* \
+    && $label != *$'\n'* && $label != *$'\r'* && $label != *$'\x1f'* ]] || return
+  local file="$HOME/.config/rfig/usage.log"
+  # ponytail: append-only log; compact it if startup parsing becomes slow.
+  (umask 077; mkdir -p -- "${file:h}" && printf '%s\x1f%s\x1f%s\n' "$kind" "$context" "$label" >> "$file") || return
+  key="$context"$'\x1f'"$label"
+  [[ $kind == C ]] && weight=3
+  _rfig_usage[$key]=$(( ${_rfig_usage[$key]:-0} + weight ))
+}
+
+_rfig_record_line() {
+  local line=$1 context='' token
+  [[ $line != *$'\n'* ]] || return
+  local -a words=( ${(z)line} )
+  for token in "${words[@]}"; do
+    [[ $token == '|' || $token == ';' || $token == '&&' || $token == '||' ]] && break
+    token=${(Q)token}
+    _rfig_record R "$context" "$token"
+    context+="${context:+ }$token"
+  done
+}
+
+_rfig_rank_group() {
+  local context=$1 record label key score position
+  shift
+  local -a ranked=() scores=()
+  for record in "$@"; do
+    label=${record%%$'\t'*}
+    key="$context"$'\x1f'"$label"
+    score=${_rfig_usage[$key]:-0}
+    if (( score == 0 )); then
+      ranked+=( "$record" )
+      scores+=( 0 )
+      continue
+    fi
+    position=1
+    while (( position <= $#ranked && scores[position] >= score )); do
+      (( position++ ))
+    done
+    if (( position == 1 )); then
+      ranked=( "$record" "${ranked[@]}" )
+      scores=( "$score" "${scores[@]}" )
+    elif (( position > $#ranked )); then
+      ranked+=( "$record" )
+      scores+=( "$score" )
+    else
+      ranked=( "${ranked[1,position-1]}" "$record" "${ranked[position,-1]}" )
+      scores=( "${scores[1,position-1]}" "$score" "${scores[position,-1]}" )
+    fi
+  done
+  reply=( "${ranked[@]}" )
+}
 
 _rfig_compadd() {
   local -a hits descriptions
@@ -192,7 +263,13 @@ _rfig_preview() {
       subcommands+=( "$record" )
     fi
   done
-  _rfig_hits=( "${subcommands[@]}" "${flags[@]}" )
+  local context=${original_buffer[1,_rfig_start]}
+  local -a context_words=( ${(z)context} ) ordered
+  context="${(j: :)context_words}"
+  _rfig_rank_group "$context" "${subcommands[@]}"
+  ordered=( "${reply[@]}" )
+  _rfig_rank_group "$context" "${flags[@]}"
+  _rfig_hits=( "${ordered[@]}" "${reply[@]}" )
   (( $#_rfig_hits )) || return
   (( _rfig_selected > $#_rfig_hits )) && _rfig_selected=$#_rfig_hits
   _rfig_render
@@ -256,14 +333,18 @@ _rfig_choose() {
   fi
   local -a previous_hits=( "${_rfig_hits[@]}" )
   local record=${_rfig_hits[_rfig_selected]}
+  local label=${record%%$'\t'*}
   local rest=${record#*$'\t'} insert
   insert=${rest%%$'\t'*}
   local prefix=${BUFFER[1,_rfig_start]} suffix=${BUFFER[$(( CURSOR + 1 )),-1]}
+  local -a context_words=( ${(z)prefix} )
+  local context="${(j: :)context_words}"
   (( _rfig_injected )) && prefix+=' '
   local space=' '
   [[ -n $suffix || $insert == */ ]] && space=''
   BUFFER="$prefix$insert$space$suffix"
   CURSOR=$(( ${#prefix} + ${#insert} + ${#space} ))
+  _rfig_record C "$context" "$label"
   _rfig_selected=1
   _rfig_preview
   local index same=1
@@ -283,6 +364,7 @@ _rfig_choose() {
 }
 
 _rfig_accept_line() {
+  _rfig_record_line "$BUFFER"
   POSTDISPLAY=''
   region_highlight=(${region_highlight:#*memo=rfig})
   _rfig_hits=()
