@@ -8,7 +8,7 @@ zmodload zsh/stat
 typeset -gaU _rfig_hits
 typeset -gA _rfig_option_kinds
 typeset -g _rfig_option_source='' _rfig_option_stamp=''
-typeset -gi _rfig_selected=1 _rfig_injected=0
+typeset -gi _rfig_selected=1 _rfig_pulse=0 _rfig_injected=0
 
 _rfig_compadd() {
   local -a hits descriptions
@@ -29,7 +29,7 @@ _rfig_compadd() {
       kind=option
     elif [[ $item == -* ]]; then
       kind=flag
-    elif (( CURRENT == 1 )); then
+    elif [[ $curcontext == *:-command-:* ]]; then
       kind=command
     elif [[ ${_type-} == *command* ]] || { (( CURRENT == 2 )) && [[ $curcontext == *:argument-1 ]]; }; then
       kind=subcommand
@@ -59,6 +59,68 @@ _rfig_capture() {
   compstate[list]=''
 }
 zle -C _rfig_capture complete-word _rfig_capture
+
+_rfig_render() {
+  POSTDISPLAY=''
+  region_highlight=(${region_highlight:#*memo=rfig})
+  (( $#_rfig_hits )) || return
+  local first=$(( _rfig_selected > 5 ? _rfig_selected - 4 : 1 ))
+  local index description row start kind icon color rest record label icon_offset label_offset width
+  rest=${_rfig_hits[_rfig_selected]#*$'\t'}
+  rest=${rest#*$'\t'}
+  description=${rest%%$'\t'*}
+  for (( index = first; index <= $#_rfig_hits && index < first + 5; index++ )); do
+    record=${_rfig_hits[index]}
+    label=${record%%$'\t'*}
+    kind=${record##*$'\t'}
+    [[ -n $label ]] || continue
+    case $kind in
+      command) icon='⌘'; color=cyan ;;
+      subcommand) icon='↳'; color=magenta ;;
+      argument) icon='●'; color=green ;;
+      option) icon='◇'; color=blue ;;
+      flag) icon='⚑'; color=yellow ;;
+    esac
+    POSTDISPLAY+=$'\n'
+    start=$(( ${#BUFFER} + ${#POSTDISPLAY} ))
+    icon_offset=2
+    label_offset=4
+    width=41
+    if (( index == _rfig_selected )); then
+      if (( _rfig_pulse )); then
+        printf -v row ' %s %s   %-38.38s' '➜' "$icon" "$label"
+        icon_offset=3
+        label_offset=7
+        width=38
+      else
+        printf -v row '→ %s %-41.41s' "$icon" "$label"
+      fi
+    elif (( _rfig_pulse && (index == _rfig_selected - 1 || index == _rfig_selected + 1) )); then
+      printf -v row '  %s  %-40.40s' "$icon" "$label"
+      label_offset=5
+      width=40
+    else
+      printf -v row '  %s %-41.41s' "$icon" "$label"
+    fi
+    POSTDISPLAY+=$row
+    if (( index == _rfig_selected )); then
+      if (( _rfig_pulse )); then
+        region_highlight+=( "$((start + 1)) $((start + 2)) fg=cyan,bold memo=rfig" )
+      else
+        region_highlight+=( "$start $((start + 1)) fg=cyan,bold memo=rfig" )
+      fi
+    fi
+    region_highlight+=( "$((start + icon_offset)) $((start + icon_offset + 1)) fg=$color memo=rfig" )
+    if (( index == _rfig_selected || (_rfig_pulse && (index == _rfig_selected - 1 || index == _rfig_selected + 1)) )); then
+      local label_style=bold
+      (( index == _rfig_selected )) && label_style=fg=cyan,bold
+      region_highlight+=( "$((start + label_offset)) $((start + label_offset + (${#label} < width ? ${#label} : width))) $label_style memo=rfig" )
+    fi
+  done
+  POSTDISPLAY+=$'\n'
+  printf -v row ' %-44.44s' "$description"
+  POSTDISPLAY+=$row
+}
 
 _rfig_preview() {
   POSTDISPLAY=''
@@ -99,9 +161,31 @@ _rfig_preview() {
 
   (( $#_rfig_hits )) || return
   local -a subcommands flags
-  local record label
+  local record label typed_prefix=${original_buffer[$((_rfig_start + 1)),$original_cursor]}
+  if [[ $original_buffer == 'git checkout '* ]]; then
+    local current=${original_buffer#git checkout }
+    if [[ $current != *' '* && $current != -* ]]; then
+      local -A branches
+      local branch
+      for branch in ${(f)"$(command git for-each-ref --format='%(refname:short)' refs/heads refs/remotes 2>/dev/null)"}; do
+        [[ -n $branch && $branch != */HEAD ]] && branches[$branch]=1
+      done
+      local -a branch_hits
+      for record in "${_rfig_hits[@]}"; do
+        label=${record%%$'\t'*}
+        [[ $label == -* || -n ${branches[$label]-} ]] && branch_hits+=( "$record" )
+      done
+      _rfig_hits=( "${branch_hits[@]}" )
+      (( $#_rfig_hits )) || return
+    fi
+  fi
   for record in "${_rfig_hits[@]}"; do
     label=${record%%$'\t'*}
+    if [[ $typed_prefix == --* ]]; then
+      [[ $label == --* ]] || continue
+    elif [[ $typed_prefix == -* ]]; then
+      [[ $label == -* && $label != --* ]] || continue
+    fi
     if [[ $label == -* ]]; then
       flags+=( "$record" )
     else
@@ -109,43 +193,15 @@ _rfig_preview() {
     fi
   done
   _rfig_hits=( "${subcommands[@]}" "${flags[@]}" )
+  (( $#_rfig_hits )) || return
   (( _rfig_selected > $#_rfig_hits )) && _rfig_selected=$#_rfig_hits
-  local first=$(( _rfig_selected > 5 ? _rfig_selected - 4 : 1 ))
-  local index description row start kind icon color rest
-  rest=${_rfig_hits[_rfig_selected]#*$'\t'}
-  rest=${rest#*$'\t'}
-  description=${rest%%$'\t'*}
-  for (( index = first; index <= $#_rfig_hits && index < first + 5; index++ )); do
-    record=${_rfig_hits[index]}
-    label=${record%%$'\t'*}
-    kind=${record##*$'\t'}
-    [[ -n $label ]] || continue
-    case $kind in
-      command) icon='⌘'; color=cyan ;;
-      subcommand) icon='↳'; color=magenta ;;
-      argument) icon='●'; color=green ;;
-      option) icon='◇'; color=blue ;;
-      flag) icon='⚑'; color=yellow ;;
-    esac
-    POSTDISPLAY+=$'\n'
-    start=$(( ${#BUFFER} + ${#POSTDISPLAY} ))
-    printf -v row ' %s %-42.42s' "$icon" "$label"
-    POSTDISPLAY+=$row
-    if (( index == _rfig_selected )); then
-      region_highlight+=( "$start $((start + ${#row})) standout memo=rfig" )
-      region_highlight+=( "$((start + 1)) $((start + 2)) standout,bg=$color memo=rfig" )
-    else
-      region_highlight+=( "$((start + 1)) $((start + 2)) fg=$color memo=rfig" )
-    fi
-  done
-  POSTDISPLAY+=$'\n'
-  printf -v row ' %-44.44s' "$description"
-  POSTDISPLAY+=$row
+  _rfig_render
 }
 
 _rfig_after_edit() {
   zle ".$WIDGET" "$@"
   _rfig_selected=1
+  _rfig_pulse=0
   _rfig_preview
   zle -R
 }
@@ -154,26 +210,43 @@ for _rfig_widget in self-insert backward-delete-char delete-char backward-kill-w
 done
 unset _rfig_widget
 
+_rfig_redraw_move() {
+  local previous=$1
+  if (( $#_rfig_hits )); then
+    if (( previous != _rfig_selected )); then
+      _rfig_pulse=1
+      _rfig_render
+      zle -R
+      sleep 0.06
+      _rfig_pulse=0
+    fi
+    _rfig_render
+  else
+    _rfig_preview
+  fi
+  zle -R
+}
+
 _rfig_up() {
+  local previous=$_rfig_selected
   if (( $#_rfig_hits )); then
     (( _rfig_selected = _rfig_selected > 1 ? _rfig_selected - 1 : 1 ))
   else
     zle up-line-or-history
     _rfig_selected=1
   fi
-  _rfig_preview
-  zle -R
+  _rfig_redraw_move $previous
 }
 
 _rfig_down() {
+  local previous=$_rfig_selected
   if (( $#_rfig_hits )); then
     (( _rfig_selected = _rfig_selected < $#_rfig_hits ? _rfig_selected + 1 : $#_rfig_hits ))
   else
     zle down-line-or-history
     _rfig_selected=1
   fi
-  _rfig_preview
-  zle -R
+  _rfig_redraw_move $previous
 }
 
 _rfig_choose() {

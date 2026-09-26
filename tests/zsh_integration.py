@@ -140,8 +140,8 @@ with tempfile.TemporaryDirectory() as temp:
             time.sleep(0.01)
         assert any(line.startswith("rfigfixture\t") and line.endswith("\tcommand") for line in (home / "hits").read_text().splitlines())
         os.write(fd, b"xture")
-        live = wait_for(fd, b"\x1b[7m")
-        assert b"48;5;25m" not in live, "selection must use the terminal theme"
+        live = wait_for(fd, "→".encode())
+        assert b"\x1b[7m" not in live, "selection must not use inverse video"
         (home / "hits").unlink(missing_ok=True)
         os.write(fd, b"\x18")
         deadline = time.monotonic() + 5
@@ -162,7 +162,10 @@ with tempfile.TemporaryDirectory() as temp:
         while not (home / "hits").exists() and time.monotonic() < deadline:
             time.sleep(0.01)
         assert any(line.startswith("--verbose\t") and line.endswith("\tflag") for line in (home / "hits").read_text().splitlines())
-        os.write(fd, b"\x1b[B\x1b[C")
+        os.write(fd, b"\x1b[B")
+        pulse = wait_for(fd, "➜".encode())
+        assert "➜".encode() in pulse, "selection must briefly enlarge and shift the arrow"
+        os.write(fd, b"\x1b[C")
         selected_output = wait_for(fd, b"RFIG> rfigfixture zeta")
         assert b"\r\nRFIG-TOP" not in selected_output, "selection must stay on the existing prompt"
         os.write(fd, b"\r")
@@ -170,7 +173,7 @@ with tempfile.TemporaryDirectory() as temp:
         assert (home / "fixture-args").read_text() == "zeta\n"
 
         os.write(fd, b"rfigfixture")
-        wait_for(fd, b"\x1b[7m")
+        wait_for(fd, "→".encode())
         os.write(fd, b"\x1b[C")
         wait_for(fd, b"RFIG> rfigfixture alpha")
         (home / "hits").unlink(missing_ok=True)
@@ -193,6 +196,47 @@ with tempfile.TemporaryDirectory() as temp:
         wait_for(fd, b"RFIG> ")
         assert (home / "args").read_text() == "branch x\n"
 
+        os.write(fd, b"unfunction git\r")
+        wait_for(fd, b"RFIG> ")
+        os.write(fd, f"cd {repo}\r".encode())
+        wait_for(fd, b"RFIG> ")
+        (home / "hits").unlink(missing_ok=True)
+        os.write(fd, b"git checkout ")
+        wait_for(fd, "●".encode())
+        os.write(fd, b"\x18")
+        deadline = time.monotonic() + 5
+        while not (home / "hits").exists() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        checkout_hits = (home / "hits").read_text().splitlines()
+        assert any(line.startswith("feature-rfig\t") and line.endswith("\targument") for line in checkout_hits), checkout_hits[:20]
+        os.write(fd, b"\x15")
+
+        (repo / "biz-center").mkdir()
+        completion_fixture = home / "checkout-completion.zsh"
+        completion_fixture.write_text(
+            "_rfig_git_test() {\n"
+            "  if [[ ${words[2]-} == checkout && $CURRENT == 3 ]]; then\n"
+            "    compadd -- feature-rfig biz-center\n"
+            "  else\n"
+            "    _git \"$@\"\n"
+            "  fi\n"
+            "}\n"
+            "compdef _rfig_git_test git\n"
+        )
+        os.write(fd, f"source {completion_fixture}\r".encode())
+        wait_for(fd, b"RFIG> ")
+        (home / "hits").unlink(missing_ok=True)
+        os.write(fd, b"git checkout ")
+        wait_for(fd, "→".encode())
+        os.write(fd, b"\x18")
+        deadline = time.monotonic() + 5
+        while not (home / "hits").exists() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        checkout_hits = (home / "hits").read_text().splitlines()
+        assert any(line.startswith("feature-rfig\t") for line in checkout_hits), checkout_hits
+        assert not any(line.startswith("biz-center\t") for line in checkout_hits), checkout_hits
+        os.write(fd, b"\x15")
+
         if shutil.which("tmux"):
             tmux = ["tmux", "-L", f"rfig-test-{os.getpid()}", "-f", "/dev/null"]
             session_env = dict(os.environ, HOME=temp, ZDOTDIR=temp, PATH=child_path, TERM="xterm-256color")
@@ -202,15 +246,36 @@ with tempfile.TemporaryDirectory() as temp:
                 deadline = time.monotonic() + 5
                 while time.monotonic() < deadline:
                     screen = subprocess.check_output(tmux + ["capture-pane", "-t", "check", "-p"], env=session_env, text=True)
-                    if " ● alpha" in screen:
+                    if "→ ● alpha" in screen:
                         break
                     time.sleep(0.05)
-                assert " ● alpha" in screen, "the preview must show the argument icon"
+                assert "→ ● alpha" in screen, "the pointer must precede the argument icon"
                 styled = subprocess.check_output(tmux + ["capture-pane", "-t", "check", "-p", "-e"], env=session_env)
                 selected = next(line for line in styled.splitlines() if b"alpha" in line)
-                before_label = selected[selected.index(b"\x1b[7m"):selected.index(b"alpha")]
-                assert b"\x1b[0m" not in before_label, "the selected row must stay highlighted across its icon"
-                assert b"\x1b[42m" in before_label, "the selected argument icon must use the terminal's green palette color"
+                assert b"\x1b[7m" not in selected, "the selected row must not use inverse video"
+                assert b"\x1b[42m" not in selected, "the icon must not use a colored background"
+                assert b"\x1b[32m" in selected, "the argument icon must use the terminal's green palette color"
+                after_icon = selected.split("●".encode(), 1)[1].split(b"alpha", 1)[0]
+                assert b"\x1b[36m" in after_icon, "the selected label must use the terminal's cyan palette color"
+                subprocess.run(tmux + ["send-keys", "-t", "check", "Down"], env=session_env, check=True)
+                deadline = time.monotonic() + 5
+                while time.monotonic() < deadline:
+                    screen = subprocess.check_output(tmux + ["capture-pane", "-t", "check", "-p"], env=session_env, text=True)
+                    if "→ ● beta" in screen and "➜" not in screen:
+                        break
+                    time.sleep(0.02)
+                assert "→ ● beta" in screen and "➜" not in screen, "animation must settle on the next item"
+                styled = subprocess.check_output(tmux + ["capture-pane", "-t", "check", "-p", "-e"], env=session_env)
+                selected = next(line for line in styled.splitlines() if b"beta" in line)
+                assert b"\x1b[36m" in selected.split("●".encode(), 1)[1].split(b"beta", 1)[0], "the label color must follow selection"
+                subprocess.run(tmux + ["send-keys", "-t", "check", "Up"], env=session_env, check=True)
+                deadline = time.monotonic() + 5
+                while time.monotonic() < deadline:
+                    screen = subprocess.check_output(tmux + ["capture-pane", "-t", "check", "-p"], env=session_env, text=True)
+                    if "→ ● alpha" in screen and "➜" not in screen:
+                        break
+                    time.sleep(0.02)
+                assert "→ ● alpha" in screen and "➜" not in screen, "animation must settle on the previous item"
                 subprocess.run(tmux + ["send-keys", "-t", "check", "Right"], env=session_env, check=True)
                 deadline = time.monotonic() + 5
                 while time.monotonic() < deadline:
@@ -237,5 +302,6 @@ with tempfile.TemporaryDirectory() as temp:
                 subprocess.run(tmux + ["kill-server"], env=session_env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         print("zsh live selection, nested completion, and terminal theme: OK")
     finally:
-        os.kill(pid, signal.SIGTERM)
         os.close(fd)
+        os.kill(pid, signal.SIGKILL)
+        os.waitpid(pid, 0)
