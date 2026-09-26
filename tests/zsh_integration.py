@@ -80,6 +80,12 @@ with tempfile.TemporaryDirectory() as temp:
         brew_env = dict(os.environ, HOME=brew_temp, ZDOTDIR=str(brew_rc_dir), SHELL="/bin/zsh", PATH=str(brew_bin))
         subprocess.run([str(brew_prefix / "bin/rfig"), "setup"], env=brew_env, check=True)
         assert (brew_rc_dir / ".zshrc").read_text().strip() == f'source "{brew_prefix / "share/rfig/rfig.zsh"}"'
+        if "brew" in (brew_home / ".config/rfig/supported.txt").read_text().splitlines():
+            analyzed = brew_home / ".config/rfig/options/brew.tsv"
+            deadline = time.monotonic() + 5
+            while not analyzed.exists() and time.monotonic() < deadline:
+                time.sleep(0.01)
+            assert analyzed.exists(), "background analysis must finish before cleanup"
     (home / ".zshrc").write_text(
         f"PROMPT=$'RFIG-TOP\\nRFIG> '\nautoload -Uz compinit; compinit -D\nsource {ROOT / 'rfig.zsh'}\n"
         f"git() {{ print -r -- \"$*\" > {home / 'args'}; }}\n"
@@ -300,6 +306,29 @@ with tempfile.TemporaryDirectory() as temp:
                 command_line = next(i for i, line in enumerate(lines) if "RFIG> rfigdisplay" in line)
                 result_line = next(i for i, line in enumerate(lines) if "RFIG_RESULT" in line)
                 assert result_line == command_line + 1, "the preview must leave no blank lines before output"
+                for index, (typed, wanted, unwanted) in enumerate((
+                    ("rfigfixture -", "-v", "--as"),
+                    ("rfigfixture --", "--as", "-v"),
+                )):
+                    name = f"flags-{index}"
+                    subprocess.run(tmux + ["new-session", "-d", "-s", name, "-x", "100", "-y", "24", "/bin/zsh", "-i"], env=session_env, check=True)
+                    subprocess.run(tmux + ["send-keys", "-t", name, "-l", typed], env=session_env, check=True)
+                    deadline = time.monotonic() + 5
+                    menu = ""
+                    while time.monotonic() < deadline:
+                        screen = subprocess.check_output(tmux + ["capture-pane", "-t", name, "-p"], env=session_env, text=True)
+                        if f"RFIG> {typed}" in screen:
+                            menu = screen.rsplit(f"RFIG> {typed}", 1)[-1]
+                            if "→" in menu:
+                                break
+                        time.sleep(0.05)
+                    labels = []
+                    for row in menu.splitlines():
+                        parts = row.split()
+                        if parts and parts[0] in {"→", "⌘", "↳", "●", "◇", "⚑"}:
+                            labels.append(parts[-1])
+                    assert wanted in labels and unwanted not in labels, (typed, labels)
+                    subprocess.run(tmux + ["kill-session", "-t", name], env=session_env, check=True)
             finally:
                 subprocess.run(tmux + ["kill-server"], env=session_env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         print("zsh live selection, nested completion, and terminal theme: OK")
