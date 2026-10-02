@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1018">
+  <meta name="description" content="rfig 为 macOS zsh 带来输入即出现的命令补全，支持动态多级候选和本机使用习惯排序。">
+  <title>rfig — 让终端跟上你的思路</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b1018'/%3E%3Cpath d='m16 19 13 13-13 13M34 45h15' fill='none' stroke='%23b3f2ac' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="header container">
+    <a class="logo" href="#top" aria-label="rfig 首页"><span class="logo-mark">›_</span>rfig<span class="logo-dot">.</span></a>
+    <nav aria-label="主导航"><a href="#features">功能</a><a href="#how">工作方式</a><a href="#install">安装</a></nav>
+    <a class="github-link" href="https://github.com/tamia6/rfig" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
+  </header>
+  <main id="top">
+    <section class="hero container">
+      <div class="hero-copy">
+        <p class="badge"><span class="signal"></span> 为 macOS zsh 而做</p>
+        <h1>让终端<br><em>跟上你的思路。</em></h1>
+        <p class="hero-desc">命令还没打完，下一步已经出现。rfig 在当前提示符下展示补全候选，让你少记参数、少按 Tab，更顺畅地完成每一步。</p>
+        <div class="actions"><a class="primary" href="#install">开始使用 <span>↗</span></a><a class="secondary" href="#demo">看看实际效果 ↓</a></div>
+        <div class="hero-facts"><span><b>01</b> 输入即显示</span><span><b>02</b> 动态多级补全</span><span><b>03</b> 尊重本机环境</span></div>
+      </div>
+      <div class="hero-art" aria-label="rfig 补全菜单示意">
+        <div class="orbit orbit-a"></div><div class="orbit orbit-b"></div>
+        <div class="terminal">
+          <div class="terminal-bar"><span class="lights"><i></i><i></i><i></i></span><span>rfig — zsh</span><span>⌘</span></div>
+          <div class="terminal-body">
+            <div><span class="prompt">❯</span> git checkout<span class="cursor"></span></div>
+            <div class="terminal-row active"><span>→</span><span class="branch-icon">①</span><strong>feature/ui-refresh</strong></div>
+            <div class="terminal-row"><span></span><span class="branch-icon">●</span><span>main</span></div>
+            <div class="terminal-row"><span></span><span class="branch-icon">●</span><span>release/0.1</span></div>
+            <div class="terminal-hint">↑ ↓ 选择　·　→ 插入　·　Enter 执行</div>
+          </div>
+        </div>
+        <div class="float-tag"><b>↳</b> 多一级，也一样顺手</div>
+      </div>
+    </section>
+    <section class="demo container" id="demo">
+      <div class="section-head"><div><p class="eyebrow">LIVE IN YOUR TERMINAL</p><h2>补全，应该就在光标旁边。</h2></div><p>无需切换窗口，也无需记住所有子命令。选中候选后继续输入，下一层自然出现。</p></div>
+      <div class="demo-frame"><div class="demo-bar"><span class="lights"><i></i><i></i><i></i></span><span>真实终端演示</span><span>rfig / zsh</span></div><img src="rfig-demo.gif" width="960" height="376" alt="在 zsh 中输入 Git 命令时 rfig 显示动态补全菜单" loading="lazy"></div>
+      <p class="under-note">↗ 根据当前会话的补全定义显示候选，Git 分支与路径随工作目录变化。</p>
+    </section>
+    <section class="features container" id="features">
+      <div class="section-head"><div><p class="eyebrow">BUILT FOR FLOW</p><h2>少一点打断，<br>多一点专注。</h2></div><p>把熟悉的终端留给你，把繁琐的记忆工作交给 rfig。</p></div>
+      <div class="feature-grid">
+        <article class="feature-card big">
+          <span class="card-index">01 / 直接出现</span>
+          <div class="mini-demo" aria-hidden="true"><span class="prompt">❯</span> brew services <span class="mini-cursor"></span><div class="mini-list"><div>→ <b>↳</b> <strong>start</strong></div><div>　<b>↳</b> stop</div><div>　<b>↳</b> list</div></div></div>
+          <h3>输入时，就有下一步。</h3><p>候选在提示符下方即时出现。方向键浏览，右箭头插入；Enter 始终执行当前输入的命令。</p>
+        </article>
+        <article class="feature-card"><span class="card-index">02 / 跟着环境走</span><div class="feature-symbol">{<span>git</span>}</div><h3>动态，不靠死表。</h3><p>优先使用当前 zsh 的补全定义，也能复用本机的 zsh、Fish、Bash 补全脚本与命令帮助信息。</p></article>
+        <article class="feature-card"><span class="card-index">03 / 越用越顺手</span><div class="rank-example">① 常用候选　 ② 第二选择　 ↳ 其他命令</div><h3>习惯决定排序。</h3><p>选择与执行记录留在本机。常用候选靠前显示，其他选项仍然可以正常选择。</p></article>
+      </div>
+    </section>
+    <section class="how container" id="how"><div><p class="eyebrow">HOW IT WORKS</p><h2>从安装到顺手，<br>只差一次设置。</h2><p>rfig 扫描本机命令和补全定义，后台逐个分析尚缺少规则的工具。无需预装一整套固定的命令库。</p></div><div class="steps"><div><span>01</span><strong>安装 rfig</strong><p>选择 Homebrew、预编译包或源码安装。</p></div><div><span>02</span><strong>运行 setup</strong><p>扫描命令并写入 zsh 集成，后台继续补齐候选。</p></div><div><span>03</span><strong>打开新终端</strong><p>输入命令，候选自然出现在光标下方。</p></div></div></section>
+    <section class="install" id="install"><div class="container install-inner"><div><p class="eyebrow">GET STARTED</p><h2>现在，打开你的终端。</h2><p>当前版本支持 macOS zsh。选择适合你的安装方式；其他 Shell 的交互集成仍在计划中。</p></div><div class="install-card"><div class="tabs" role="tablist" aria-label="安装方式"><button type="button" role="tab" aria-selected="true" class="selected" data-method="brew">Homebrew</button><button type="button" role="tab" aria-selected="false" data-method="binary">下载二进制</button><button type="button" role="tab" aria-selected="false" data-method="source">从源码</button></div><div class="code-box"><small>在终端运行</small><pre><code id="install-code">brew install tamia6/tap/rfig
+rfig setup</code></pre><button id="copy" type="button">复制命令</button></div><p id="install-caption">安装后打开新的 zsh 终端即可使用。</p></div></div></section>
+  </main>
+  <footer class="footer container"><div><a class="logo" href="#top"><span class="logo-mark">›_</span>rfig<span class="logo-dot">.</span></a><p>把下一步，留在光标旁。</p></div><div class="footer-links"><a href="https://github.com/tamia6/rfig" target="_blank" rel="noopener noreferrer">GitHub ↗</a><a href="https://github.com/tamia6/rfig/releases/latest" target="_blank" rel="noopener noreferrer">最新版本 ↗</a><a href="https://github.com/tamia6/rfig#readme" target="_blank" rel="noopener noreferrer">文档 ↗</a></div><small>Built for the terminal. Made for the flow.</small></footer>
+  <script>
+    const methods = {
+      brew: ['brew install tamia6/tap/rfig\nrfig setup', '安装后打开新的 zsh 终端即可使用。'],
+      binary: ['tar -xzf rfig-v0.1.2-macos-universal.tar.gz\ncd rfig-v0.1.2\nsh install.sh', '先从 GitHub Releases 下载完整压缩包，解压后运行包内脚本。'],
+      source: ['./install.sh', '在克隆的 rfig 项目目录运行；需要 Rust 和 Cargo。']
+    };
+    const code = document.getElementById('install-code');
+    const caption = document.getElementById('install-caption');
+    const copy = document.getElementById('copy');
+    document.querySelectorAll('[data-method]').forEach(tab => tab.addEventListener('click', () => {
+      document.querySelectorAll('[data-method]').forEach(item => { item.classList.remove('selected'); item.setAttribute('aria-selected', 'false'); });
+      tab.classList.add('selected'); tab.setAttribute('aria-selected', 'true');
+      [code.textContent, caption.textContent] = methods[tab.dataset.method];
+      copy.textContent = '复制命令';
+    }));
+    copy.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(code.textContent); copy.textContent = '已复制 ✓'; }
+      catch { copy.textContent = '请手动复制'; }
+      setTimeout(() => copy.textContent = '复制命令', 1800);
+    });
+  </script>
+</body>
+</html>
