@@ -1,0 +1,44 @@
+SHELL=zsh EXE=/usr/bin/zsh
+test_cancel_repeated_and_private_history (__main__.StrictShell.test_cancel_repeated_and_private_history) ... ok
+test_ctrl_d_exits_empty_line (__main__.StrictShell.test_ctrl_d_exits_empty_line) ... ok
+test_editor_sigterm_cleanup (__main__.StrictShell.test_editor_sigterm_cleanup) ... skipped 'zsh uses ZLE rather than a separate editor process'
+test_literal_candidates (__main__.StrictShell.test_literal_candidates) ... ok
+test_multiline_bracketed_paste (__main__.StrictShell.test_multiline_bracketed_paste) ... ok
+test_rapid_input_delete_and_wrapping (__main__.StrictShell.test_rapid_input_delete_and_wrapping) ... ok
+test_shell_state_and_directory (__main__.StrictShell.test_shell_state_and_directory) ... ok
+test_slow_provider_input_latency_and_cancel (__main__.StrictShell.test_slow_provider_input_latency_and_cancel) ... FAIL
+
+======================================================================
+FAIL: test_slow_provider_input_latency_and_cancel (__main__.StrictShell.test_slow_provider_input_latency_and_cancel)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/work/tests/strict_shell.py", line 190, in test_slow_provider_input_latency_and_cancel
+    latency=self.wait(lambda:'rfigslow xyz' in self.current(),'typing blocked by slow provider',seconds=.5)
+  File "/work/tests/strict_shell.py", line 96, in wait
+    self.fail(message+'\n'+self.screen())
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: typing blocked by slow provider
+RFIG> rfigslo
+→ ⌘ rfigslow
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+----------------------------------------------------------------------
+Ran 8 tests in 4.609s
+
+FAILED (failures=1, skipped=1)

@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
+import platform
 import tempfile
 
 
@@ -27,10 +29,12 @@ with tempfile.TemporaryDirectory() as temp:
 
         if kind == "binary":
             shutil.copy(fake, package / "rfig")
+            target = 'macos-universal' if sys.platform == 'darwin' else 'linux-' + {'arm64':'aarch64','aarch64':'aarch64','x86_64':'x86_64'}[platform.machine()]
+            (package / "TARGET").write_text(target+'\n')
             (package / "SHA256SUMS").write_text(
                 "".join(
                     f"{hashlib.sha256((package / name).read_bytes()).hexdigest()}  {name}\n"
-                    for name in ("rfig", "rfig.zsh")
+                    for name in ("rfig", "rfig.zsh", "TARGET")
                 )
             )
         else:
@@ -53,12 +57,24 @@ with tempfile.TemporaryDirectory() as temp:
             PATH=path,
             RFIG_TEST_BINARY=str(fake),
         )
+        if kind == "binary":
+            (package / "TARGET").write_text('unsupported-other\n')
+            rejected = subprocess.run(["sh", str(package / "install.sh")], env=env, capture_output=True, text=True)
+            assert rejected.returncode != 0 and (package / "rfig").exists()
+            assert not (home / "setup-called").exists()
+            (package / "TARGET").write_text(target+'\n')
+            original = (package / "rfig").read_bytes()
+            (package / "rfig").write_bytes(original+b'\n# corrupted\n')
+            rejected = subprocess.run(["sh", str(package / "install.sh")], env=env, capture_output=True, text=True)
+            assert rejected.returncode != 0 and (package / "rfig").exists()
+            assert not (home / "setup-called").exists()
+            (package / "rfig").write_bytes(original)
         subprocess.run(["sh", str(package / "install.sh")], env=env, check=True)
         if kind == "binary":
             assert not (package / "rfig").exists(), "binary should be moved"
         assert (home / ".local/bin/rfig").is_file()
         assert (home / "setup-called").read_text().strip() == "setup"
-        assert (home / ".config/rfig/rfig.zsh").read_bytes() == (ROOT / "rfig.zsh").read_bytes()
-        assert 'export PATH="$HOME/.local/bin:$PATH"' in (home / ".zshrc").read_text()
+        # setup owns per-shell integration; see multi_shell_setup.py with the real binary.
+        assert not (home / ".zshrc").exists(), "installer must not assume zsh"
 
 print("shared source and archive installer: OK")

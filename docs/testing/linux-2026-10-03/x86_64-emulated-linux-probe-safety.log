@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "/work/tests/docker/linux_probe_safety.py", line 4, in <module>
+    runpy.run_path(str(Path(__file__).resolve().parents[1] / 'linux_sandbox.py'), run_name='__main__')
+  File "<frozen runpy>", line 291, in run_path
+  File "<frozen runpy>", line 98, in _run_module_code
+  File "<frozen runpy>", line 88, in _run_code
+  File "/work/tests/linux_sandbox.py", line 37, in <module>
+    assert result.returncode==0, result.stderr
+           ^^^^^^^^^^^^^^^^^^^^
+AssertionError: rfig: Linux help probing needs Landlock ABI 3+ (Linux 6.2+ with Landlock enabled); existing completion definitions remain available
+

@@ -1,0 +1,9 @@
+rfig is ready. Completion enrichment is running in the background; open a new zsh terminal.
+rfig is ready. Completion enrichment is running in the background; open a new zsh terminal.
+rfig: Linux help probing needs Landlock ABI 3+ (Linux 6.2+ with Landlock enabled); existing completion definitions remain available
+Traceback (most recent call last):
+  File "/work/tests/zsh_integration.py", line 161, in <module>
+    subprocess.run([str(home / ".local/bin/rfig"), "analyze", name], env=setup_env, check=True)
+  File "/usr/lib/python3.11/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/tmp/tmpz9gt1s2t/.local/bin/rfig', 'analyze', 'rfiggenfixture']' returned non-zero exit status 2.

@@ -194,7 +194,8 @@ with tempfile.TemporaryDirectory() as temp:
         brew_rc_dir.mkdir()
         brew_env = dict(os.environ, HOME=brew_temp, ZDOTDIR=str(brew_rc_dir), SHELL="/bin/zsh", PATH=str(brew_bin))
         subprocess.run([str(brew_prefix / "bin/rfig"), "setup"], env=brew_env, check=True)
-        assert (brew_rc_dir / ".zshrc").read_text().strip() == f'source "{brew_prefix / "share/rfig/rfig.zsh"}"'
+        assert (brew_rc_dir / ".zshrc").read_text().strip() == f'source "{brew_home / ".config/rfig/rfig.zsh"}"'
+        assert (brew_home / ".config/rfig/rfig.zsh").read_bytes() == (ROOT / "rfig.zsh").read_bytes()
         assert "brew" in (brew_home / ".config/rfig/commands.txt").read_text().splitlines()
     (home / ".zshrc").write_text(
         f"PROMPT=$'RFIG-TOP\\nRFIG> '\nautoload -Uz compinit; compinit -D\nfpath+=( {late_dir} )\nsource {ROOT / 'rfig.zsh'}\n"
@@ -294,7 +295,7 @@ with tempfile.TemporaryDirectory() as temp:
 
         (home / "hits").unlink(missing_ok=True)
         os.write(fd, b"cd")
-        wait_for(fd, b"src")
+        # Capture the full candidate list; src need not be one of the visible five.
         os.write(fd, b"\x18")
         deadline = time.monotonic() + 5
         while not (home / "hits").exists() and time.monotonic() < deadline:
@@ -527,6 +528,10 @@ with tempfile.TemporaryDirectory() as temp:
         os.kill(pid, signal.SIGKILL)
         os.waitpid(pid, 0)
     for name, cached in (("rfiggenfixture", generated), ("rfigprotocolfixture", protocol)):
+        stale_scripts = [home / f".config/rfig/generated/{name}.{shell}" for shell in ("bash", "fish")]
+        for script in stale_scripts:
+            script.write_text("# obsolete completion\n")
         (home / "bin" / name).write_text("#!/bin/sh\nexit 0\n")
         subprocess.run([str(home / ".local/bin/rfig"), "analyze", name], env=dict(os.environ, HOME=temp, PATH=child_path), check=True)
         assert not cached.exists(), f"stale completion cache for {name}"
+        assert not any(script.exists() for script in stale_scripts), "all shells' stale generators must be removed"

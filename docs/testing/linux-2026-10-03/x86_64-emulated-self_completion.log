@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "/work/tests/self_completion.py", line 33, in <module>
+    subprocess.run([str(BINARY), "analyze", "rfig"], env=env, check=True, capture_output=True, text=True)
+  File "/usr/lib/python3.11/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/work/target/debug/rfig', 'analyze', 'rfig']' returned non-zero exit status 2.

@@ -65,17 +65,20 @@ with tempfile.TemporaryDirectory() as temp:
             resumed = snapshot_current()
             assert "post=ello" in resumed and "buffer=plainfixture h" in resumed, resumed
             call("send-keys", "-t", "compat", "Right")
+            snapshot_current()
             screen = call("capture-pane", "-t", "compat", "-p")
             assert "RFIG> plainfixture hello" in screen, screen
             call("send-keys", "-t", "compat", "C-u")
             menu = snapshot_for("rfigfixture")
             assert "post= beta\n" in menu and "alpha" in menu and "hits=2" in menu, menu
             call("send-keys", "-t", "compat", "Right")
+            snapshot_current()
             screen = call("capture-pane", "-t", "compat", "-p")
             assert "rfigfixture alpha" in screen, screen
             call("send-keys", "-t", "compat", "C-u")
             snapshot_for("rfigfixture")
             call("send-keys", "-t", "compat", "C-e")
+            snapshot_current()
             screen = call("capture-pane", "-t", "compat", "-p")
             assert "RFIG> rfigfixture beta" in screen, screen
             call("send-keys", "-t", "compat", "C-u")

@@ -1,0 +1,22 @@
+PRETTY_NAME="Debian GNU/Linux 13 (trixie)"
+NAME="Debian GNU/Linux"
+VERSION_ID="13"
+VERSION="13 (trixie)"
+VERSION_CODENAME=trixie
+DEBIAN_VERSION_FULL=13.2
+ID=debian
+HOME_URL="https://www.debian.org/"
+SUPPORT_URL="https://www.debian.org/support"
+BUG_REPORT_URL="https://bugs.debian.org/"
+aarch64
+rustc 1.91.1 (ed61e7d7e 2025-11-07)
+GNU bash, version 5.2.37(1)-release (aarch64-unknown-linux-gnu)
+fish, version 4.0.2
+zsh 5.9 (aarch64-unknown-linux-gnu)
+tmux 3.5a
+4
+    PID    PPID STAT COMMAND
+      1       0 Ss   /sbin/docker-init -- sleep infinity
+      7       1 S    sleep infinity
+   8378       0 Ss   sh -c cat /etc/os-release; uname -m; rustc --version; /bin/bash --version | head -1; fish --version; zsh --version; tmux -V; cat /sys/fs/cgroup/pids.current; ps -eo pid,ppid,stat,args
+   8396    8378 R    ps -eo pid,ppid,stat,args

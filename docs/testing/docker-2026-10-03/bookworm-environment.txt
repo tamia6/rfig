@@ -1,0 +1,16 @@
+PRETTY_NAME="Debian GNU/Linux 12 (bookworm)"
+NAME="Debian GNU/Linux"
+VERSION_ID="12"
+VERSION="12 (bookworm)"
+VERSION_CODENAME=bookworm
+ID=debian
+HOME_URL="https://www.debian.org/"
+SUPPORT_URL="https://www.debian.org/support"
+BUG_REPORT_URL="https://bugs.debian.org/"
+aarch64
+rustc 1.91.1 (ed61e7d7e 2025-11-07)
+GNU bash, version 5.2.15(1)-release (aarch64-unknown-linux-gnu)
+GNU bash, version 4.4.0(1)-release (aarch64-unknown-linux-gnu)
+fish, version 3.6.0
+zsh 5.9 (aarch64-unknown-linux-gnu)
+tmux 3.3a
