@@ -11,7 +11,7 @@ typeset -gA _rfig_branch_candidates
 typeset -gA _rfig_usage
 _rfig_usage=()
 typeset -g _rfig_option_source='' _rfig_option_stamp=''
-typeset -gi _rfig_selected=1 _rfig_pulse=0 _rfig_injected=0
+typeset -gi _rfig_selected=1 _rfig_pulse=0 _rfig_injected=0 _rfig_popular_count=0
 
 _rfig_load_usage() {
   local kind context label key weight
@@ -142,6 +142,7 @@ _rfig_render() {
   (( $#_rfig_hits )) || return
   local first=$(( _rfig_selected > 5 ? _rfig_selected - 4 : 1 ))
   local index description row start kind icon color rest record label icon_offset label_offset width
+  local -a popular_icons=( '①' '②' '③' )
   rest=${_rfig_hits[_rfig_selected]#*$'\t'}
   rest=${rest#*$'\t'}
   description=${rest%%$'\t'*}
@@ -157,6 +158,7 @@ _rfig_render() {
       option) icon='◇'; color=blue ;;
       flag) icon='⚑'; color=yellow ;;
     esac
+    (( index <= _rfig_popular_count )) && icon=$popular_icons[index]
     POSTDISPLAY+=$'\n'
     start=$(( ${#BUFFER} + ${#POSTDISPLAY} ))
     icon_offset=2
@@ -203,6 +205,7 @@ _rfig_preview() {
   region_highlight=(${region_highlight:#*memo=rfig})
   _rfig_hits=()
   _rfig_branch_candidates=()
+  _rfig_popular_count=0
   _rfig_injected=0
   [[ -n $BUFFER && $BUFFER != *$'\n'* ]] || return
 
@@ -307,14 +310,18 @@ _rfig_preview() {
       subcommands+=( "$record" )
     fi
   done
-  local context=${original_buffer[1,_rfig_start]}
-  local -a context_words=( ${(z)context} ) ordered
+  local context=${original_buffer[1,_rfig_start]} key
+  local -a context_words=( ${(z)context} )
   context="${(j: :)context_words}"
-  _rfig_rank_group "$context" "${subcommands[@]}"
-  ordered=( "${reply[@]}" )
-  _rfig_rank_group "$context" "${flags[@]}"
-  _rfig_hits=( "${ordered[@]}" "${reply[@]}" )
+  _rfig_rank_group "$context" "${subcommands[@]}" "${flags[@]}"
+  _rfig_hits=( "${reply[@]}" )
   (( $#_rfig_hits )) || return
+  for record in "${_rfig_hits[@]}"; do
+    label=${record%%$'\t'*}
+    key="$context"$'\x1f'"$label"
+    (( ${_rfig_usage[$key]:-0} > 0 )) || break
+    (( ++_rfig_popular_count == 3 )) && break
+  done
   (( _rfig_selected > $#_rfig_hits )) && _rfig_selected=$#_rfig_hits
   _rfig_render
 }
