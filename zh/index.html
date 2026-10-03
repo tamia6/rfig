@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1018">
+  <meta name="description" content="rfig 为 macOS 与 Linux 的 zsh、Bash 与 Fish 带来命令补全菜单与内置历史命令自动建议，无需额外安装 zsh-autosuggestions。支持按目录匹配历史、动态多级候选和使用习惯排序。">
+  <title>rfig — 让终端跟上你的思路</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b1018'/%3E%3Cpath d='m16 19 13 13-13 13M34 45h15' fill='none' stroke='%23b3f2ac' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="canonical" href="https://tamia6.github.io/rfig/zh/">
+  <link rel="alternate" hreflang="zh-CN" href="https://tamia6.github.io/rfig/zh/">
+  <link rel="alternate" hreflang="en" href="https://tamia6.github.io/rfig/">
+  <link rel="alternate" hreflang="x-default" href="https://tamia6.github.io/rfig/">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <header class="header container">
+    <a class="logo" href="#top" aria-label="rfig 首页"><span class="logo-mark">›_</span>rfig<span class="logo-dot">.</span></a>
+    <nav aria-label="主导航"><a href="#features">功能</a><a href="#support">支持范围</a><a href="#how">工作方式</a><a href="#install">安装</a></nav>
+    <div class="header-actions"><a class="language-link" href="../" lang="en" hreflang="en" aria-label="Switch to English">English</a>
+    <a class="github-link" href="https://github.com/tamia6/rfig" target="_blank" rel="noopener noreferrer">GitHub ↗</a></div>
+  </header>
+  <main id="top">
+    <section class="hero container">
+      <div class="hero-copy">
+        <p class="badge"><span class="signal"></span> zsh · Bash · Fish</p>
+        <h1>让终端<br><em>跟上你的思路。</em></h1>
+        <p class="hero-desc">输入时查看候选，用右箭头插入下一步。菜单与按目录匹配的历史命令自动建议同时显示，无需另外安装 zsh-autosuggestions 类命令自动建议插件。</p>
+        <div class="actions"><a class="primary" href="#install">开始使用 <span>↗</span></a><a class="secondary" href="#demo">看看实际效果 ↓</a></div>
+        <p class="source-note">v0.2.0 支持 zsh、Bash 4.4+、Fish 3.6+。<a href="#support">查看支持范围与系统要求 ↗</a></p>
+        <div class="hero-facts"><span><b>01</b> 输入即显示</span><span><b>02</b> 动态多级补全</span><span><b>03</b> 尊重本机环境</span></div>
+      </div>
+      <div class="hero-art" aria-label="rfig 补全菜单示意">
+        <div class="orbit-field" aria-hidden="true"><div class="orbit orbit-a"></div><div class="orbit orbit-b"></div></div>
+        <div class="terminal">
+          <div class="terminal-bar"><span class="lights"><i></i><i></i><i></i></span><span>rfig — zsh</span><span>⌘</span></div>
+          <div class="terminal-body">
+            <div><span class="prompt">❯</span> git checkout<span class="cursor"></span></div>
+            <div class="terminal-row active"><span>→</span><span class="branch-icon">①</span><strong>feature/ui-refresh</strong></div>
+            <div class="terminal-row"><span></span><span class="branch-icon">●</span><span>main</span></div>
+            <div class="terminal-row"><span></span><span class="branch-icon">●</span><span>release/0.1</span></div>
+            <div class="terminal-hint">↑ ↓ 选择　·　→ 插入　·　Enter 执行</div>
+          </div>
+        </div>
+        <div class="float-tag"><b>↳</b> 多一级，也一样顺手</div>
+      </div>
+    </section>
+    <section class="demo container" id="demo">
+      <div class="section-head"><div><p class="eyebrow">LIVE IN YOUR TERMINAL</p><h2>补全，应该就在光标旁边。</h2></div><p>无需切换窗口，也无需记住所有子命令。选中候选后继续输入，下一层自然出现。</p></div>
+      <div class="demo-frame"><div class="demo-bar"><span class="lights"><i></i><i></i><i></i></span><span>真实终端演示</span><span>rfig / zsh</span></div><img src="../rfig-demo.gif" width="960" height="376" alt="rfig 在 zsh 中演示命令与路径补全，以及历史命令自动建议的显示、接受和执行" loading="lazy"></div>
+      <p class="under-note">↗ 输入 gi，菜单按实际输入显示候选，历史命令自动建议以内联灰色文本显示。Ctrl+E 接受建议，Enter 执行完整建议。</p>
+    </section>
+    <section class="features container" id="features">
+      <div class="section-head"><div><p class="eyebrow">BUILT FOR FLOW</p><h2>少一点打断，<br>多一点专注。</h2></div><p>把熟悉的终端留给你，把繁琐的记忆工作交给 rfig。</p></div>
+      <div class="feature-grid">
+        <article class="feature-card big">
+          <span class="card-index">01 / 直接出现</span>
+          <div class="mini-demo" aria-hidden="true"><span class="prompt">❯</span> brew services <span class="mini-cursor"></span><div class="mini-list"><div>→ <b>↳</b> <strong>start</strong></div><div>　<b>↳</b> stop</div><div>　<b>↳</b> list</div></div></div>
+          <h3>补全菜单与自动建议，同时呈现。</h3><p>菜单根据实际输入提示候选，历史命令自动建议（History-based Autosuggestions）根据当前目录的历史匹配完整命令，以内联灰色文本显示。方向键浏览菜单，右箭头插入；Ctrl+E 接受自动建议，Enter 在有自动建议时执行完整建议，否则执行当前输入。</p>
+        </article>
+        <article class="feature-card"><span class="card-index">02 / 跟着环境走</span><div class="feature-symbol">{<span>git</span>}</div><h3>动态，不靠死表。</h3><p>优先使用当前 Shell 的补全定义，再结合可用脚本、协议和帮助缓存。分支、路径等候选随环境变化，多级能力取决于补全来源。</p></article>
+        <article class="feature-card"><span class="card-index">03 / 越用越顺手</span><div class="rank-example">① 常用候选　 ② 第二选择　 ↳ 其他命令</div><h3>习惯决定排序。</h3><p>按命令上下文累计选择与执行记录。常用候选靠前，最多前三项标记圈号，其他候选仍可浏览；数据保存在本机。</p></article>
+      </div>
+      <p class="under-note">输入 <code>gi</code> 时，即使自动建议给出完整的 <code>git checkout master</code>，菜单也只按 <code>gi</code> 提示。颜色使用终端的 ANSI 调色板，选中项由箭头与文字颜色标识。</p>
+    </section>
+    <section class="support container" id="support" aria-labelledby="support-title">
+      <div class="section-head"><div><p class="eyebrow">KNOW WHAT WORKS</p><h2 id="support-title">选你熟悉的 Shell。</h2></div><p>v0.2.0 支持以下 Shell，可按需分别启用。</p></div>
+      <div class="support-table-wrap">
+        <table class="support-table">
+          <caption>当前源码的 Shell 支持范围。</caption>
+          <thead><tr><th scope="col">功能</th><th scope="col">zsh</th><th scope="col">Bash 4.4+</th><th scope="col">Fish 3.6+</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">自动菜单与多级候选</th><td>✅ 已支持</td><td>✅ 已支持</td><td>✅ 已支持</td></tr>
+            <tr><th scope="row">按目录匹配的自动建议</th><td>✅ 已支持</td><td>✅ 已支持</td><td>✅ 已支持</td></tr>
+            <tr><th scope="row">常用排序、类别配色</th><td>✅ 已支持</td><td>✅ 已支持</td><td>✅ 已支持</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="support-notes">
+        <article><h3>macOS 与 Linux</h3><p>当前源码支持 Linux x86_64 / ARM64。帮助探测使用 Landlock + seccomp，需启用 Landlock ABI 3+（通常为 Linux 6.2+）；不满足时保留现有补全和历史。Linux 安装包提供 x86_64 与 ARM64 两种架构，可从 Releases 下载。</p></article>
+        <article><h3>按需启用多个 Shell</h3><p>使用 <code>rfig setup --shell zsh</code> 配置 zsh；将 Shell 名称换为 <code>bash</code> 或 <code>fish</code> 即可分别启用。配置完成后打开新会话，rfig 不会修改默认 Shell。</p></article>
+      </div>
+    </section>
+    <section class="how container" id="how"><div><p class="eyebrow">HOW IT WORKS</p><h2>从安装到顺手，<br>只差一次设置。</h2><p>安装时扫描当前 PATH 中的可执行命令与常见补全目录。macOS/Linux 在可用沙箱中串行分析缺少规则的部分用户命令；动态候选仍按需查询。</p></div><div class="steps"><div><span>01</span><strong>安装 rfig</strong><p>选择 Homebrew、预编译包或源码安装。</p></div><div><span>02</span><strong>运行 setup</strong><p>按 $SHELL 或 --shell 指定的类型写入集成；可用沙箱中后台继续优化，可重复设置。</p></div><div><span>03</span><strong>打开新终端</strong><p>有可用补全来源时，候选出现在输入下方；历史从使用时开始按目录记录。</p></div></div></section>
+    <section class="install" id="install"><div class="container install-inner"><div><p class="eyebrow">GET STARTED</p><h2>现在，打开你的终端。</h2><p>macOS 与 Linux 均可从源码安装。Linux 安装包按 x86_64 / ARM64 区分，要求 glibc 2.36+。Homebrew 和下载包以发布版本为准。macOS 自带 Bash 3.2 不支持。</p></div><div class="install-card"><div class="tabs" role="tablist" aria-label="安装方式"><button type="button" role="tab" aria-selected="true" class="selected" data-method="brew">Homebrew</button><button type="button" role="tab" aria-selected="false" data-method="binary">下载二进制</button><button type="button" role="tab" aria-selected="false" data-method="source">从源码</button></div><div class="code-box"><small>在终端运行</small><pre><code id="install-code">brew install tamia6/tap/rfig
+rfig setup</code></pre><button id="copy" type="button">复制命令</button></div><p id="install-caption">安装 Tap 发布版本，setup 默认按 $SHELL 配置；随后打开对应 Shell 的新会话。</p></div></div></section>
+    <section class="faq container" aria-labelledby="faq-title">
+      <div class="section-head"><div><p class="eyebrow">A FEW DETAILS</p><h2 id="faq-title">开始之前，你可能想知道。</h2></div></div>
+      <details><summary>还需要安装 zsh-autosuggestions 吗？</summary><p>不需要。rfig 内置历史命令自动建议，可替代它的历史命令自动建议功能。请从 .zshrc 或插件管理器中移除旧插件的加载配置，再开启新会话。Fish 集成也会关闭原生命令自动建议，使用 rfig 的目录历史。</p></details>
+      <details><summary>会导入旧历史、扫描整台电脑吗？</summary><p>不会自动导入缺少目录信息的旧 Shell 历史。命令扫描以当前 PATH 与常见补全目录为范围，不会遍历整块磁盘。历史、选择记录与缓存保存在 ~/.config/rfig/。</p></details>
+      <details><summary>菜单与自动建议同时出现，Enter 会执行什么？</summary><p>有自动建议时，Enter 执行完整建议；没有自动建议时，执行实际输入，不会接受高亮菜单项。光标在行尾时，右箭头优先插入菜单选中项，Ctrl+E 接受自动建议而不执行。</p></details>
+      <details><summary>为什么有些命令没有候选？</summary><p>命令可能没有可用补全定义，或后台分析尚未完成、被跳过或失败。可查看 ~/.config/rfig/enrich.status；done 只表示处理结束，不代表每个命令都成功。可用 rfig analyze &lt;命令名&gt; 单独刷新。Linux 若缺少 Landlock 或被容器限制，会明确提示无法探测，不会退回无隔离执行。</p></details>
+      <details><summary>怎样启用另一个 Shell？</summary><p>当前源码支持分别运行 rfig setup --shell zsh、rfig setup --shell bash 或 rfig setup --shell fish，再打开对应 Shell 的新会话。设置不会改变你的默认 Shell，各 Shell 的候选可能不同。</p></details>
+    </section>
+  </main>
+  <footer class="footer container"><div><a class="logo" href="#top"><span class="logo-mark">›_</span>rfig<span class="logo-dot">.</span></a><p>把下一步，留在光标旁。</p></div><div class="footer-links"><a href="https://github.com/tamia6/rfig" target="_blank" rel="noopener noreferrer">GitHub ↗</a><a href="https://github.com/tamia6/rfig/releases/latest" target="_blank" rel="noopener noreferrer">最新版本 ↗</a><a href="https://github.com/tamia6/rfig/blob/main/README.zh-CN.md" target="_blank" rel="noopener noreferrer">文档 ↗</a></div><small>Built for the terminal. Made for the flow.</small></footer>
+  <script>
+    const methods = {
+      brew: ['brew install tamia6/tap/rfig\nrfig setup', '安装 Tap 发布版本，setup 默认按 $SHELL 配置；随后打开对应 Shell 的新会话。'],
+      binary: ['sh install.sh', '从页尾 GitHub Releases 选择与系统和 CPU 匹配的包，在任意目录解压，进入含 install.sh 的目录执行。无需 Rust。'],
+      source: ['sh install.sh --shell zsh\n# 也可将 zsh 替换为 bash 或 fish', '在当前源码目录运行，需要 Rust 和 Cargo；自动编译、安装并配置所选 Shell。']
+    };
+    const code = document.getElementById('install-code');
+    const caption = document.getElementById('install-caption');
+    const copy = document.getElementById('copy');
+    document.querySelectorAll('[data-method]').forEach(tab => tab.addEventListener('click', () => {
+      document.querySelectorAll('[data-method]').forEach(item => { item.classList.remove('selected'); item.setAttribute('aria-selected', 'false'); });
+      tab.classList.add('selected'); tab.setAttribute('aria-selected', 'true');
+      [code.textContent, caption.textContent] = methods[tab.dataset.method];
+      copy.textContent = '复制命令';
+    }));
+    copy.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(code.textContent); copy.textContent = '已复制 ✓'; }
+      catch { copy.textContent = '请手动复制'; }
+      setTimeout(() => copy.textContent = '复制命令', 1800);
+    });
+  </script>
+</body>
+</html>

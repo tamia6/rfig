@@ -17,3 +17,8 @@
 .faq{padding:80px 0}.faq details{border-top:1px solid var(--line);padding:20px 0}.faq details:last-child{border-bottom:1px solid var(--line)}.faq summary{cursor:pointer;font-weight:500;font-size:17px}.faq details p{max-width:800px;color:var(--muted);margin:14px 0 0;font-size:14px;overflow-wrap:anywhere}a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--cyan);outline-offset:5px}
 @media(max-width:820px){.support-notes{grid-template-columns:1fr;gap:24px}}@media(max-width:520px){.support{padding:55px 0 70px}.support-table{font-size:12px}.support-table th,.support-table td{padding:12px 9px}.support-table caption{padding:14px 12px;font-size:12px}.support-table th:first-child{width:32%}.support-table thead th{white-space:nowrap}.faq{padding:60px 0}.faq summary{font-size:16px}}
 .orbit-field{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden;pointer-events:none}
+
+/* Language navigation and English copy share the existing layout. */
+.header-actions{display:flex;align-items:center;gap:18px;flex-shrink:0}.language-link{font-size:13px;color:var(--muted);text-decoration:underline;text-underline-offset:4px}
+html[lang="en"] h1{font-size:clamp(48px,5.6vw,76px);letter-spacing:-.065em}html[lang="en"] .section-head>div{min-width:0}html[lang="en"] .section-head h2{max-width:650px}html[lang="en"] .support-table-wrap{overflow-x:auto}html[lang="en"] .support-table{min-width:480px}
+@media(max-width:1050px){.header nav{gap:22px}}@media(max-width:520px){.header-actions{gap:12px}html[lang="en"] h1{font-size:clamp(40px,10.5vw,56px)}}
