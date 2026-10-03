@@ -114,7 +114,7 @@ _rfig_rank_group() {
 
 _rfig_compadd() {
   local -a hits descriptions
-  local item index kind
+  local item insert index kind
   for item in "$@"; do
     if [[ $item == -A || $item == -D || $item == -O ]]; then
       builtin compadd "$@"
@@ -123,7 +123,10 @@ _rfig_compadd() {
   done
   builtin compadd -A hits -D descriptions "$@"
   for (( index = 1; index <= $#hits; index++ )); do
-    item=$hits[index]
+    # -A returns the shell-ready insertion, including quoting applied by zsh.
+    # Keep it intact; quoting it again inserts literal backslashes into arguments.
+    insert=$hits[index]
+    item=${(Q)insert}
     [[ -n $item && $item != *$'\n'* && $item != *$'\t'* ]] || continue
     if [[ ${curtag-} == *branch* || ${curtag-} == heads* || ${curtag-} == *-heads* ]]; then
       _rfig_branch_candidates[$item]=1
@@ -141,7 +144,7 @@ _rfig_compadd() {
     else
       kind=argument
     fi
-    _rfig_hits+=( "$item"$'\t'"${(q)item}"$'\t'"${descriptions[index]//$'\n'/ }"$'\t'"$kind" )
+    _rfig_hits+=( "$item"$'\t'"$insert"$'\t'"${descriptions[index]//$'\n'/ }"$'\t'"$kind" )
   done
   builtin compadd "$@"
 }

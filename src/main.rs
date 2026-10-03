@@ -1,3 +1,7 @@
+mod editor;
+mod engine;
+mod sandbox;
+use libc::{flock, kill, setrlimit, setsid};
 use std::{
     collections::{HashMap, HashSet},
     env, fs,
@@ -20,17 +24,18 @@ use crossterm::{
 };
 use unicode_width::UnicodeWidthChar;
 
-unsafe extern "C" {
-    fn flock(fd: i32, operation: i32) -> i32;
-    fn setsid() -> i32;
-    fn kill(pid: i32, signal: i32) -> i32;
-    fn setrlimit(resource: i32, limit: *const ResourceLimit) -> i32;
-}
-
-#[repr(C)]
-struct ResourceLimit {
-    current: u64,
-    maximum: u64,
+static COMPLETION_CANCELLED: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+static COMPLETION_CHILD: std::sync::atomic::AtomicI32 = std::sync::atomic::AtomicI32::new(0);
+fn cancel_completion() {
+    use std::sync::atomic::Ordering;
+    COMPLETION_CANCELLED.store(true, Ordering::SeqCst);
+    let pid = COMPLETION_CHILD.load(Ordering::SeqCst);
+    if pid > 0 {
+        unsafe {
+            kill(-pid, 9);
+        }
+    }
 }
 
 const GIT: &[(&str, &str)] = &[
@@ -58,13 +63,13 @@ const GIT: &[(&str, &str)] = &[
 
 const HELP: &str = "Usage: rfig <command> [arguments]
 
-Inline command completion for zsh. Suggestions appear as you type.
+Inline command completion and history suggestions for zsh, Bash and Fish. Suggestions appear as you type.
 
 Commands:
-  setup                 Scan commands, install zsh integration, and enrich in the background
+  setup [--shell SHELL]  Scan commands, install shell integration, and enrich in the background
   init                  Refresh the local command catalog
   analyze <command>     Refresh completion data for one command
-  completion zsh        Print the zsh completion definition for rfig
+  completion <shell>    Print completion definitions (zsh, bash, fish)
 
 Options:
   -h, --help            Show this help
@@ -86,7 +91,9 @@ _rfig() {
     available=(${(f)"$(<"$file")"})
     compadd -- "${available[@]}"
   elif (( CURRENT == 3 )) && [[ $words[2] == completion ]]; then
-    compadd -- zsh
+    compadd -- zsh bash fish
+  elif [[ $words[2] == setup ]]; then
+    if (( CURRENT == 3 )); then compadd -- --shell; else compadd -- zsh bash fish; fi
   fi
 }
 compdef _rfig rfig
@@ -231,40 +238,27 @@ fn initialize_catalog() -> io::Result<()> {
     fs::write(directory.join("supported.txt"), supported.join("\n") + "\n")
 }
 
-fn setup() -> io::Result<()> {
-    let shell = env::var_os("SHELL").unwrap_or_default();
-    if Path::new(&shell)
-        .file_name()
-        .is_none_or(|name| name != "zsh")
-    {
-        return Err(io::Error::new(
-            io::ErrorKind::Unsupported,
-            "rfig setup currently requires zsh as the default shell",
-        ));
-    }
+fn setup(requested: Option<&str>) -> io::Result<()> {
+    let default_shell = env::var("SHELL").unwrap_or_default();
+    let shell = requested.unwrap_or_else(|| default_shell.rsplit('/').next().unwrap_or(""));
+    let contents = match shell {
+        "zsh" => include_str!("../rfig.zsh"),
+        "bash" => include_str!("../rfig.bash"),
+        "fish" => include_str!("../rfig.fish"),
+        _ => {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "choose a supported shell: rfig setup --shell zsh|bash|fish",
+            ))
+        }
+    };
     let home = PathBuf::from(
         env::var_os("HOME")
             .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "HOME is not set"))?,
     );
-    let local_script = home.join(".config/rfig/rfig.zsh");
-    let executable = env::current_exe()?;
-    let bundled_script = executable
-        .parent()
-        .and_then(Path::parent)
-        .map(|prefix| prefix.join("share/rfig/rfig.zsh"));
-    let script = if executable.starts_with(home.join(".local/bin")) && local_script.is_file() {
-        local_script.clone()
-    } else {
-        bundled_script
-            .filter(|path| path.is_file())
-            .unwrap_or_else(|| local_script.clone())
-    };
-    if !script.is_file() {
-        return Err(io::Error::new(
-            io::ErrorKind::NotFound,
-            format!("shell integration not found: {}", script.display()),
-        ));
-    }
+    let script = home.join(format!(".config/rfig/rfig.{shell}"));
+    fs::create_dir_all(script.parent().unwrap())?;
+    fs::write(&script, contents)?;
     initialize_catalog()?;
     let source = format!(
         "source \"{}\"",
@@ -276,19 +270,88 @@ fn setup() -> io::Result<()> {
             .replace('$', "\\$")
             .replace('`', "\\`")
     );
-    let rc = PathBuf::from(env::var_os("ZDOTDIR").unwrap_or_else(|| home.clone().into_os_string()))
-        .join(".zshrc");
-    let existing = fs::read_to_string(&rc).unwrap_or_default();
-    let old_source = "source \"$HOME/.config/rfig/rfig.zsh\"";
+    let rc = match shell {
+        "zsh" => {
+            PathBuf::from(env::var_os("ZDOTDIR").unwrap_or_else(|| home.clone().into_os_string()))
+                .join(".zshrc")
+        }
+        "bash" => home.join(".bashrc"),
+        _ => PathBuf::from(
+            env::var_os("XDG_CONFIG_HOME").unwrap_or_else(|| home.join(".config").into_os_string()),
+        )
+        .join("fish/conf.d/rfig.fish"),
+    };
+    fs::create_dir_all(rc.parent().unwrap())?;
+    let mut existing = fs::read_to_string(&rc).unwrap_or_default();
+    let legacy_suffix = format!("/share/rfig/rfig.{shell}\"");
+    if existing
+        .lines()
+        .any(|line| line.starts_with("source \"") && line.ends_with(&legacy_suffix))
+    {
+        let migrated = existing
+            .lines()
+            .map(|line| {
+                if line.starts_with("source \"") && line.ends_with(&legacy_suffix) {
+                    source.as_str()
+                } else {
+                    line
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+            + "\n";
+        fs::write(&rc, &migrated)?;
+        existing = migrated;
+    }
+    let bin_directory = home.join(".local/bin");
+    // setup can be invoked by the installer with a temporary PATH; persist the user bin path.
+    let path_line = if shell == "fish" {
+        "fish_add_path --global $HOME/.local/bin"
+    } else {
+        "export PATH=\"$HOME/.local/bin:$PATH\""
+    };
+    if bin_directory.is_dir() && !existing.lines().any(|line| line == path_line) {
+        let mut file = fs::OpenOptions::new().create(true).append(true).open(&rc)?;
+        writeln!(file, "\n{path_line}")?;
+    }
+    let old_source = format!("source \"$HOME/.config/rfig/rfig.{shell}\"");
     if !existing
         .lines()
-        .any(|line| line == source || (script == local_script && line == old_source))
+        .any(|line| line == source || line == old_source)
     {
         let mut file = fs::OpenOptions::new().create(true).append(true).open(&rc)?;
         if !existing.is_empty() && !existing.ends_with('\n') {
             writeln!(file)?;
         }
         writeln!(file, "{source}")?;
+    }
+    // Login Bash reads the first existing profile, not .bashrc automatically.
+    if shell == "bash" {
+        let profile = [".bash_profile", ".bash_login", ".profile"]
+            .iter()
+            .map(|name| home.join(name))
+            .find(|path| path.is_file())
+            .unwrap_or_else(|| home.join(".bash_profile"));
+        let text = fs::read_to_string(&profile).unwrap_or_default();
+        if !text.contains(".bashrc") {
+            let mut file = fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(profile)?;
+            writeln!(
+                file,
+                "\n[ -n \"$BASH_VERSION\" ] && [ -r \"$HOME/.bashrc\" ] && . \"$HOME/.bashrc\""
+            )?;
+        }
+    }
+    if let Err(error) = sandbox::check() {
+        fs::write(
+            home.join(".config/rfig/enrich.status"),
+            format!("unavailable\n{error}\n"),
+        )?;
+        eprintln!("rfig: background help enrichment unavailable: {error}");
+        println!("rfig integration is ready; open a new {shell} terminal. Existing completion definitions and history remain available.");
+        return Ok(());
     }
     let mut worker = Command::new(env::current_exe()?);
     worker
@@ -306,7 +369,7 @@ fn setup() -> io::Result<()> {
         });
     }
     worker.spawn()?;
-    println!("rfig is ready. Completion enrichment is running in the background; open a new zsh terminal.");
+    println!("rfig is ready. Completion enrichment is running in the background; open a new {shell} terminal.");
     Ok(())
 }
 
@@ -428,15 +491,24 @@ fn help_output(
     scratch: &Path,
     background_safe: bool,
 ) -> io::Result<String> {
+    help_output_status(name, args, scratch, background_safe).map(|(output, _)| output)
+}
+
+fn help_output_status(
+    name: &str,
+    args: &[&str],
+    scratch: &Path,
+    background_safe: bool,
+) -> io::Result<(String, bool)> {
+    if COMPLETION_CANCELLED.load(std::sync::atomic::Ordering::SeqCst) {
+        return Err(io::Error::new(
+            io::ErrorKind::Interrupted,
+            "completion cancelled",
+        ));
+    }
     let output = fs::File::create(scratch)?;
     let mut command = if background_safe {
-        let mut sandbox = Command::new("/usr/bin/sandbox-exec");
-        sandbox.args([
-            "-p",
-            "(version 1) (allow default) (deny file-write*) (deny network*)",
-            name,
-        ]);
-        sandbox
+        sandbox::command(name)
     } else {
         Command::new(name)
     };
@@ -450,44 +522,64 @@ fn help_output(
         .stderr(Stdio::from(output));
     unsafe {
         command.pre_exec(|| {
-            let file = ResourceLimit {
-                current: 512 * 1024,
-                maximum: 512 * 1024,
+            let file = libc::rlimit {
+                rlim_cur: 512 * 1024,
+                rlim_max: 512 * 1024,
             };
-            let cpu = ResourceLimit {
-                current: 2,
-                maximum: 2,
+            let cpu = libc::rlimit {
+                rlim_cur: 2,
+                rlim_max: 2,
             };
-            if setsid() < 0 || setrlimit(1, &file) < 0 || setrlimit(0, &cpu) < 0 {
+            if setsid() < 0
+                || setrlimit(libc::RLIMIT_FSIZE, &file) < 0
+                || setrlimit(libc::RLIMIT_CPU, &cpu) < 0
+            {
                 Err(io::Error::last_os_error())
             } else {
                 Ok(())
             }
         });
     }
+    if background_safe {
+        sandbox::protect(&mut command)?;
+    }
     let mut child = command.spawn()?;
+    COMPLETION_CHILD.store(child.id() as i32, std::sync::atomic::Ordering::SeqCst);
     let deadline = Instant::now() + Duration::from_millis(500);
-    loop {
-        if child.try_wait()?.is_some() {
+    let success = loop {
+        if COMPLETION_CANCELLED.load(std::sync::atomic::Ordering::SeqCst) {
             unsafe {
                 kill(-(child.id() as i32), 9);
             }
-            break;
+            let _ = child.wait();
+            COMPLETION_CHILD.store(0, std::sync::atomic::Ordering::SeqCst);
+            return Err(io::Error::new(
+                io::ErrorKind::Interrupted,
+                "completion cancelled",
+            ));
+        }
+        if let Some(status) = child.try_wait()? {
+            unsafe {
+                kill(-(child.id() as i32), 9);
+            }
+            COMPLETION_CHILD.store(0, std::sync::atomic::Ordering::SeqCst);
+            break status.success();
         }
         if Instant::now() >= deadline {
             unsafe {
                 kill(-(child.id() as i32), 9);
             }
             let _ = child.wait();
+            COMPLETION_CHILD.store(0, std::sync::atomic::Ordering::SeqCst);
             return Err(io::Error::new(io::ErrorKind::TimedOut, "help timed out"));
         }
         thread::sleep(Duration::from_millis(10));
-    }
+    };
     let mut bytes = Vec::new();
     fs::File::open(scratch)?
         .take(256 * 1024)
         .read_to_end(&mut bytes)?;
-    Ok(String::from_utf8_lossy(&bytes).into_owned())
+    Ok((String::from_utf8_lossy(&bytes).into_owned(), success))
 }
 
 fn safe_command_name(name: &str) -> bool {
@@ -515,56 +607,81 @@ fn cache_generated_completion(name: &str, help: &str, directory: &Path, scratch:
     if !safe_command_name(name) {
         return false;
     }
-    for generator in ["completion", "completions", "generate-completion"] {
-        let advertised = help.lines().any(|line| {
-            line.starts_with(char::is_whitespace)
-                && line
-                    .trim_start()
-                    .strip_prefix(generator)
-                    .is_some_and(|rest| {
-                        rest.starts_with(char::is_whitespace) || rest.starts_with(':')
-                    })
-        });
-        if !advertised {
+    let mut found = false;
+    for shell in ["zsh", "bash", "fish"] {
+        let mut shell_found = false;
+        let Some(interpreter) = std::iter::once(PathBuf::from(format!("/bin/{shell}")))
+            .chain(
+                env::split_paths(&env::var_os("PATH").unwrap_or_default()).map(|p| p.join(shell)),
+            )
+            .find(|p| p.is_file())
+        else {
             continue;
+        };
+        'generators: for generator in ["completion", "completions", "generate-completion"] {
+            let advertised = help.lines().any(|line| {
+                line.starts_with(char::is_whitespace)
+                    && line
+                        .trim_start()
+                        .strip_prefix(generator)
+                        .is_some_and(|rest| {
+                            rest.starts_with(char::is_whitespace) || rest.starts_with(':')
+                        })
+            });
+            if !advertised {
+                continue;
+            }
+            let joined = format!("--shell={shell}");
+            for arguments in [
+                vec![generator, shell],
+                vec![generator, "-s", shell],
+                vec![generator, "--shell", shell],
+                vec![generator, &joined],
+            ] {
+                let Ok(script) = help_output(name, &arguments, scratch, true) else {
+                    continue;
+                };
+                let recognizable = match shell {
+                    "zsh" => {
+                        script
+                            .lines()
+                            .next()
+                            .is_some_and(|l| l.starts_with("#compdef "))
+                            && script.contains("compdef ")
+                    }
+                    "bash" => script.contains("complete "),
+                    _ => script.contains("complete "),
+                };
+                if !recognizable || !script.contains(name) {
+                    continue;
+                }
+                if fs::create_dir_all(directory).is_err() {
+                    return found;
+                }
+                let temporary = directory.join(format!(".{name}-{shell}-{}", std::process::id()));
+                let valid = fs::write(&temporary, script).is_ok()
+                    && help_output_status(
+                        &interpreter.to_string_lossy(),
+                        &["-n", &temporary.to_string_lossy()],
+                        scratch,
+                        true,
+                    )
+                    .is_ok_and(|(_, success)| success);
+                if valid
+                    && fs::rename(&temporary, directory.join(format!("{name}.{shell}"))).is_ok()
+                {
+                    found = true;
+                    shell_found = true;
+                    break 'generators;
+                }
+                let _ = fs::remove_file(temporary);
+            }
         }
-        for arguments in [
-            vec![generator, "zsh"],
-            vec![generator, "-s", "zsh"],
-            vec![generator, "--shell", "zsh"],
-            vec![generator, "--shell=zsh"],
-        ] {
-            let Ok(script) = help_output(name, &arguments, scratch, true) else {
-                continue;
-            };
-            if !script
-                .lines()
-                .next()
-                .is_some_and(|line| line.starts_with("#compdef "))
-                || !script.contains("compdef ")
-                || !script.contains(&format!(" {name}"))
-            {
-                continue;
-            }
-            if fs::create_dir_all(directory).is_err() {
-                return false;
-            }
-            let temporary = directory.join(format!(".{name}-{}", std::process::id()));
-            let valid = fs::write(&temporary, script).is_ok()
-                && Command::new("/bin/zsh")
-                    .arg("-n")
-                    .arg(&temporary)
-                    .stdout(Stdio::null())
-                    .stderr(Stdio::null())
-                    .status()
-                    .is_ok_and(|status| status.success());
-            if valid && fs::rename(&temporary, directory.join(format!("{name}.zsh"))).is_ok() {
-                return true;
-            }
-            let _ = fs::remove_file(temporary);
+        if !shell_found {
+            let _ = fs::remove_file(directory.join(format!("{name}.{shell}")));
         }
     }
-    false
+    found
 }
 
 fn cache_completion_protocol(name: &str, help: &str, directory: &Path, scratch: &Path) -> bool {
@@ -631,13 +748,17 @@ fn analyze_command(name: &str, directory: &Path) -> io::Result<usize> {
     if !got_help || (kinds.is_empty() && parse_help_subcommands(name, &help).is_empty()) {
         let _ = fs::remove_file(&scratch);
         if !got_help {
-            return Err(io::Error::new(io::ErrorKind::TimedOut, "help unavailable"));
+            return Err(first_help
+                .err()
+                .unwrap_or_else(|| io::Error::new(io::ErrorKind::Other, "help unavailable")));
         }
         let config = directory.parent().unwrap();
         for stale in [
             directory.join(format!("{name}.tsv")),
             config.join("fallback").join(format!("{name}.tsv")),
             config.join("generated").join(format!("{name}.zsh")),
+            config.join("generated").join(format!("{name}.bash")),
+            config.join("generated").join(format!("{name}.fish")),
             config.join("protocol").join(name),
         ] {
             let _ = fs::remove_file(stale);
@@ -648,7 +769,9 @@ fn analyze_command(name: &str, directory: &Path) -> io::Result<usize> {
     }
     let config = directory.parent().unwrap();
     if !cache_generated_completion(name, &help, &config.join("generated"), &scratch) && got_help {
-        let _ = fs::remove_file(config.join("generated").join(format!("{name}.zsh")));
+        for shell in ["zsh", "bash", "fish"] {
+            let _ = fs::remove_file(config.join("generated").join(format!("{name}.{shell}")));
+        }
     }
     if !cache_completion_protocol(name, &help, &config.join("protocol"), &scratch) && got_help {
         let _ = fs::remove_file(config.join("protocol").join(name));
@@ -711,7 +834,18 @@ fn enrich_background() -> io::Result<()> {
     if unsafe { flock(lock.as_raw_fd(), 2 | 4) } != 0 {
         return Ok(());
     }
+    if let Err(error) = sandbox::check() {
+        fs::write(
+            config.join("enrich.status"),
+            format!("unavailable\n{error}\n"),
+        )?;
+        return Err(error);
+    }
     let commands = fs::read_to_string(config.join("commands.txt"))?;
+    let rules_modified = env::current_exe()
+        .ok()
+        .and_then(|p| fs::metadata(p).ok())
+        .and_then(|m| m.modified().ok());
     let supported: HashSet<String> = fs::read_to_string(config.join("supported.txt"))
         .unwrap_or_default()
         .lines()
@@ -761,7 +895,10 @@ fn enrich_background() -> io::Result<()> {
         if fs::metadata(&cached)
             .ok()
             .zip(fs::metadata(&path).ok())
-            .is_some_and(|(cache, binary)| cache.modified().ok() >= binary.modified().ok())
+            .is_some_and(|(cache, binary)| {
+                cache.modified().ok() >= binary.modified().ok()
+                    && cache.modified().ok() >= rules_modified
+            })
         {
             skipped += 1;
             continue;
@@ -810,12 +947,11 @@ fn external_completion(name: &str, line: &str) -> io::Result<Option<String>> {
         .as_deref()
         == Some("cobra\n")
     {
-        let arguments: Vec<_> = line.split_whitespace().skip(1).collect();
+        let context = engine::context(line);
+        let mut words = context.words;
+        words.push(context.prefix);
         let mut args = vec!["__complete"];
-        args.extend(arguments);
-        if line.ends_with(' ') || line == name {
-            args.push("");
-        }
+        args.extend(words.iter().skip(1).map(String::as_str));
         let result = help_output(name, &args, &scratch, false);
         let _ = fs::remove_file(&scratch);
         if let Ok(output) = result {
@@ -1252,19 +1388,32 @@ fn run() -> io::Result<i32> {
                 print!("{HELP}");
                 return Ok(0);
             }
-            if shell.as_deref() != Some("zsh") {
-                eprintln!("usage: rfig completion zsh");
-                return Ok(2);
+            match shell.as_deref() {
+                Some("zsh") => print!("{ZSH_COMPLETION}"),
+                Some("bash") => print!("{}", include_str!("../shell/rfig-completion.bash")),
+                Some("fish") => print!("{}", include_str!("../shell/rfig-completion.fish")),
+                _ => {
+                    eprintln!("usage: rfig completion zsh|bash|fish");
+                    return Ok(2);
+                }
             }
-            print!("{ZSH_COMPLETION}");
             return Ok(0);
         }
         Some("setup") => {
-            if matches!(args.next().as_deref(), Some("-h" | "--help")) {
+            let options: Vec<_> = args.collect();
+            if options.iter().any(|s| s == "-h" || s == "--help") {
                 print!("{HELP}");
                 return Ok(0);
             }
-            setup()?;
+            let shell = match options.as_slice() {
+                [] => None,
+                [flag, shell] if flag == "--shell" => Some(shell.as_str()),
+                _ => {
+                    eprintln!("usage: rfig setup [--shell zsh|bash|fish]");
+                    return Ok(2);
+                }
+            };
+            setup(shell)?;
             return Ok(0);
         }
         Some("init") => {
@@ -1307,6 +1456,56 @@ fn run() -> io::Result<i32> {
                     }
                 }
             }
+            return Ok(0);
+        }
+        Some("remember") => {
+            let Some(line) = args.next() else {
+                return Ok(2);
+            };
+            let directory = env::var("PWD").unwrap_or_else(|_| {
+                env::current_dir()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .into_owned()
+            });
+            engine::Memory::load(engine::config(), directory).executed(&line);
+            return Ok(0);
+        }
+        Some("query") => {
+            let (Some(shell), Some(snapshot), Some(line)) = (args.next(), args.next(), args.next())
+            else {
+                return Ok(2);
+            };
+            let snapshot = PathBuf::from(snapshot);
+            let (context, items) =
+                engine::complete(&shell, &snapshot, &line, &engine::names(&snapshot));
+            println!("{}\t{}", context.start, context.injected);
+            for item in items {
+                println!("{}\t{}\t{}", item.label, item.description, item.kind);
+            }
+            return Ok(0);
+        }
+        Some("edit") => {
+            let (Some(shell), Some(snapshot), Some(line), Some(point), Some(displayed)) = (
+                args.next(),
+                args.next(),
+                args.next(),
+                args.next(),
+                args.next(),
+            ) else {
+                return Ok(2);
+            };
+            let Some(mut point) = point.parse::<usize>().ok() else {
+                return Ok(2);
+            };
+            let Some(mut displayed) = displayed.parse::<usize>().ok() else {
+                return Ok(2);
+            };
+            if shell == "fish" {
+                point = byte_cursor(&line, point).unwrap_or(line.len());
+                displayed = byte_cursor(&line, displayed).unwrap_or(line.len());
+            }
+            editor::run(shell, PathBuf::from(snapshot), line, point, displayed)?;
             return Ok(0);
         }
         Some("position") => {
