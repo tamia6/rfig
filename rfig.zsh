@@ -11,6 +11,9 @@ typeset -gA _rfig_branch_candidates
 typeset -gA _rfig_usage
 _rfig_usage=()
 typeset -g _rfig_option_source='' _rfig_option_stamp=''
+typeset -g _rfig_ghost=''
+typeset -g _rfig_history_dir=''
+typeset -ga _rfig_history_lines
 typeset -gi _rfig_selected=1 _rfig_pulse=0 _rfig_injected=0 _rfig_popular_count=0
 
 _rfig_load_usage() {
@@ -50,6 +53,33 @@ _rfig_record_line() {
     context+="${context:+ }$token"
   done
 }
+
+_rfig_history_load_dir() {
+  _rfig_history_dir=$PWD
+  _rfig_history_lines=()
+  local dir line file="$HOME/.config/rfig/history.tsv"
+  [[ -r $file ]] || return
+  while IFS=$'\x1f' read -r dir line; do
+    [[ $dir == $_rfig_history_dir && -n $line ]] || continue
+    _rfig_history_lines+=( "$line" )
+  done < "$file"
+  (( $#_rfig_history_lines > 1000 )) && _rfig_history_lines=( "${_rfig_history_lines[-1000,-1]}" )
+}
+
+_rfig_history_record() {
+  local line=$1 file="$HOME/.config/rfig/history.tsv"
+  [[ -n $line && $line != *$'\n'* && $line != *$'\r'* && $line != *$'\x1f'* \
+    && $PWD != *$'\n'* && $PWD != *$'\r'* && $PWD != *$'\x1f'* ]] || return
+  [[ -o hist_ignore_space && $line == ' '* ]] && return
+  (umask 077; mkdir -p -- "${file:h}" && touch -- "$file" && chmod 600 "$file" && printf '%s\x1f%s\n' "$PWD" "$line" >> "$file") || return
+  [[ $_rfig_history_dir == $PWD ]] || _rfig_history_load_dir
+  _rfig_history_lines+=( "$line" )
+  (( $#_rfig_history_lines > 1000 )) && _rfig_history_lines=( "${_rfig_history_lines[-1000,-1]}" )
+}
+
+autoload -Uz add-zsh-hook
+add-zsh-hook chpwd _rfig_history_load_dir
+_rfig_history_load_dir
 
 _rfig_rank_group() {
   local context=$1 record label key score position
@@ -136,9 +166,26 @@ _rfig_capture() {
 }
 zle -C _rfig_capture complete-word _rfig_capture
 
+_rfig_history_suggest() {
+  _rfig_ghost=''
+  [[ -n $BUFFER && $CURSOR == ${#BUFFER} && $BUFFER != *$'\n'* ]] || return
+  local suggestion
+  for suggestion in "${(@Oa)_rfig_history_lines}"; do
+    [[ $suggestion == "$BUFFER"* && $suggestion != "$BUFFER" ]] || continue
+    _rfig_ghost=${suggestion#$BUFFER}
+    return
+  done
+}
+
+_rfig_show_ghost() {
+  POSTDISPLAY=$_rfig_ghost
+  [[ -n $_rfig_ghost ]] &&
+    region_highlight+=( "${#BUFFER} $(( ${#BUFFER} + ${#_rfig_ghost} )) fg=8 memo=rfig" )
+}
+
 _rfig_render() {
-  POSTDISPLAY=''
   region_highlight=(${region_highlight:#*memo=rfig})
+  _rfig_show_ghost
   (( $#_rfig_hits )) || return
   local first=$(( _rfig_selected > 5 ? _rfig_selected - 4 : 1 ))
   local index description row start kind icon color rest record label icon_offset label_offset width
@@ -203,6 +250,8 @@ _rfig_render() {
 _rfig_preview() {
   POSTDISPLAY=''
   region_highlight=(${region_highlight:#*memo=rfig})
+  _rfig_history_suggest
+  _rfig_show_ghost
   _rfig_hits=()
   _rfig_branch_candidates=()
   _rfig_popular_count=0
@@ -333,7 +382,7 @@ _rfig_after_edit() {
   _rfig_preview
   zle -R
 }
-for _rfig_widget in self-insert backward-delete-char delete-char backward-kill-word kill-word kill-whole-line bracketed-paste; do
+for _rfig_widget in self-insert backward-delete-char delete-char backward-kill-word kill-word kill-whole-line bracketed-paste backward-char beginning-of-line; do
   zle -N "$_rfig_widget" _rfig_after_edit
 done
 unset _rfig_widget
@@ -378,8 +427,19 @@ _rfig_down() {
 }
 
 _rfig_choose() {
-  if (( ! $#_rfig_hits || CURSOR < ${#BUFFER} )); then
+  if (( CURSOR < ${#BUFFER} )); then
     zle forward-char
+    return
+  fi
+  if (( ! $#_rfig_hits )); then
+    if [[ -n $_rfig_ghost ]]; then
+      BUFFER+=$_rfig_ghost
+      CURSOR=${#BUFFER}
+      _rfig_preview
+      zle -R
+    else
+      zle forward-char
+    fi
     return
   fi
   local -a previous_hits=( "${_rfig_hits[@]}" )
@@ -407,16 +467,29 @@ _rfig_choose() {
     done
   fi
   if (( same )); then
-    POSTDISPLAY=''
-    region_highlight=(${region_highlight:#*memo=rfig})
     _rfig_hits=()
+    _rfig_render
   fi
   zle reset-prompt
 }
 
+_rfig_accept_ghost() {
+  if [[ -n $_rfig_ghost && $CURSOR == ${#BUFFER} ]]; then
+    BUFFER+=$_rfig_ghost
+    CURSOR=${#BUFFER}
+  else
+    zle .end-of-line
+  fi
+  _rfig_preview
+  zle -R
+}
+
 _rfig_accept_line() {
+  [[ -n $_rfig_ghost && $CURSOR == ${#BUFFER} ]] && BUFFER+=$_rfig_ghost
+  _rfig_history_record "$BUFFER"
   _rfig_record_line "$BUFFER"
   POSTDISPLAY=''
+  _rfig_ghost=''
   region_highlight=(${region_highlight:#*memo=rfig})
   _rfig_hits=()
   zle -R
@@ -426,6 +499,7 @@ _rfig_accept_line() {
 zle -N _rfig_up
 zle -N _rfig_down
 zle -N _rfig_choose
+zle -N _rfig_accept_ghost
 zle -N _rfig_accept_line
 for _rfig_keymap in emacs viins; do
   bindkey -M "$_rfig_keymap" '^[[A' _rfig_up
@@ -435,6 +509,7 @@ for _rfig_keymap in emacs viins; do
   bindkey -M "$_rfig_keymap" '^[[C' _rfig_choose
   bindkey -M "$_rfig_keymap" '^[OC' _rfig_choose
   bindkey -M "$_rfig_keymap" '^M' _rfig_accept_line
+  bindkey -M "$_rfig_keymap" '^E' _rfig_accept_ghost
   bindkey -M "$_rfig_keymap" '^I' expand-or-complete
 done
 unset _rfig_keymap
