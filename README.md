@@ -1,10 +1,12 @@
-# rfig
+# rfig — Rust Terminal Autocomplete for zsh, Bash, and Fish
 
 **English** · [简体中文](README.zh-CN.md) · [Website](https://tamia6.github.io/rfig/)
 
-**Command completion menus and history-based autosuggestions, right on your command line.**
+**An open-source terminal autocomplete tool with command menus and history-based suggestions.**
 
-Built in Rust, rfig adds completion menus to zsh, Bash, and Fish as you type. Navigate with the arrow keys, insert a candidate with the right arrow, and continue completing the next argument. Your shell executes the command.
+Built in Rust, rfig brings IDE-style command-line autocomplete to zsh, Bash, and Fish on macOS and Linux. Candidates appear as you type; navigate with the arrow keys, insert one with the right arrow, and continue completing the next argument. Your shell executes the command.
+
+rfig is an independent, Fig-inspired project and is not affiliated with Fig. It uses completion definitions and scripts available in your environment, with sandboxed help analysis as a conditional fallback; it does not promise completion for every command.
 
 Built-in **history-based autosuggestions** appear as inline gray text and replace the history suggestion functionality of plugins such as `zsh-autosuggestions`. **No separate autosuggestion plugin is required.** Menus use only what you actually type; autosuggestions match history from your current working directory. Both can appear together.
 
@@ -15,6 +17,8 @@ The demo shows command and path completion, then a menu and an autosuggestion ap
 [Installation](#installation) · [Usage](#usage) · [Shell support](#shell-support) · [Completion sources](#completion-sources-and-background-enrichment) · [Testing](#testing)
 
 > rfig v0.2.0 supports macOS and Linux with zsh, Bash 4.4+, and Fish 3.6+. Install with Homebrew, a prebuilt binary, or the source code.
+
+**At a glance:** terminal autocomplete and nested CLI completion · inline, directory-scoped command-history suggestions · local usage-based ranking · no AI service or cloud account required.
 
 ## Features
 
@@ -182,6 +186,20 @@ In `enrich.status`, `done` means processing has finished, not that every command
 Delete `usage.log` to reset ranking, or `history.tsv` to clear autosuggestion history, then restart the shell. History contains command text; manage it according to your needs.
 
 To uninstall, remove rfig's source line from each configured shell. For Fish, remove `conf.d/rfig.fish`. Delete `~/.local/bin/rfig` for source/binary installations, or run `brew uninstall rfig` for Homebrew. Remove `~/.config/rfig/` when its data is no longer needed, then restart the shell.
+
+## FAQ
+
+### Is rfig a Fig alternative?
+
+rfig is an independent, open-source terminal autocomplete project inspired by Fig. It is not affiliated with Fig and does not claim compatibility with every Fig feature or specification.
+
+### Does rfig complete every command?
+
+No. Candidate coverage depends on completion definitions, scripts, generators, and cached help available on your system. Some commands may have no candidates or only basic help-derived candidates.
+
+### Does rfig use AI?
+
+No. Completion, history suggestions, and usage ranking run locally; no AI service or cloud account is required.
 
 ## Testing
 
