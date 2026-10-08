@@ -4,8 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0b1018">
-  <meta name="description" content="rfig 为 macOS 与 Linux 的 zsh、Bash 与 Fish 带来命令补全菜单与内置历史命令自动建议，无需额外安装 zsh-autosuggestions。支持按目录匹配历史、动态多级候选和使用习惯排序。">
-  <title>rfig — 让终端跟上你的思路</title>
+  <meta name="description" content="rfig 是面向 macOS 与 Linux 上 zsh、Bash、Fish 的开源 Rust 终端自动补全工具，提供动态命令菜单和按目录匹配的历史建议。受 Fig 启发的独立项目。">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="rfig — Rust 终端自动补全：zsh、Bash、Fish">
+  <meta property="og:description" content="开源 IDE 风格命令行补全，提供动态菜单与本地目录历史建议。受 Fig 启发的独立项目，与 Fig 无隶属关系。">
+  <meta property="og:url" content="https://tamia6.github.io/rfig/zh/">
+  <meta property="og:locale" content="zh_CN">
+  <title>rfig — Rust 终端自动补全：zsh、Bash、Fish</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b1018'/%3E%3Cpath d='m16 19 13 13-13 13M34 45h15' fill='none' stroke='%23b3f2ac' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
   <link rel="canonical" href="https://tamia6.github.io/rfig/zh/">
   <link rel="alternate" hreflang="zh-CN" href="https://tamia6.github.io/rfig/zh/">
@@ -25,6 +30,7 @@
       <div class="hero-copy">
         <p class="badge"><span class="signal"></span> zsh · Bash · Fish</p>
         <h1>让终端<br><em>跟上你的思路。</em></h1>
+        <p class="eyebrow">开源终端自动补全 · 受 Fig 启发的独立项目</p>
         <p class="hero-desc">输入时查看候选，用右箭头插入下一步。菜单与按目录匹配的历史命令自动建议同时显示，无需另外安装 zsh-autosuggestions 类命令自动建议插件。</p>
         <div class="actions"><a class="primary" href="#install">开始使用 <span>↗</span></a><a class="secondary" href="#demo">看看实际效果 ↓</a></div>
         <p class="source-note">v0.2.0 支持 zsh、Bash 4.4+、Fish 3.6+。<a href="#support">查看支持范围与系统要求 ↗</a></p>
@@ -87,6 +93,9 @@ rfig setup</code></pre><button id="copy" type="button">复制命令</button></di
     <section class="faq container" aria-labelledby="faq-title">
       <div class="section-head"><div><p class="eyebrow">A FEW DETAILS</p><h2 id="faq-title">开始之前，你可能想知道。</h2></div></div>
       <details><summary>还需要安装 zsh-autosuggestions 吗？</summary><p>不需要。rfig 内置历史命令自动建议，可替代它的历史命令自动建议功能。请从 .zshrc 或插件管理器中移除旧插件的加载配置，再开启新会话。Fish 集成也会关闭原生命令自动建议，使用 rfig 的目录历史。</p></details>
+      <details><summary>rfig 是 Fig 的替代品吗？</summary><p>rfig 是受 Fig 启发的独立开源终端自动补全项目，与 Fig 无隶属关系，也不声称兼容 Fig 的全部功能或规范。</p></details>
+      <details><summary>rfig 支持所有命令吗？</summary><p>不保证。候选范围取决于本机可用的补全定义、脚本、生成器和帮助缓存。有些命令可能没有候选，或只能获得基于帮助文本的基础候选。</p></details>
+      <details><summary>rfig 会使用 AI 吗？</summary><p>不会。补全、历史建议和使用排序均在本机运行，无需 AI 服务或云端账号。</p></details>
       <details><summary>会导入旧历史、扫描整台电脑吗？</summary><p>不会自动导入缺少目录信息的旧 Shell 历史。命令扫描以当前 PATH 与常见补全目录为范围，不会遍历整块磁盘。历史、选择记录与缓存保存在 ~/.config/rfig/。</p></details>
       <details><summary>菜单与自动建议同时出现，Enter 会执行什么？</summary><p>有自动建议时，Enter 执行完整建议；没有自动建议时，执行实际输入，不会接受高亮菜单项。光标在行尾时，右箭头优先插入菜单选中项，Ctrl+E 接受自动建议而不执行。</p></details>
       <details><summary>为什么有些命令没有候选？</summary><p>命令可能没有可用补全定义，或后台分析尚未完成、被跳过或失败。可查看 ~/.config/rfig/enrich.status；done 只表示处理结束，不代表每个命令都成功。可用 rfig analyze &lt;命令名&gt; 单独刷新。Linux 若缺少 Landlock 或被容器限制，会明确提示无法探测，不会退回无隔离执行。</p></details>

@@ -4,8 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0b1018">
-  <meta name="description" content="rfig brings command completion menus and history-based autosuggestions to zsh, Bash, and Fish on macOS and Linux. Discover directory-scoped history, dynamic completion, and usage-based ranking.">
-  <title>rfig — A terminal that keeps up with you</title>
+  <meta name="description" content="rfig is an open-source Rust terminal autocomplete tool for zsh, Bash, and Fish on macOS and Linux, with dynamic completion menus and directory-scoped history suggestions. An independent, Fig-inspired project.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="rfig — Rust Terminal Autocomplete for zsh, Bash, and Fish">
+  <meta property="og:description" content="Open-source, IDE-style command-line autocomplete with dynamic menus and local, directory-scoped history suggestions. Independent and Fig-inspired.">
+  <meta property="og:url" content="https://tamia6.github.io/rfig/">
+  <meta property="og:locale" content="en_US">
+  <title>rfig — Rust Terminal Autocomplete for zsh, Bash &amp; Fish</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b1018'/%3E%3Cpath d='m16 19 13 13-13 13M34 45h15' fill='none' stroke='%23b3f2ac' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
   <link rel="canonical" href="https://tamia6.github.io/rfig/">
   <link rel="alternate" hreflang="zh-CN" href="https://tamia6.github.io/rfig/zh/">
@@ -25,6 +30,7 @@
       <div class="hero-copy">
         <p class="badge"><span class="signal"></span> zsh · Bash · Fish</p>
         <h1>Your terminal.<br><em>In your flow.</em></h1>
+        <p class="eyebrow">OPEN-SOURCE TERMINAL AUTOCOMPLETE · AN INDEPENDENT FIG-INSPIRED PROJECT</p>
         <p class="hero-desc">See candidates as you type. Press the right arrow to insert one. Completion menus and directory-scoped history suggestions work together—no separate autosuggestion plugin needed.</p>
         <div class="actions"><a class="primary" href="#install">Get started <span>↗</span></a><a class="secondary" href="#demo">Watch it in action ↓</a></div>
         <p class="source-note">v0.2.0 supports zsh, Bash 4.4+, and Fish 3.6+. <a href="#support">Shell support & requirements ↗</a></p>
@@ -87,6 +93,9 @@ rfig setup</code></pre><button id="copy" type="button">Copy command</button></di
     <section class="faq container" aria-labelledby="faq-title">
       <div class="section-head"><div><p class="eyebrow">A FEW DETAILS</p><h2 id="faq-title">A few things before you start.</h2></div></div>
       <details><summary>Do I still need zsh-autosuggestions?</summary><p>No. rfig includes history-based autosuggestions that replace its history suggestion functionality. Remove the old plugin from .zshrc or your plugin manager, then open a new session. Fish integration also disables native autosuggestions in favor of rfig’s directory-scoped history.</p></details>
+      <details><summary>Is rfig a Fig alternative?</summary><p>rfig is an independent, open-source terminal autocomplete project inspired by Fig. It is not affiliated with Fig and does not claim compatibility with every Fig feature or specification.</p></details>
+      <details><summary>Does rfig complete every command?</summary><p>No. Candidate coverage depends on completion definitions, scripts, generators, and cached help available on your system. Some commands may have no candidates or only basic help-derived candidates.</p></details>
+      <details><summary>Does rfig use AI?</summary><p>No. Completion, history suggestions, and usage ranking run locally; no AI service or cloud account is required.</p></details>
       <details><summary>Does rfig import old history or scan my whole computer?</summary><p>Old shell history without directory information is not imported automatically. Scanning covers your current PATH and common completion directories, not the whole disk. History, selection records, and caches live in ~/.config/rfig/.</p></details>
       <details><summary>What does Enter do when both a menu and suggestion appear?</summary><p>Enter executes the full autosuggestion when one is present. Otherwise, it executes your typed input without accepting the highlighted menu item. At the end of the line, Right prioritizes the menu selection; Ctrl+E accepts the autosuggestion without executing it.</p></details>
       <details><summary>Why do some commands have no candidates?</summary><p>A command may have no usable definition, or background analysis may be pending, skipped, or unsuccessful. Check ~/.config/rfig/enrich.status: done means processing ended, not that every command succeeded. Refresh one with rfig analyze &lt;command&gt;. If Landlock is unavailable or restricted on Linux, probing is refused rather than run without isolation.</p></details>
