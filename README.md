@@ -10,9 +10,9 @@ rfig is an independent, Fig-inspired project and is not affiliated with Fig. It 
 
 Built-in **history-based autosuggestions** appear as inline gray text and replace the history suggestion functionality of plugins such as `zsh-autosuggestions`. **No separate autosuggestion plugin is required.** Menus use only what you actually type; autosuggestions match history from your current working directory. Both can appear together.
 
-![rfig demonstrating command and path completion with history-based autosuggestions in zsh](assets/rfig-demo.gif)
+![rfig demonstrating progressive Git completion, dynamic branches, Brew services, and npm scripts in zsh](assets/rfig-showcase.gif)
 
-The demo shows command and path completion, then a menu and an autosuggestion appearing together after typing `gi`. `Ctrl+E` accepts the suggestion; `Enter` executes the full suggestion.
+The demo shows progressive Git completion from `g` to `gi` to `git`, then `checkout` and a real branch from the current repository. It also demonstrates dynamic Brew service candidates, npm scripts, arrow-key navigation, insertion, execution, and menu dismissal.
 
 [Installation](#installation) · [Usage](#usage) · [Shell support](#shell-support) · [Completion sources](#completion-sources-and-background-enrichment) · [Testing](#testing)
 

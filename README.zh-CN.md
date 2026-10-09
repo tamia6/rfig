@@ -10,9 +10,9 @@ rfig 是受 Fig 启发的独立项目，与 Fig 无隶属关系。它使用本�
 
 内置的历史命令自动建议（History-based Autosuggestions）以内联灰色文本显示，可替代 `zsh-autosuggestions` 类插件的历史命令自动建议功能，**无需另外安装命令自动建议插件**。菜单只根据实际输入生成，自动建议按当前工作目录匹配历史，两者可以同时显示。
 
-![rfig 在 zsh 中展示命令、路径补全与历史命令自动建议](assets/rfig-demo.gif)
+![rfig 在 zsh 中展示 Git 逐级补全、动态分支、Brew 服务和 npm 脚本](assets/rfig-showcase.gif)
 
-演示包含命令与路径补全，以及输入 `gi` 时同时显示菜单和历史命令自动建议；`Ctrl+E` 接受建议，`Enter` 执行完整建议。
+动图展示 Git 从 `g`、`gi`、`git` 逐级补全到 `checkout`，再选择当前仓库中的真实分支；同时演示 Brew 服务、npm 脚本、方向键导航、插入、执行和取消菜单。
 
 [安装](#安装) · [使用](#使用) · [Shell 支持](#shell-支持) · [补全来源](#补全来源与后台优化) · [测试验证](#测试验证)
 
