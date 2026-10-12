@@ -26,7 +26,7 @@ run('setup',['python3','tests/multi_shell_setup.py'])
 run('archive-installer',['python3','tests/install_archive.py'])
 run('real-binary-installer',['python3','tests/install_binary.py'],dict(RFIG_TEST_BINARY=str(root/'target/debug/rfig')))
 run('linux-probe-safety',['python3','tests/docker/linux_probe_safety.py'])
-for test in ('setup_safety', 'self_completion', 'zsh_integration', 'zsh_usage', 'zsh_history_suggestions'):
+for test in ('setup_safety', 'self_completion', 'zsh_integration', 'zsh_usage', 'zsh_history_suggestions', 'zsh_large_completion'):
     run(test,['python3',f'tests/{test}.py'])
 # Exercise the real platform sandbox; no fake sandbox helpers.
 for shell,exe,tag in [('bash','/bin/bash','bash-system'),('bash','/opt/bash44/bin/bash','bash44'),('fish','/usr/bin/fish','fish'),('zsh','/usr/bin/zsh','zsh59')]:

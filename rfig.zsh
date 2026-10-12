@@ -113,7 +113,7 @@ _rfig_rank_group() {
 }
 
 _rfig_compadd() {
-  local -a hits descriptions
+  local -a hits descriptions _rfig_records
   local item insert index kind
   for item in "$@"; do
     if [[ $item == -A || $item == -D || $item == -O ]]; then
@@ -144,8 +144,10 @@ _rfig_compadd() {
     else
       kind=argument
     fi
-    _rfig_hits+=( "$item"$'\t'"$insert"$'\t'"${descriptions[index]//$'\n'/ }"$'\t'"$kind" )
+    _rfig_records+=( "$item"$'\t'"$insert"$'\t'"${descriptions[index]//$'\n'/ }"$'\t'"$kind" )
   done
+  # Deduplicate once per batch instead of rescanning the unique array for each hit.
+  _rfig_hits+=( "${_rfig_records[@]}" )
   builtin compadd "$@"
 }
 
