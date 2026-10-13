@@ -216,21 +216,24 @@ _rfig_render() {
     icon_offset=2
     label_offset=4
     width=41
-    if (( index == _rfig_selected )); then
-      if (( _rfig_pulse )); then
-        printf -v row ' %s %s   %-38.38s' '➜' "$icon" "$label"
-        icon_offset=3
-        label_offset=7
-        width=38
-      else
-        printf -v row '→ %s %-41.41s' "$icon" "$label"
-      fi
+    if (( index == _rfig_selected && _rfig_pulse )); then
+      icon_offset=3
+      label_offset=7
+      width=38
     elif (( _rfig_pulse && (index == _rfig_selected - 1 || index == _rfig_selected + 1) )); then
-      printf -v row '  %s  %-40.40s' "$icon" "$label"
       label_offset=5
       width=40
+    fi
+    (( width = COLUMNS - label_offset - 1 < width ? COLUMNS - label_offset - 1 : width ))
+    (( width < 0 )) && width=0
+    if (( index == _rfig_selected && _rfig_pulse )); then
+      printf -v row ' ➜ %s   %-*.*s' "$icon" $width $width "$label"
+    elif (( index == _rfig_selected )); then
+      printf -v row '→ %s %-*.*s' "$icon" $width $width "$label"
+    elif (( _rfig_pulse && (index == _rfig_selected - 1 || index == _rfig_selected + 1) )); then
+      printf -v row '  %s  %-*.*s' "$icon" $width $width "$label"
     else
-      printf -v row '  %s %-41.41s' "$icon" "$label"
+      printf -v row '  %s %-*.*s' "$icon" $width $width "$label"
     fi
     POSTDISPLAY+=$row
     if (( index == _rfig_selected )); then
@@ -248,7 +251,9 @@ _rfig_render() {
     fi
   done
   POSTDISPLAY+=$'\n'
-  printf -v row ' %-44.44s' "$description"
+  width=$(( COLUMNS > 2 ? COLUMNS - 2 : 0 ))
+  (( width > 44 )) && width=44
+  printf -v row ' %-*.*s' $width $width "$description"
   POSTDISPLAY+=$row
 }
 
@@ -475,7 +480,7 @@ _rfig_choose() {
     _rfig_hits=()
     _rfig_render
   fi
-  zle reset-prompt
+  zle -R
 }
 
 _rfig_accept_ghost() {

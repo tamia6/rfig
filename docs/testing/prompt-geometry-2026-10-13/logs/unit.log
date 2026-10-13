@@ -1,0 +1,21 @@
+
+running 13 tests
+test editor::geometry_tests::physical_prompt_rows_include_wrap_and_terminal_controls ... ok
+test engine::tests::dash_filter_and_popular_limit ... ok
+test engine::tests::tokenization_never_executes ... ok
+test tests::filesystem_name_is_safe_in_shell ... ok
+test tests::cd_completes_existing_directory ... ok
+test tests::git_tab_replaces_prefix_and_keeps_suffix ... ok
+test tests::git_without_space_opens_subcommands ... ok
+test tests::help_advertises_separate_global_options ... ok
+test tests::help_lists_subcommands_in_usage_and_command_sections ... ok
+test tests::help_marks_value_options_and_boolean_switches ... ok
+test tests::native_completion_extends_a_nested_command ... ok
+test tests::system_services_are_not_help_probed ... ok
+test tests::unsupported_command_uses_shell_completion ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling rfig v0.2.0 (/work)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.58s
+     Running unittests src/main.rs (target/debug/deps/rfig-de71f1745399fa6f)

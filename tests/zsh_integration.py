@@ -34,13 +34,25 @@ def wait_for(fd, needle, timeout=5):
 
 
 def wait_for_file(fd, path, timeout=5):
+    transcript = b""
     deadline = time.monotonic() + timeout
     while not path.exists() and time.monotonic() < deadline:
         if select.select([fd], [], [], 0.05)[0]:
             output = os.read(fd, 65536)
+            transcript += output
             if b"\x1b[6n" in output:
                 os.write(fd, CURSOR_REPLY)
     assert path.exists(), f"waiting for {path.name}"
+    return transcript
+
+
+def wait_for_buffer(fd, home, expected):
+    path = home / "buffer"
+    path.unlink(missing_ok=True)
+    os.write(fd, b"\x18")
+    output = wait_for_file(fd, path)
+    assert path.read_text().strip() == expected
+    return output
 
 
 with tempfile.TemporaryDirectory() as temp:
@@ -215,7 +227,7 @@ with tempfile.TemporaryDirectory() as temp:
         "_rfig_file_values() { compadd biz-center; }\n"
         "_rfig_branch_completion() { _alternative 'branches:branch:_rfig_branch_values' 'files:file:_rfig_file_values'; }\n"
         "compdef _rfig_branch_completion rfigbranchfixture\n"
-        f"_rfig_snapshot() {{ print -rl -- \"${{_rfig_hits[@]}}\" > {home / 'hits'}; }}\n"
+        f"_rfig_snapshot() {{ print -r -- \"$BUFFER\" > {home / 'buffer'}; print -rl -- \"${{_rfig_hits[@]}}\" > {home / 'hits'}; }}\n"
         "zle -N _rfig_snapshot\nbindkey '^X' _rfig_snapshot\n"
     )
     child_path=f"{home / '.local/bin'}:{home / 'bin'}:{os.environ['PATH']}"
@@ -290,7 +302,7 @@ with tempfile.TemporaryDirectory() as temp:
             assert any(line.startswith(expected + "\t") and line.endswith("\tsubcommand") for line in hits), hits
             if command == "rfighelpusage":
                 os.write(fd, b"\x1b[C")
-                wait_for(fd, b"RFIG> rfighelpusage setup")
+                wait_for_buffer(fd, home, "rfighelpusage setup")
             os.write(fd, b"\x15")
 
         (home / "hits").unlink(missing_ok=True)
@@ -340,7 +352,7 @@ with tempfile.TemporaryDirectory() as temp:
         pulse = wait_for(fd, "➜".encode())
         assert "➜".encode() in pulse, "selection must briefly enlarge and shift the arrow"
         os.write(fd, b"\x1b[C")
-        selected_output = wait_for(fd, b"RFIG> rfigfixture zeta")
+        selected_output = wait_for_buffer(fd, home, "rfigfixture zeta")
         assert b"\r\nRFIG-TOP" not in selected_output, "selection must stay on the existing prompt"
         os.write(fd, b"\r")
         wait_for(fd, b"RFIG> ")
@@ -351,7 +363,7 @@ with tempfile.TemporaryDirectory() as temp:
         os.write(fd, b"\x1b[B")  # zeta was just used, so select alpha explicitly.
         time.sleep(0.1)
         os.write(fd, b"\x1b[C")
-        wait_for(fd, b"RFIG> rfigfixture alpha")
+        wait_for_buffer(fd, home, "rfigfixture alpha")
         (home / "hits").unlink(missing_ok=True)
         os.write(fd, b"\x18")
         deadline = time.monotonic() + 5
@@ -359,15 +371,15 @@ with tempfile.TemporaryDirectory() as temp:
             time.sleep(0.01)
         assert any(line.startswith("beta\t") and line.endswith("\targument") for line in (home / "hits").read_text().splitlines())
         os.write(fd, b"\x1b[C")
-        wait_for(fd, b"RFIG> rfigfixture alpha beta")
+        wait_for_buffer(fd, home, "rfigfixture alpha beta")
         os.write(fd, b"\x1b[C")
-        wait_for(fd, b"RFIG> rfigfixture alpha beta gamma")
+        wait_for_buffer(fd, home, "rfigfixture alpha beta gamma")
         os.write(fd, b"\r")
         wait_for(fd, b"RFIG> ")
         assert (home / "fixture-args").read_text() == "alpha beta gamma\n"
 
         os.write(fd, b"git br\x1b[C")
-        wait_for(fd, b"RFIG> git branch")
+        wait_for_buffer(fd, home, "git branch")
         os.write(fd, b"x\r")
         wait_for(fd, b"RFIG> ")
         assert (home / "args").read_text() == "branch x\n"

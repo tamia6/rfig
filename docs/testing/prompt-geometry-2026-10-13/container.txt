@@ -1,0 +1,1 @@
+image=sha256:16a3bbc29403baaaa4960f672a631af915d628412daea51f64b3ce74eb9f2705 init=true cpus=2000000000 memory=2147483648 pids=256 network=none

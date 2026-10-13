@@ -36,6 +36,7 @@ for shell,exe,tag in [('bash','/bin/bash','bash-system'),('bash','/opt/bash44/bi
         for mode in ('emacs','vi'):
             for attempt in range(1,4):
                 run(f'{tag}-{mode}-{attempt}',['python3','tests/multi_shell_interaction.py'],dict(env,RFIG_TEST_VI='1' if mode=='vi' else ''))
+    run(f'{tag}-prompt-geometry',['python3','tests/prompt_geometry.py'],env)
     run(f'{tag}-strict',['python3','tests/strict_shell.py'],env)
     run(f'{tag}-ansi',['python3','tests/strict_shell.py','StrictShell.test_literal_candidates','StrictShell.test_rapid_input_delete_and_wrapping'],dict(env,RFIG_TEST_TERM='xterm'))
 raise SystemExit(1 if any(item['exit_code'] for item in summary) else 0)

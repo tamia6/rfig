@@ -7,7 +7,17 @@ fi
 [[ ${_RFIG_BASH_LOADED-} == 1 ]] && return
 _RFIG_BASH_LOADED=1
 _rfig_prompt_anchor() {
-  [[ $PS1 == '\[\e7\]'* ]] || PS1='\[\e7\]'"$PS1"
+  local saved_status=$?
+  # Expand once per real prompt; redisplay must not rerun command substitutions.
+  [[ $PS1 == '${_rfig_prompt_text}' ]] || _rfig_prompt_source=$PS1
+  (exit "$saved_status")
+  _rfig_prompt_text=${_rfig_prompt_source@P}
+  if shopt -q promptvars; then
+    PS1='${_rfig_prompt_text}'
+  else
+    PS1=$_rfig_prompt_source
+  fi
+  return "$saved_status"
 }
 # Preserve the user's prompt hooks, including hooks that replace PS1.
 if [[ $(declare -p PROMPT_COMMAND 2>/dev/null) == 'declare -a '* ]]; then
@@ -15,22 +25,14 @@ if [[ $(declare -p PROMPT_COMMAND 2>/dev/null) == 'declare -a '* ]]; then
 else
   PROMPT_COMMAND="${PROMPT_COMMAND-}"$'\n''_rfig_prompt_anchor'
 fi
-_rfig_prompt_anchor
 
 _rfig_edit() {
   local snapshot action point updated keymap
   snapshot=$(umask 077; mktemp -d "${TMPDIR:-/tmp}/rfig.XXXXXXXX") || return
   (umask 077; declare -f > "$snapshot/definitions"; complete -p >> "$snapshot/definitions"; compgen -c > "$snapshot/names")
-  local prompt=${PS1@P}
-  prompt=${prompt//$'\001'/}
+  local prompt=${_rfig_prompt_text//$'\001'/}
   prompt=${prompt//$'\002'/}
-  local prompt_tail=$prompt prompt_rows=0
-  while [[ $prompt_tail == *$'\n'* ]]; do
-    ((prompt_rows+=1))
-    prompt_tail=${prompt_tail#*$'\n'}
-  done
-  printf '\0338%s' "$prompt"
-  RFIG_PROMPT_ROWS=$prompt_rows RFIG_SHELL_EXE=$BASH RFIG_PROVIDER=1 command rfig edit bash "$snapshot" "$READLINE_LINE" "$READLINE_POINT" 0
+  RFIG_PROMPT="$prompt" RFIG_SHELL_EXE=$BASH RFIG_PROVIDER=1 command rfig edit bash "$snapshot" "$READLINE_LINE" "$READLINE_POINT" "$READLINE_POINT"
   if [[ -f $snapshot/result ]]; then
     { IFS= read -r action; IFS= read -r point; IFS= read -r -d '' updated || :; } < "$snapshot/result"
     READLINE_LINE=$updated READLINE_POINT=$point

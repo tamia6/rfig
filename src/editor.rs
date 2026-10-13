@@ -38,6 +38,87 @@ impl Drop for CompletionWorker {
     }
 }
 
+// Count physical prompt rows, including wrapping and common terminal cursor controls.
+fn prompt_position(prompt: &str, cols: u16) -> (u16, u16) {
+    let cols = cols.max(1) as usize;
+    let (mut x, mut y) = (0usize, 0usize);
+    let mut saved = (0usize, 0usize);
+    let mut chars = prompt.chars().peekable();
+    while let Some(ch) = chars.next() {
+        match ch {
+            '\x1b' => match chars.next() {
+                Some('[') => {
+                    let mut parameters = String::new();
+                    while let Some(c) = chars.next() {
+                        if ('@'..='~').contains(&c) {
+                            let n = parameters
+                                .split(';')
+                                .next()
+                                .and_then(|v| v.parse::<usize>().ok())
+                                .unwrap_or(1)
+                                .max(1);
+                            match c {
+                                's' => saved = (x, y),
+                                'u' => {
+                                    (x, y) = saved;
+                                }
+                                'G' | '`' => x = (n - 1).min(cols - 1),
+                                'C' => x = (x + n).min(cols - 1),
+                                'D' => x = x.saturating_sub(n),
+                                'A' => y = y.saturating_sub(n),
+                                'B' => y += n,
+                                'E' => {
+                                    y += n;
+                                    x = 0;
+                                }
+                                'F' => {
+                                    y = y.saturating_sub(n);
+                                    x = 0;
+                                }
+                                _ => {}
+                            }
+                            break;
+                        }
+                        parameters.push(c);
+                    }
+                }
+                Some('7') => saved = (x, y),
+                Some('8') => {
+                    (x, y) = saved;
+                }
+                Some(']') => {
+                    while let Some(c) = chars.next() {
+                        if c == '\x07' || (c == '\x1b' && chars.next() == Some('\\')) {
+                            break;
+                        }
+                    }
+                }
+                _ => {}
+            },
+            '\n' => {
+                y += 1;
+                x = 0;
+            }
+            '\r' => x = 0,
+            '\t' => x = ((x / 8 + 1) * 8).min(cols),
+            c if !c.is_control() => {
+                let width = unicode_width::UnicodeWidthChar::width(c).unwrap_or(0);
+                if width > 0 && x + width > cols {
+                    y += 1;
+                    x = 0;
+                }
+                x += width;
+            }
+            _ => {}
+        }
+    }
+    if x == cols {
+        y += 1;
+        x = 0;
+    }
+    (x as u16, y.min(u16::MAX as usize) as u16)
+}
+
 struct Screen {
     tty: fs::File,
     x: u16,
@@ -45,6 +126,7 @@ struct Screen {
     cols: u16,
     rows: u16,
     drawn: u16,
+    prompt: String,
 }
 impl Screen {
     fn clear(&mut self) -> io::Result<()> {
@@ -268,7 +350,7 @@ pub fn run(
     let mut tty = fs::OpenOptions::new().write(true).open("/dev/tty")?;
     queue!(tty, EnableBracketedPaste)?;
     tty.flush()?;
-    let (x, y) = match cursor::position() {
+    let (mut x, mut y) = match cursor::position() {
         Ok(p) => p,
         Err(e) => {
             let _ = terminal::disable_raw_mode();
@@ -276,10 +358,36 @@ pub fn run(
         }
     };
     let (cols, rows) = terminal::size()?;
+    let prompt = std::env::var("RFIG_PROMPT").unwrap_or_default();
     let shown = &line[..displayed.min(line.len())];
     let width = UnicodeWidthStr::width(shown) as u16;
-    let offset = (x as usize + cols as usize - (width as usize % cols as usize)) % cols as usize;
-    let prior_rows = (offset + width as usize) / cols as usize;
+    if shell == "bash" {
+        // bind -x clears the current physical line. Repaint the frozen prompt from
+        // the live cursor, never from DECSC's saved screen coordinates.
+        let (prompt_x, prompt_rows) = prompt_position(&prompt, cols);
+        let input_rows = (prompt_x as usize + width as usize) / cols.max(1) as usize;
+        let top = y
+            .saturating_sub(prompt_rows)
+            .saturating_sub(input_rows as u16);
+        queue!(
+            tty,
+            MoveTo(0, top),
+            Clear(ClearType::FromCursorDown),
+            Print(&prompt)
+        )?;
+        tty.flush()?;
+        (x, y) = cursor::position()?;
+    }
+    let offset = if shell == "bash" {
+        x as usize
+    } else {
+        (x as usize + cols as usize - (width as usize % cols as usize)) % cols as usize
+    };
+    let prior_rows = if shell == "bash" {
+        0
+    } else {
+        (offset + width as usize) / cols as usize
+    };
     let mut screen = Screen {
         tty,
         x: offset as u16,
@@ -287,6 +395,7 @@ pub fn run(
         cols,
         rows,
         drawn: 1,
+        prompt,
     };
     let mut memory = Memory::load(
         engine::config(),
@@ -383,7 +492,20 @@ pub fn run(
         }
         let event = event::read()?;
         match event {
-            Event::Resize(_, _) => {}
+            Event::Resize(cols, rows) => {
+                // The terminal can reflow the input: saved absolute coordinates are stale.
+                let (_, y) = cursor::position()?;
+                screen.cols = cols.max(1);
+                screen.rows = rows.max(1);
+                if !screen.prompt.is_empty() {
+                    screen.x = prompt_position(&screen.prompt, screen.cols).0;
+                } else {
+                    screen.x = screen.x.min(screen.cols - 1);
+                }
+                let cursor_rows = (screen.x as usize + UnicodeWidthStr::width(&line[..point]))
+                    / screen.cols as usize;
+                screen.y = y.saturating_sub(cursor_rows as u16);
+            }
             Event::Paste(text) => {
                 // Terminal paste commonly uses CR; shell editing buffers use LF.
                 let text = text.replace("\r\n", "\n").replace('\r', "\n");
@@ -534,10 +656,10 @@ pub fn run(
             }
         ),
     )?;
-    let prompt_rows = std::env::var("RFIG_PROMPT_ROWS")
-        .ok()
-        .and_then(|s| s.parse::<u16>().ok())
-        .unwrap_or(0);
+    // Readline redisplays only the last logical prompt line. Keep earlier
+    // prompt lines intact instead of erasing their physical wrapped rows.
+    let prompt_tail = screen.prompt.rsplit('\n').next().unwrap_or("");
+    let prompt_rows = prompt_position(prompt_tail, screen.cols).1;
     let host_y = screen.y.saturating_sub(prompt_rows);
     drop(screen);
     if !shell_is_fish {
@@ -546,4 +668,24 @@ pub fn run(
         tty.flush()?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod geometry_tests {
+    use super::prompt_position;
+
+    #[test]
+    fn physical_prompt_rows_include_wrap_and_terminal_controls() {
+        assert_eq!(prompt_position("abcdefghij\n$ ", 8), (2, 2));
+        assert_eq!(prompt_position("\x1b[31m中文\x1b[0m$ ", 5), (1, 1));
+        assert_eq!(
+            prompt_position("user\x1b[s\x1b[45G12:00\x1b[u\n$ ", 58),
+            (2, 1)
+        );
+        assert_eq!(
+            prompt_position("\x1b]0;window title\x07user\n$ ", 58),
+            (2, 1)
+        );
+        assert_eq!(prompt_position("12345678\n$ ", 8), (2, 1));
+    }
 }

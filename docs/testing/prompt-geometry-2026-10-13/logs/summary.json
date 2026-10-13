@@ -1,0 +1,77 @@
+[
+  {
+    "name": "unit",
+    "exit_code": 0,
+    "seconds": 0.65
+  },
+  {
+    "name": "bash-emacs",
+    "exit_code": 0,
+    "seconds": 4.06
+  },
+  {
+    "name": "bash-vi",
+    "exit_code": 0,
+    "seconds": 4.06
+  },
+  {
+    "name": "bash-strict",
+    "exit_code": 0,
+    "seconds": 3.69
+  },
+  {
+    "name": "fish-emacs",
+    "exit_code": 0,
+    "seconds": 3.8
+  },
+  {
+    "name": "fish-vi",
+    "exit_code": 0,
+    "seconds": 3.92
+  },
+  {
+    "name": "fish-strict",
+    "exit_code": 0,
+    "seconds": 3.42
+  },
+  {
+    "name": "zsh-strict",
+    "exit_code": 1,
+    "seconds": 5.07
+  },
+  {
+    "name": "zsh_usage",
+    "exit_code": 0,
+    "seconds": 1.93
+  },
+  {
+    "name": "zsh_history_suggestions",
+    "exit_code": 0,
+    "seconds": 6.4
+  },
+  {
+    "name": "setup_safety",
+    "exit_code": 0,
+    "seconds": 3.74
+  },
+  {
+    "name": "zsh_integration",
+    "exit_code": 0,
+    "seconds": 20.72
+  },
+  {
+    "name": "bash-prompt",
+    "exit_code": 0,
+    "seconds": 3.98
+  },
+  {
+    "name": "fish-prompt",
+    "exit_code": 0,
+    "seconds": 3.88
+  },
+  {
+    "name": "zsh-prompt",
+    "exit_code": 0,
+    "seconds": 4.04
+  }
+]
