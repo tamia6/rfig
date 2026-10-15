@@ -63,7 +63,7 @@ _rfig_history_load_dir() {
     [[ $dir == $_rfig_history_dir && -n $line ]] || continue
     _rfig_history_lines+=( "$line" )
   done < "$file"
-  (( $#_rfig_history_lines > 1000 )) && _rfig_history_lines=( "${_rfig_history_lines[-1000,-1]}" )
+  (( $#_rfig_history_lines > 1000 )) && _rfig_history_lines=( "${_rfig_history_lines[-1000,-1][@]}" )
 }
 
 _rfig_history_record() {
@@ -74,7 +74,7 @@ _rfig_history_record() {
   (umask 077; mkdir -p -- "${file:h}" && touch -- "$file" && chmod 600 "$file" && printf '%s\x1f%s\n' "$PWD" "$line" >> "$file") || return
   [[ $_rfig_history_dir == $PWD ]] || _rfig_history_load_dir
   _rfig_history_lines+=( "$line" )
-  (( $#_rfig_history_lines > 1000 )) && _rfig_history_lines=( "${_rfig_history_lines[-1000,-1]}" )
+  (( $#_rfig_history_lines > 1000 )) && _rfig_history_lines=( "${_rfig_history_lines[-1000,-1][@]}" )
 }
 
 autoload -Uz add-zsh-hook
@@ -105,8 +105,8 @@ _rfig_rank_group() {
       ranked+=( "$record" )
       scores+=( "$score" )
     else
-      ranked=( "${ranked[1,position-1]}" "$record" "${ranked[position,-1]}" )
-      scores=( "${scores[1,position-1]}" "$score" "${scores[position,-1]}" )
+      ranked=( "${ranked[1,position-1][@]}" "$record" "${ranked[position,-1][@]}" )
+      scores=( "${scores[1,position-1][@]}" "$score" "${scores[position,-1][@]}" )
     fi
   done
   reply=( "${ranked[@]}" )
