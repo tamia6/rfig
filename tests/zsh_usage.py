@@ -16,12 +16,24 @@ with tempfile.TemporaryDirectory() as temp:
     config = home / ".config/rfig"
     config.mkdir(parents=True)
     usage = config / "usage.log"
+    work = home / "work"
+    work.mkdir()
+    ranked_names = ("alpha", "bravo two", "charlie", "delta", "echo", "foxtrot", "golf", "hotel")
+    # Force a middle insertion with multi-element slices, then score more candidates.
+    ranked_weights = (4, 3, 0, 0, 2, 1, 2, 0)
+    for name in ranked_names:
+        (work / name).mkdir()
     usage.write_text(
         (f"C{SEP}rfigfixture{SEP}beta\n" * 3)
         + "".join(f"C{SEP}rfigpopular{SEP}{name}\n" * count for name, count in (("alpha", 4), ("beta", 3), ("gamma", 2), ("delta", 1)))
         + (f"C{SEP}rfigmixed{SEP}--verbose\n" * 3)
         + f"C{SEP}rfigmixed{SEP}build\n"
         + (f"C{SEP}other{SEP}alpha\n" * 20)
+        + "".join(
+            f"C{SEP}{command}{SEP}{name}\n" * weight
+            for command in ("cd", "ls")
+            for name, weight in zip(ranked_names, ranked_weights)
+        )
     )
     (home / ".zshrc").write_text(
         "PROMPT='RFIG> '\n"
@@ -36,6 +48,8 @@ with tempfile.TemporaryDirectory() as temp:
         "rfigmixed() { :; }\n"
         "_rfigmixed() { compadd -- build deploy --verbose --help; }\n"
         "compdef _rfigmixed rfigmixed\n"
+        "_rfig_snapshot() { printf '%s\\0' \"$BUFFER\" \"$#_rfig_hits\" \"${_rfig_hits[@]}\" done > \"$HOME/snapshot\"; }\n"
+        "zle -N _rfig_snapshot\nbindkey '^X' _rfig_snapshot\n"
     )
     socket = f"rfig-usage-{os.getpid()}"
     tmux = ["tmux", "-L", socket, "-f", "/dev/null"]
@@ -106,6 +120,32 @@ with tempfile.TemporaryDirectory() as temp:
             time.sleep(0.04)
         assert (home / "result").read_text() == "beta\n"
         assert f"R{SEP}rfigfixture{SEP}beta" in usage.read_text().splitlines()
+        wait_for(lambda output: output.rstrip().splitlines()[-1] == "RFIG>")
+        failures = []
+        for command in ("cd", "ls"):
+            snapshot = home / "snapshot"
+            snapshot.unlink(missing_ok=True)
+            line = f"{command} {work}/"
+            call("send-keys", "-t", "usage", "-l", line)
+            call("send-keys", "-t", "usage", "C-x")
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                data = snapshot.read_bytes() if snapshot.exists() else b""
+                if data.endswith(b"done\0"):
+                    break
+                time.sleep(0.04)
+            assert data.endswith(b"done\0"), screen()
+            rows = data.decode().split("\0")
+            records = [row.split("\t") for row in rows[2:-2]]
+            expected = [name for name, _ in sorted(zip(ranked_names, ranked_weights), key=lambda item: -item[1])]
+            output = call("capture-pane", "-t", "usage", "-p", "-S", "-100")
+            if (rows[0] != line or rows[1] != str(len(expected)) or [row[0] for row in records] != expected
+                    or any(len(row) != 4 for row in records) or "bad math expression" in output):
+                failures.append((command, rows, output))
+            else:
+                print(f"{command}: all {len(records)} records intact; score order and stable ties: OK")
+            call("send-keys", "-t", "usage", "C-u")
+        assert not failures, failures
     finally:
         subprocess.run(tmux + ["kill-server"], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
