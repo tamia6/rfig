@@ -441,9 +441,14 @@ fn parse_help_subcommands<'a>(name: &str, help: &'a str) -> Vec<&'a str> {
     let mut in_section = false;
     for line in help.lines() {
         let trimmed = line.trim();
-        if trimmed
-            .strip_suffix(':')
-            .is_some_and(|heading| heading.to_ascii_lowercase().contains("command"))
+        let heading = trimmed.trim_end_matches(':');
+        let uppercase_heading = !heading.is_empty()
+            && heading.chars().any(|ch| ch.is_ascii_uppercase())
+            && heading
+                .chars()
+                .all(|ch| ch.is_ascii_uppercase() || ch.is_ascii_whitespace() || ch == '_');
+        if heading.to_ascii_lowercase().contains("command")
+            && (trimmed.ends_with(':') || uppercase_heading)
         {
             in_section = true;
             continue;
@@ -1598,6 +1603,12 @@ mod tests {
             parse_help_subcommands("other", section),
             vec!["build", "deploy"]
         );
+    }
+
+    #[test]
+    fn help_lists_subcommands_in_unpunctuated_sections() {
+        let help = "USAGE\n  tool [flags] <subcommand>\n\nSUBCOMMANDS\n  up       Connect\n  status   Show status\n\nFLAGS\n  --socket value  Socket path\n";
+        assert_eq!(parse_help_subcommands("tool", help), vec!["up", "status"]);
     }
 
     #[test]
