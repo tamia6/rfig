@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import signal
 import time
 
 root=Path(__file__).resolve().parents[2]
@@ -11,11 +12,22 @@ summary=[]
 def run(name,args,extra=None,timeout=150):
     env=dict(os.environ,**(extra or {}));env['RFIG_TEST_ARTIFACTS']=str(results/name)
     start=time.monotonic()
+    process=None
     try:
-        p=subprocess.run(args,cwd=root,env=env,capture_output=True,text=True,timeout=timeout)
-        code=p.returncode;output=p.stdout+p.stderr
-    except subprocess.TimeoutExpired as e:
-        code=124;output='TIMEOUT\n'+str(e.stdout)+str(e.stderr)
+        process=subprocess.Popen(args,cwd=root,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,
+                                 text=True,start_new_session=True)
+        try:
+            output,_=process.communicate(timeout=timeout)
+            code=process.returncode
+        except subprocess.TimeoutExpired:
+            os.killpg(process.pid, signal.SIGKILL)
+            output=(process.communicate()[0] or '')
+            code=124
+            output='TIMEOUT\n'+output
+    finally:
+        if process is not None and process.poll() is None:
+            os.killpg(process.pid, signal.SIGKILL)
+            process.wait()
     (results/(name+'.log')).write_text(output)
     entry=dict(name=name,exit_code=code,seconds=round(time.monotonic()-start,2))
     summary.append(entry);print(json.dumps(entry),flush=True)

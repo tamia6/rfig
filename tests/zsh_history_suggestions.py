@@ -5,6 +5,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import time
+from process_cleanup import cleanup_tmux
 
 ROOT = Path(__file__).resolve().parents[1]
 with tempfile.TemporaryDirectory() as temp:
@@ -110,6 +111,6 @@ with tempfile.TemporaryDirectory() as temp:
             learned = snapshot_for("plainfixture u")
             assert "post=nique" in learned, learned
         finally:
-            subprocess.run(tmux + ["kill-server"], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            cleanup_tmux(tmux, [home])
 
 print("rfig built-in history suggestions: OK")

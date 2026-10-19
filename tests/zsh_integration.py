@@ -12,6 +12,7 @@ import subprocess
 import tempfile
 import termios
 import time
+from process_cleanup import cleanup_tmux
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -533,12 +534,13 @@ with tempfile.TemporaryDirectory() as temp:
                     assert wanted in labels and unwanted not in labels, (typed, labels)
                     subprocess.run(tmux + ["kill-session", "-t", name], env=session_env, check=True)
             finally:
-                subprocess.run(tmux + ["kill-server"], env=session_env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                cleanup_tmux(tmux, [home])
         print("zsh live selection, nested completion, and terminal theme: OK")
     finally:
         os.close(fd)
         os.kill(pid, signal.SIGKILL)
         os.waitpid(pid, 0)
+        cleanup_tmux(["tmux", "-L", f"rfig-test-{os.getpid()}", "-f", "/dev/null"], [home])
     for name, cached in (("rfiggenfixture", generated), ("rfigprotocolfixture", protocol)):
         stale_scripts = [home / f".config/rfig/generated/{name}.{shell}" for shell in ("bash", "fish")]
         for script in stale_scripts:

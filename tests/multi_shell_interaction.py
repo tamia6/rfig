@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import tempfile
 import time
+from process_cleanup import cleanup_tmux
 
 ROOT = Path(__file__).resolve().parents[1]
 BIN = Path(os.environ.get('RFIG_TEST_BINARY', ROOT / 'target/debug/rfig'))
@@ -120,4 +121,4 @@ source {ROOT}/rfig.bash
         keys('C-d'); time.sleep(.15)
         print(SHELL+' real interactive menu, gray history, ranking, options, cancellation, Unicode: OK')
     finally:
-        subprocess.run(tmux+['kill-server'],env=env,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        cleanup_tmux(tmux, [home])

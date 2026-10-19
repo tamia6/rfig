@@ -12,6 +12,7 @@ import subprocess
 import tempfile
 import time
 import unittest
+from process_cleanup import cleanup_tmux
 
 ROOT = Path(__file__).resolve().parents[1]
 SHELL = os.environ.get('RFIG_TEST_SHELL', 'bash')
@@ -115,7 +116,9 @@ source {ROOT}/rfig.zsh
     def tearDown(self):
         ARTIFACTS.mkdir(parents=True,exist_ok=True)
         (ARTIFACTS/(self.id().split('.')[-1]+'.screen.txt')).write_text(self.screen())
-        subprocess.run(self.tmux+['kill-server'],env=self.env,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        leftovers = cleanup_tmux(self.tmux, [self.home, self.tmp])
+        if leftovers:
+            raise RuntimeError(f"test-owned processes survived cleanup: {sorted(leftovers)}")
         for pid in self.slow_pids():
             if self.alive(pid):
                 try:os.kill(pid,signal.SIGKILL)
