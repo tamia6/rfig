@@ -16,7 +16,7 @@ The demo shows progressive Git completion from `g` to `gi` to `git`, then `check
 
 [Installation](#installation) · [Usage](#usage) · [Shell support](#shell-support) · [Completion sources](#completion-sources-and-background-enrichment) · [Testing](#testing)
 
-> rfig v0.2.1 supports macOS and Linux with zsh, Bash 4.4+, and Fish 3.6+. Install with Homebrew, a prebuilt binary, or the source code.
+> rfig v0.2.2 supports macOS and Linux with zsh, Bash 4.4+, and Fish 3.6+. Install with Homebrew, a prebuilt binary, or the source code.
 
 **At a glance:** terminal autocomplete and nested CLI completion · inline, directory-scoped command-history suggestions · local usage-based ranking · no AI service or cloud account required.
 

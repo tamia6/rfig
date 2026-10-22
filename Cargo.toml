@@ -1,6 +1,6 @@
 [package]
 name = "rfig"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 description = "Inline terminal command completion and history suggestions for zsh, Bash and Fish"
 license = "MIT"
