@@ -1,0 +1,10 @@
+RFIG> source /var/folders/p4/h_3xm0f155l3cbgnxm3bsznr0000g
+n/T/rfig-strict-w6tqzgpo/right-prompt
+LEFT
+RFIG> rfigprobe space\ value                        STATUS
+LEFT
+RFIG>                                               STATUS
+
+
+
+

@@ -1,0 +1,6 @@
+zsh: narrow dynamic prompt, scrolling, resize, execution and cleanup OK
+...s
+----------------------------------------------------------------------
+Ran 4 tests in 6.363s
+
+OK (skipped=1)

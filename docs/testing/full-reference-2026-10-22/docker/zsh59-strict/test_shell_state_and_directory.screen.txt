@@ -1,0 +1,18 @@
+RFIG> cd '/tmp/rfig-strict-irhsep7d/space dir'
+RFIG> rfigprobe "$PWD"
+RFIG> export RFIG_KEEP='persistent value'; rfigprobe "$RFIG_KEEP"
+RFIG>
+
+
+
+
+
+
+
+
+
+
+
+
+
+

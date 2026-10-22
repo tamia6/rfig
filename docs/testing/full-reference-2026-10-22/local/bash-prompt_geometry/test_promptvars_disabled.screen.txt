@@ -1,0 +1,18 @@
+RFIG> shopt -u promptvars; PS1='RFIG> '; touch "$HOME/promptvars-off"
+RFIG> rfigprobe space\ value
+RFIG>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

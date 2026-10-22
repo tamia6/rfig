@@ -1,0 +1,15 @@
+SHELL=fish EXE=/opt/homebrew/bin/fish
+fish: slow-provider input observation 83ms (screen wait 5ms)
+test_cancel_repeated_and_private_history (__main__.StrictShell.test_cancel_repeated_and_private_history) ... ok
+test_ctrl_d_exits_empty_line (__main__.StrictShell.test_ctrl_d_exits_empty_line) ... ok
+test_editor_sigterm_cleanup (__main__.StrictShell.test_editor_sigterm_cleanup) ... ok
+test_literal_candidates (__main__.StrictShell.test_literal_candidates) ... ok
+test_multiline_bracketed_paste (__main__.StrictShell.test_multiline_bracketed_paste) ... ok
+test_rapid_input_delete_and_wrapping (__main__.StrictShell.test_rapid_input_delete_and_wrapping) ... ok
+test_shell_state_and_directory (__main__.StrictShell.test_shell_state_and_directory) ... ok
+test_slow_provider_input_latency_and_cancel (__main__.StrictShell.test_slow_provider_input_latency_and_cancel) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 6.505s
+
+OK

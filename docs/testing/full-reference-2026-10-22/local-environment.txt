@@ -1,0 +1,4 @@
+Darwin arm64
+GNU bash, version 4.4.0(1)-release (arm-apple-darwin27.0.0)
+fish, version 4.9.3
+zsh 5.9 (arm64-apple-darwin26.0)

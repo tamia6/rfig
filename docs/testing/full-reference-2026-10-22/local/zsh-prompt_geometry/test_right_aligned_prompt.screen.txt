@@ -1,0 +1,10 @@
+n/T/rfig-strict-04tvd1qn/right-prompt
+
+LEFT                                        STATUS
+RFIG> rfigprobe space\ value
+LEFT                                        STATUS
+RFIG>
+
+
+
+
