@@ -12,7 +12,7 @@ import subprocess
 import tempfile
 import time
 import unittest
-from process_cleanup import cleanup_tmux
+from process_cleanup import cleanup_tmux, _processes
 
 ROOT = Path(__file__).resolve().parents[1]
 SHELL = os.environ.get('RFIG_TEST_SHELL', 'bash')
@@ -23,6 +23,7 @@ ARTIFACTS = Path(os.environ.get('RFIG_TEST_ARTIFACTS', '/tmp/rfig-strict-results
 class StrictShell(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix='rfig-strict-')
+        self.addCleanup(self.temp.cleanup)
         self.home = Path(self.temp.name)
         self.tmp = self.home/'tmp'; self.tmp.mkdir()
         self.config=self.home/'.config/rfig'; self.config.mkdir(parents=True)
@@ -73,6 +74,7 @@ source {ROOT}/rfig.zsh
 ''')
             command=[EXE,'-i']
         self.tmux=['tmux','-L',f'strict-{SHELL}-{os.getpid()}','-f','/dev/null']
+        self.addCleanup(cleanup_tmux, self.tmux, [self.home, self.tmp])
         self.call('new-session','-d','-s','test','-c',str(self.home),'-x','80','-y','18',*command)
         self.call('set-option','-g','status','off')
         self.shell_pid=int(self.call('display-message','-p','-t','test','#{pane_pid}'))
@@ -109,10 +111,8 @@ source {ROOT}/rfig.zsh
         try:return [p for l in self.marker.read_text().splitlines() for p in json.loads(l)]
         except (FileNotFoundError,json.JSONDecodeError):return []
     def alive(self,pid):
-        try:
-            status=Path(f'/proc/{pid}/stat').read_text().split(') ',1)[1].split()[0]
-            return status!='Z'
-        except FileNotFoundError:return False
+        process = _processes().get(pid)
+        return process is not None and not process[2].startswith('Z')
     def tearDown(self):
         ARTIFACTS.mkdir(parents=True,exist_ok=True)
         (ARTIFACTS/(self.id().split('.')[-1]+'.screen.txt')).write_text(self.screen())
@@ -166,7 +166,7 @@ source {ROOT}/rfig.zsh
     def test_shell_state_and_directory(self):
         target=self.home/'space dir';target.mkdir()
         self.type('cd '+"'"+str(target)+"'");self.keys('Enter')
-        self.wait(lambda:os.readlink(f'/proc/{self.shell_pid}/cwd')==str(target) and self.current()=='' and not self.editor_pids(),'cd prompt')
+        self.wait(lambda:Path(self.call('display-message','-p','-t','test','#{pane_current_path}').strip()).resolve()==target.resolve() and self.current()=='' and not self.editor_pids(),'cd prompt')
         self.run_line('rfigprobe "$PWD"',1)
         self.assertEqual(self.executed()[-1],[str(target)])
         assignment="set -gx RFIG_KEEP 'persistent value'" if SHELL=='fish' else "export RFIG_KEEP='persistent value'"

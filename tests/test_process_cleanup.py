@@ -5,10 +5,14 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from process_cleanup import cleanup_process_tree
+from process_cleanup import cleanup_process_tree, _processes
 
 
 class ProcessCleanupTests(unittest.TestCase):
+    def test_process_table_contains_current_process(self):
+        import os
+        self.assertIn(os.getpid(), _processes())
+
     def test_cleanup_kills_nested_process_after_parent_exits(self):
         root = Path(__file__).resolve().parent / ".cleanup-fixture"
         root.mkdir(exist_ok=True)

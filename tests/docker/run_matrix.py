@@ -34,6 +34,7 @@ def run(name,args,extra=None,timeout=150):
     (results/'summary.json').write_text(json.dumps(summary,indent=2))
 
 run('unit',['cargo','test','--locked','--offline','-j','2'])
+run('process-cleanup',['python3','tests/test_process_cleanup.py'])
 run('setup',['python3','tests/multi_shell_setup.py'])
 run('archive-installer',['python3','tests/install_archive.py'])
 run('real-binary-installer',['python3','tests/install_binary.py'],dict(RFIG_TEST_BINARY=str(root/'target/debug/rfig')))
@@ -44,6 +45,7 @@ for test in ('setup_safety', 'self_completion', 'zsh_integration', 'zsh_usage', 
 for shell,exe,tag in [('bash','/bin/bash','bash-system'),('bash','/opt/bash44/bin/bash','bash44'),('fish','/usr/bin/fish','fish'),('zsh','/usr/bin/zsh','zsh59')]:
     if not Path(exe).exists():continue
     env=dict(RFIG_TEST_SHELL=shell,RFIG_TEST_SHELL_EXE=exe)
+    run(f'{tag}-help-reference',['python3','tests/help_reference.py'],env)
     if shell!='zsh':
         for mode in ('emacs','vi'):
             for attempt in range(1,4):

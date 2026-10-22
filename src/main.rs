@@ -436,8 +436,52 @@ fn parse_help_options(help: &str) -> HashMap<String, &'static str> {
     kinds
 }
 
+fn help_invocation(help: &str) -> Option<&str> {
+    let mut usage = false;
+    for line in help.lines() {
+        let trimmed = line.trim();
+        let text = if let Some((heading, rest)) = trimmed.split_once(':') {
+            if !heading.eq_ignore_ascii_case("usage") {
+                continue;
+            }
+            usage = true;
+            rest.trim()
+        } else if trimmed.eq_ignore_ascii_case("usage") {
+            usage = true;
+            continue;
+        } else if usage && line.starts_with(char::is_whitespace) {
+            trimmed
+        } else {
+            continue;
+        };
+        if let Some(word) = text
+            .split_whitespace()
+            .next()
+            .filter(|word| safe_command_name(word))
+        {
+            return Some(word);
+        }
+    }
+    None
+}
+
+fn advertised_full_help(help: &str) -> Option<Vec<&str>> {
+    let invocation = help_invocation(help)?;
+    for line in help
+        .lines()
+        .filter(|line| line.starts_with(char::is_whitespace))
+    {
+        let words: Vec<_> = line.split_whitespace().collect();
+        if words.starts_with(&[invocation, "help", "--all"]) {
+            return Some(vec!["help", "--all"]);
+        }
+    }
+    None
+}
+
 fn parse_help_subcommands<'a>(name: &str, help: &'a str) -> Vec<&'a str> {
     let mut commands = Vec::new();
+    let invocation = help_invocation(help).unwrap_or(name);
     let mut in_section = false;
     for line in help.lines() {
         let trimmed = line.trim();
@@ -465,7 +509,7 @@ fn parse_help_subcommands<'a>(name: &str, help: &'a str) -> Vec<&'a str> {
             }
         } else {
             trimmed
-                .strip_prefix(name)
+                .strip_prefix(invocation)
                 .and_then(|rest| rest.strip_prefix(char::is_whitespace))
                 .and_then(|rest| rest.split_whitespace().next())
                 .filter(|_| line.starts_with(char::is_whitespace))
@@ -744,6 +788,25 @@ fn analyze_command(name: &str, directory: &Path) -> io::Result<usize> {
                 help = short_help;
             }
         }
+    }
+    if let Some(args) = advertised_full_help(&help) {
+        let result = help_output_status(name, &args, &scratch, true);
+        let full_help = match result {
+            Ok((output, true)) if !parse_help_subcommands(name, &output).is_empty() => output,
+            result => {
+                let _ = fs::remove_file(&scratch);
+                return Err(result.err().unwrap_or_else(|| {
+                    io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        "advertised full help unavailable; preserving cached completions",
+                    )
+                }));
+            }
+        };
+        kinds.extend(parse_help_options(&full_help));
+        separate_options |= help_advertises_option_command(name, &full_help);
+        help.push('\n');
+        help.push_str(&full_help);
     }
     if separate_options {
         if let Ok(help) = help_output(name, &["options"], &scratch, true) {
@@ -1621,6 +1684,27 @@ mod tests {
             "other",
             "Use \"tool options\" for a list of global command-line options."
         ));
+    }
+
+    #[test]
+    fn help_uses_declared_invocation_alias_and_full_reference() {
+        let help = "Wrapper CLI\nUsage: short <command> [options]\n\nStart here:\n  short setup  Configure\n  short start  Start\n\nExplore:\n  provider account models\n\nMore help:\n  short help --all  Complete command reference\n";
+        assert_eq!(
+            parse_help_subcommands("wrapper", help),
+            vec!["setup", "start", "help"]
+        );
+        assert_eq!(advertised_full_help(help), Some(vec!["help", "--all"]));
+        assert_eq!(
+            advertised_full_help("Examples:\n  stranger help --all\n"),
+            None
+        );
+        assert_eq!(
+            parse_help_subcommands(
+                "wrapper",
+                "Usage: short <command>\n  stranger delete  Unrelated\n"
+            ),
+            Vec::<&str>::new()
+        );
     }
 
     #[test]

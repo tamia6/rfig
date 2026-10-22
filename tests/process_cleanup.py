@@ -10,7 +10,7 @@ def _processes():
     rows = {}
     output = subprocess.check_output(["ps", "-axo", "pid=,ppid=,stat=,command="], text=True)
     for line in output.splitlines():
-        fields = line.strip().split(None, 2)
+        fields = line.strip().split(None, 3)
         if len(fields) == 4:
             rows[int(fields[0])] = (int(fields[1]), fields[3], fields[2])
     return rows
@@ -34,7 +34,7 @@ def cleanup_process_tree(pids=(), roots=(), timeout=3.0):
     selected = set(pids)
     needles = tuple(str(root) for root in roots)
     selected.update(
-        pid for pid, (_, command) in processes.items()
+        pid for pid, (_, command, _) in processes.items()
         if needles and any(needle in command for needle in needles)
     )
     selected = _descendants(processes, selected)
