@@ -146,7 +146,6 @@ impl Screen {
         &mut self,
         line: &str,
         point: usize,
-        ghost: &str,
         items: &[Item],
         selected: usize,
         pulse: bool,
@@ -157,10 +156,7 @@ impl Screen {
         self.rows = rows.max(1);
         self.x = self.x.min(self.cols - 1);
         self.y = self.y.min(self.rows - 1);
-        let line_rows =
-            (self.x as usize + UnicodeWidthStr::width(line) + UnicodeWidthStr::width(ghost))
-                / self.cols as usize
-                + 1;
+        let line_rows = (self.x as usize + UnicodeWidthStr::width(line)) / self.cols as usize + 1;
         let menu_rows = if items.is_empty() {
             0
         } else {
@@ -176,14 +172,7 @@ impl Screen {
             )?;
             self.y = self.y.saturating_sub(scroll);
         }
-        queue!(
-            self.tty,
-            MoveTo(self.x, self.y),
-            Print(line),
-            SetForegroundColor(Color::DarkGrey),
-            Print(ghost),
-            ResetColor
-        )?;
+        queue!(self.tty, MoveTo(self.x, self.y), Print(line), ResetColor)?;
         let first = selected.saturating_sub(4);
         let menu_y = self.y.saturating_add(line_rows as u16);
         for (offset, item) in items.iter().enumerate().skip(first).take(5) {
@@ -193,6 +182,7 @@ impl Screen {
             }
             let active = offset == selected;
             let (icon, color) = match item.kind.as_str() {
+                "history" => ("◷", Color::DarkGrey),
                 "command" => ("⌘", Color::Cyan),
                 "subcommand" => ("↳", Color::Magenta),
                 "option" => ("◇", Color::Blue),
@@ -447,6 +437,9 @@ pub fn run(
         if query != pending {
             pending = query.into();
             items.clear();
+            if point == line.len() {
+                memory.add_history(&line, &mut items);
+            }
             selected = 0;
             if !query.is_empty() {
                 let _ = send.send(query.into());
@@ -462,26 +455,17 @@ pub fn run(
                 }) {
                     hits.clear();
                 }
+                if point == line.len() {
+                    memory.add_history(&line, &mut hits);
+                }
                 ctx = new_context;
                 items = hits;
                 selected = 0;
                 dirty = true;
             }
         }
-        let ghost = if point == line.len() {
-            memory.suggest(&line)
-        } else {
-            String::new()
-        };
         if dirty {
-            screen.draw(
-                &line,
-                point,
-                &ghost,
-                &items,
-                selected,
-                Instant::now() < pulse_until,
-            )?;
+            screen.draw(&line, point, &items, selected, Instant::now() < pulse_until)?;
             dirty = false;
         }
         if !event::poll(Duration::from_millis(15))? {
@@ -520,7 +504,6 @@ pub fn run(
                 let alt = key.modifiers.contains(KeyModifiers::ALT);
                 match key.code {
                     KeyCode::Enter => {
-                        line.push_str(&ghost);
                         point = line.len();
                         if !shell_is_fish {
                             memory.executed(&line);
@@ -537,9 +520,6 @@ pub fn run(
                     KeyCode::Char('d') if ctrl && line.is_empty() => break "eof",
                     KeyCode::Char('r') if ctrl => break "search",
                     KeyCode::Char('e') if ctrl => {
-                        if point == line.len() {
-                            line.push_str(&ghost);
-                        }
                         point = line.len();
                     }
                     KeyCode::End => point = line.len(),
@@ -555,11 +535,17 @@ pub fn run(
                         } else if let Some(item) = items.get(selected) {
                             let previous = items.iter().map(|i| i.label.clone()).collect();
                             let prefix = ctx.words.join(" ");
+                            if item.kind == "history" {
+                                line = item.label.clone();
+                                point = line.len();
+                                items.clear();
+                                continue;
+                            }
                             memory.record("C", &prefix, &item.label);
                             let insert = format!(
                                 "{}{}{}",
                                 if ctx.injected { " " } else { "" },
-                                engine::quote(&item.label),
+                                engine::quote(&item.label, &line[ctx.start..point]),
                                 if item.label.ends_with('/') { "" } else { " " }
                             );
                             line.replace_range(ctx.start..point, &insert);
@@ -568,9 +554,6 @@ pub fn run(
                             // A new context may expose another level; stale rows disappear immediately.
 
                             items.clear();
-                        } else {
-                            line.push_str(&ghost);
-                            point = line.len();
                         }
                     }
                     KeyCode::Up | KeyCode::Down => {

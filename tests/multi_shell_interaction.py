@@ -68,19 +68,19 @@ source {ROOT}/rfig.bash
         call('set-option','-g','status','off')
         wait_for(lambda:'RFIG>' in screen(),'prompt missing')
         type_('rfigfi')
-        wait_for(lambda:'rfigfixture beta' in screen() and '⌘ rfigfixture' in screen(), 'typed-prefix menu and ghost missing')
-        assert 'gamma' not in screen(), 'gray suggestion must not supply menu context'
+        wait_for(lambda:'rfigfixture beta' in screen() and '⌘ rfigfixture' in screen(), 'typed-prefix menu and history missing')
+        assert 'gamma' not in screen(), 'history must not supply ordinary completion context'
         type_('xture')
         wait_for(lambda:'① beta' in screen() and 'gamma' in screen(),'menu or usage ranking missing')
-        assert 'RFIG> rfigfixture beta' in screen(), screen()
+        assert screen().rsplit('RFIG>',1)[-1].splitlines()[0].strip()=='rfigfixture', screen()
         keys('Enter')
-        wait_for(lambda:(home/'executed').exists(),'Enter did not execute gray suggestion')
-        assert (home/'executed').read_text()=='beta\n'
+        wait_for(lambda:(home/'executed').exists(),'Enter did not execute typed input')
+        assert (home/'executed').read_text()=='\n'
         wait_for(lambda:'gamma' not in screen(),'overlay remains after execution')
         assert 'RFIG> RFIG>' not in screen(), 'prompt was duplicated'
         (home/'executed').unlink()
         type_('rfigfixture ');wait_for(lambda:'gamma' in screen(),'menu not refreshed')
-        keys('Down','Right'); wait_for(lambda:'north' in screen(),'nested completion missing'); keys('C-e','Enter')
+        keys('Down','Down','Right'); wait_for(lambda:'north' in screen(),'nested completion missing'); keys('C-e','Enter')
         wait_for(lambda:(home/'executed').exists(),'selected candidate not executed')
         assert (home/'executed').read_text()=='alpha\n', (home/'executed').read_text()
         type_('rfigfixture -');wait_for(lambda:'-v' in screen(),'short option missing')
@@ -99,15 +99,15 @@ source {ROOT}/rfig.bash
         type_('rfigfixture be'); wait_for(lambda:'beta' in screen().rsplit('RFIG>',1)[-1], 'menu missing')
         keys('Enter'); time.sleep(.2)
         assert (home/'executed').read_text()=='be\n'
-        # Ctrl+E accepts gray text; it is not executed until Enter.
-        type_('rfigfixture g'); wait_for(lambda:'rfigfixture gamma' in screen().rsplit('RFIG>',1)[-1], 'gray suggestion missing')
+        # Ctrl+E moves to the end and does not accept the history row.
+        type_('rfigfixture g'); wait_for(lambda:'rfigfixture gamma' in screen().rsplit('RFIG>',1)[-1], 'history suggestion missing')
         keys('C-e'); time.sleep(.1)
         assert (home/'executed').read_text()=='be\n'
         keys('Enter');time.sleep(.2)
-        assert (home/'executed').read_text()=='gamma\n'
+        assert (home/'executed').read_text()=='g\n'
         # Tab returns to the host shell's completion, with no implicit execution.
         type_('rfigfixture be'); time.sleep(.2); keys('Tab'); time.sleep(.3)
-        assert (home/'executed').read_text()=='gamma\n'
+        assert (home/'executed').read_text()=='g\n'
         assert 'rfigfixture beta' in screen().rsplit('RFIG>',1)[-1], screen()
         keys('C-c');time.sleep(.2)
         type_('rfigunknown'); wait_for(lambda:'create' in screen().rsplit('RFIG>',1)[-1], 'help-cache fallback missing')
@@ -119,6 +119,6 @@ source {ROOT}/rfig.bash
         assert '→' not in screen().rsplit('RFIG>',1)[-1], screen()
         wait_for(lambda:screen().rsplit('RFIG>',1)[-1].strip()=='', 'final command did not finish')
         keys('C-d'); time.sleep(.15)
-        print(SHELL+' real interactive menu, gray history, ranking, options, cancellation, Unicode: OK')
+        print(SHELL+' real interactive menu, history selection, ranking, options, cancellation, Unicode: OK')
     finally:
         cleanup_tmux(tmux, [home])

@@ -1,0 +1,10 @@
+RFIG> rfigprobe space\ value
+PROMPT-HEADER-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxx
+TIME:17:45:32
+RFIG> rfigprobe space\ value
+PROMPT-HEADER-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxx
+TIME:17:45:32
+RFIG>
+

@@ -1,0 +1,10 @@
+RFIG> rfigprobe space\ value
+…R-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TIME:17:45:08
+RFIG> rfigprobe space\ value
+…R-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TIME:17:45:08
+RFIG> rfigprobe space\ value
+…R-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TIME:17:45:08
+RFIG>

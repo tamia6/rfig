@@ -66,9 +66,9 @@ printf '%s\\0' "$#reply" "${reply[@]}"
 BUFFER='echo record 1000'
 CURSOR=${#BUFFER}
 _rfig_history_suggest
-printf '%s\\0' "$_rfig_ghost"
+printf '%s\\0' "$_rfig_history_match"
 ''')
-        self.assertEqual(actual, ["1000"] + lines[-1000:] + [" 'two words' * 中文"])
+        self.assertEqual(actual, ["1000"] + lines[-1000:] + [lines[1000]])
 
     def test_history_record_keeps_last_1000_lines_separate(self):
         lines = [f"echo record {i} 'two words' * 中文" for i in range(1002)]

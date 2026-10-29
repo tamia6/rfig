@@ -1,0 +1,6 @@
+...s
+----------------------------------------------------------------------
+Ran 4 tests in 2.948s
+
+OK (skipped=1)
+fish: narrow dynamic prompt, scrolling, resize, execution and cleanup OK

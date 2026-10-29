@@ -1,0 +1,10 @@
+'cd /' -> 'cd /bin/'
+'ls /' -> 'ls /bin/'
+'cd /tmp/rfig-path-ch85o0yj/parent/' -> 'cd /tmp/rfig-path-ch85o0yj/parent/child\\ dir/'
+'cd ./parent/' -> 'cd ./parent/child\\ dir/'
+'cd ~/parent/' -> 'cd ~/parent/child\\ dir/'
+'cd ./parent/ch' -> 'cd ./parent/child\\ dir/'
+'cd /tmp/rfig-path-ch85o0yj/parent/child\\ dir/' -> 'cd /tmp/rfig-path-ch85o0yj/parent/child\\ dir/next/'
+'ls ./parent/fi' -> 'ls ./parent/file\\ name.txt '
+'pathfixture --path=./parent/ch' -> 'pathfixture --path=./parent/child\\ dir/'
+zsh path completion: OK

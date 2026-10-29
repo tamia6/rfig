@@ -1,0 +1,137 @@
+[
+  {
+    "name": "unit",
+    "exit_code": 0,
+    "seconds": 0.98
+  },
+  {
+    "name": "build",
+    "exit_code": 0,
+    "seconds": 0.03
+  },
+  {
+    "name": "test_process_cleanup",
+    "exit_code": 0,
+    "seconds": 0.27
+  },
+  {
+    "name": "multi_shell_setup",
+    "exit_code": 0,
+    "seconds": 0.78
+  },
+  {
+    "name": "install_archive",
+    "exit_code": 0,
+    "seconds": 0.12
+  },
+  {
+    "name": "install_binary",
+    "exit_code": 0,
+    "seconds": 1.06
+  },
+  {
+    "name": "setup_safety",
+    "exit_code": 0,
+    "seconds": 3.78
+  },
+  {
+    "name": "self_completion",
+    "exit_code": 0,
+    "seconds": 0.25
+  },
+  {
+    "name": "zsh_integration",
+    "exit_code": 0,
+    "seconds": 22.45
+  },
+  {
+    "name": "zsh_usage",
+    "exit_code": 0,
+    "seconds": 3.33
+  },
+  {
+    "name": "zsh_array_slices",
+    "exit_code": 0,
+    "seconds": 1.26
+  },
+  {
+    "name": "zsh_history_suggestions",
+    "exit_code": 0,
+    "seconds": 6.81
+  },
+  {
+    "name": "zsh_large_completion",
+    "exit_code": 0,
+    "seconds": 2.44
+  },
+  {
+    "name": "zsh_path_completion",
+    "exit_code": 0,
+    "seconds": 11.4
+  },
+  {
+    "name": "bash-help_reference",
+    "exit_code": 0,
+    "seconds": 1.32
+  },
+  {
+    "name": "bash-prompt_geometry",
+    "exit_code": 0,
+    "seconds": 5.75
+  },
+  {
+    "name": "bash-strict_shell",
+    "exit_code": 0,
+    "seconds": 10.65
+  },
+  {
+    "name": "bash-emacs",
+    "exit_code": 0,
+    "seconds": 4.88
+  },
+  {
+    "name": "bash-vi",
+    "exit_code": 0,
+    "seconds": 4.84
+  },
+  {
+    "name": "fish-help_reference",
+    "exit_code": 0,
+    "seconds": 1.29
+  },
+  {
+    "name": "fish-prompt_geometry",
+    "exit_code": 0,
+    "seconds": 4.58
+  },
+  {
+    "name": "fish-strict_shell",
+    "exit_code": 0,
+    "seconds": 8.21
+  },
+  {
+    "name": "fish-emacs",
+    "exit_code": 0,
+    "seconds": 4.36
+  },
+  {
+    "name": "fish-vi",
+    "exit_code": 0,
+    "seconds": 4.7
+  },
+  {
+    "name": "zsh-help_reference",
+    "exit_code": 0,
+    "seconds": 1.48
+  },
+  {
+    "name": "zsh-prompt_geometry",
+    "exit_code": 0,
+    "seconds": 5.83
+  },
+  {
+    "name": "zsh-strict_shell",
+    "exit_code": 1,
+    "seconds": 10.49
+  }
+]

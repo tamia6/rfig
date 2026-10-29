@@ -4,6 +4,7 @@ if (( ! $+functions[_main_complete] )); then
   compinit -D
 fi
 zmodload zsh/stat
+zmodload zsh/zutil
 
 typeset -gaU _rfig_hits
 typeset -gA _rfig_option_kinds
@@ -11,7 +12,7 @@ typeset -gA _rfig_branch_candidates
 typeset -gA _rfig_usage
 _rfig_usage=()
 typeset -g _rfig_option_source='' _rfig_option_stamp=''
-typeset -g _rfig_ghost=''
+typeset -g _rfig_history_match=''
 typeset -g _rfig_history_dir=''
 typeset -ga _rfig_history_lines
 typeset -gi _rfig_selected=1 _rfig_pulse=0 _rfig_injected=0 _rfig_popular_count=0
@@ -114,20 +115,33 @@ _rfig_rank_group() {
 
 _rfig_compadd() {
   local -a hits descriptions _rfig_records
-  local item insert index kind
+  local -A addopts
+  local item insert index kind hidden_prefix hidden_suffix file_name
   for item in "$@"; do
     if [[ $item == -A || $item == -D || $item == -O ]]; then
       builtin compadd "$@"
       return
     fi
   done
+  zparseopts -E -A addopts a k q Q f e n U l 1 2 C P: S: p: s: i: I: W: d: J: X: x: V: o:: r: R: D: O: A: E: M: F:
+  hidden_prefix=${addopts[-p]-}
+  hidden_suffix=${addopts[-s]-}
+  if (( ! ${+addopts[-Q]} )); then
+    [[ -n $hidden_prefix ]] && hidden_prefix=${(q)hidden_prefix}
+    [[ -n $hidden_suffix ]] && hidden_suffix=${(q)hidden_suffix}
+  fi
   builtin compadd -A hits -D descriptions "$@"
   for (( index = 1; index <= $#hits; index++ )); do
-    # -A returns the shell-ready insertion, including quoting applied by zsh.
-    # Keep it intact; quoting it again inserts literal backslashes into arguments.
+    # -A quotes the match body, but omits compadd's surrounding insertion fields.
     insert=$hits[index]
     item=${(Q)insert}
     [[ -n $item && $item != *$'\n'* && $item != *$'\t'* ]] || continue
+    file_name=${(Q)${addopts[-W]-$hidden_prefix}}$item
+    if (( ${+addopts[-f]} )) && [[ -d $file_name && $insert != */ && -z $hidden_suffix ]]; then
+      insert+='/'
+    fi
+    insert="${addopts[-i]-}${addopts[-P]-}$hidden_prefix$insert$hidden_suffix${addopts[-S]-}${addopts[-I]-}"
+    (( ${+addopts[-U]} )) || insert="$IPREFIX$insert$ISUFFIX"
     if [[ ${curtag-} == *branch* || ${curtag-} == heads* || ${curtag-} == *-heads* ]]; then
       _rfig_branch_candidates[$item]=1
     fi
@@ -172,25 +186,19 @@ _rfig_capture() {
 zle -C _rfig_capture complete-word _rfig_capture
 
 _rfig_history_suggest() {
-  _rfig_ghost=''
+  _rfig_history_match=''
   [[ -n $BUFFER && $CURSOR == ${#BUFFER} && $BUFFER != *$'\n'* ]] || return
   local suggestion
   for suggestion in "${(@Oa)_rfig_history_lines}"; do
-    [[ $suggestion == "$BUFFER"* && $suggestion != "$BUFFER" ]] || continue
-    _rfig_ghost=${suggestion#$BUFFER}
+    [[ $suggestion == "$BUFFER"* && $suggestion != "$BUFFER" && $suggestion != *[[:cntrl:]]* ]] || continue
+    _rfig_history_match=$suggestion
     return
   done
 }
 
-_rfig_show_ghost() {
-  POSTDISPLAY=$_rfig_ghost
-  [[ -n $_rfig_ghost ]] &&
-    region_highlight+=( "${#BUFFER} $(( ${#BUFFER} + ${#_rfig_ghost} )) fg=8 memo=rfig" )
-}
-
 _rfig_render() {
   region_highlight=(${region_highlight:#*memo=rfig})
-  _rfig_show_ghost
+  POSTDISPLAY=''
   (( $#_rfig_hits )) || return
   local first=$(( _rfig_selected > 5 ? _rfig_selected - 4 : 1 ))
   local index description row start kind icon color rest record label icon_offset label_offset width
@@ -204,13 +212,16 @@ _rfig_render() {
     kind=${record##*$'\t'}
     [[ -n $label ]] || continue
     case $kind in
+      history) icon='◷'; color=8 ;;
       command) icon='⌘'; color=cyan ;;
       subcommand) icon='↳'; color=magenta ;;
       argument) icon='●'; color=green ;;
       option) icon='◇'; color=blue ;;
       flag) icon='⚑'; color=yellow ;;
     esac
-    (( index <= _rfig_popular_count )) && icon=$popular_icons[index]
+    local popular_index=$index
+    [[ ${_rfig_hits[1]##*$'\t'} == history ]] && (( --popular_index ))
+    (( popular_index > 0 && popular_index <= _rfig_popular_count )) && icon=$popular_icons[popular_index]
     POSTDISPLAY+=$'\n'
     start=$(( ${#BUFFER} + ${#POSTDISPLAY} ))
     icon_offset=2
@@ -257,11 +268,9 @@ _rfig_render() {
   POSTDISPLAY+=$row
 }
 
-_rfig_preview() {
+_rfig_complete() {
   POSTDISPLAY=''
   region_highlight=(${region_highlight:#*memo=rfig})
-  _rfig_history_suggest
-  _rfig_show_ghost
   _rfig_hits=()
   _rfig_branch_candidates=()
   _rfig_popular_count=0
@@ -358,9 +367,9 @@ _rfig_preview() {
   fi
   for record in "${_rfig_hits[@]}"; do
     label=${record%%$'\t'*}
-    if [[ $typed_prefix == --* ]]; then
+    if [[ $typed_prefix == --* && $typed_prefix != *=* ]]; then
       [[ $label == --* ]] || continue
-    elif [[ $typed_prefix == -* ]]; then
+    elif [[ $typed_prefix == -* && $typed_prefix != *=* ]]; then
       [[ $label == -* && $label != --* ]] || continue
     fi
     if [[ $label == -* ]]; then
@@ -382,6 +391,16 @@ _rfig_preview() {
     (( ++_rfig_popular_count == 3 )) && break
   done
   (( _rfig_selected > $#_rfig_hits )) && _rfig_selected=$#_rfig_hits
+}
+
+_rfig_preview() {
+  _rfig_complete
+  _rfig_history_suggest
+  if [[ -n $_rfig_history_match ]]; then
+    _rfig_hits=( "$_rfig_history_match"$'\t'"$_rfig_history_match"$'\tHistory\thistory' "${_rfig_hits[@]}" )
+  fi
+  (( _rfig_selected > $#_rfig_hits )) && _rfig_selected=$#_rfig_hits
+  (( _rfig_selected < 1 )) && _rfig_selected=1
   _rfig_render
 }
 
@@ -442,14 +461,7 @@ _rfig_choose() {
     return
   fi
   if (( ! $#_rfig_hits )); then
-    if [[ -n $_rfig_ghost ]]; then
-      BUFFER+=$_rfig_ghost
-      CURSOR=${#BUFFER}
-      _rfig_preview
-      zle -R
-    else
-      zle forward-char
-    fi
+    zle forward-char
     return
   fi
   local -a previous_hits=( "${_rfig_hits[@]}" )
@@ -457,6 +469,14 @@ _rfig_choose() {
   local label=${record%%$'\t'*}
   local rest=${record#*$'\t'} insert
   insert=${rest%%$'\t'*}
+  if [[ ${record##*$'\t'} == history ]]; then
+    BUFFER=$insert
+    CURSOR=${#BUFFER}
+    _rfig_selected=1
+    _rfig_preview
+    zle -R
+    return
+  fi
   local prefix=${BUFFER[1,_rfig_start]} suffix=${BUFFER[$(( CURSOR + 1 )),-1]}
   local -a context_words=( ${(z)prefix} )
   local context="${(j: :)context_words}"
@@ -483,23 +503,17 @@ _rfig_choose() {
   zle -R
 }
 
-_rfig_accept_ghost() {
-  if [[ -n $_rfig_ghost && $CURSOR == ${#BUFFER} ]]; then
-    BUFFER+=$_rfig_ghost
-    CURSOR=${#BUFFER}
-  else
-    zle .end-of-line
-  fi
+_rfig_end_of_line() {
+  zle .end-of-line
   _rfig_preview
   zle -R
 }
 
 _rfig_accept_line() {
-  [[ -n $_rfig_ghost && $CURSOR == ${#BUFFER} ]] && BUFFER+=$_rfig_ghost
   _rfig_history_record "$BUFFER"
   _rfig_record_line "$BUFFER"
   POSTDISPLAY=''
-  _rfig_ghost=''
+  _rfig_history_match=''
   region_highlight=(${region_highlight:#*memo=rfig})
   _rfig_hits=()
   zle -R
@@ -509,7 +523,7 @@ _rfig_accept_line() {
 zle -N _rfig_up
 zle -N _rfig_down
 zle -N _rfig_choose
-zle -N _rfig_accept_ghost
+zle -N _rfig_end_of_line
 zle -N _rfig_accept_line
 for _rfig_keymap in emacs viins; do
   bindkey -M "$_rfig_keymap" '^[[A' _rfig_up
@@ -519,7 +533,7 @@ for _rfig_keymap in emacs viins; do
   bindkey -M "$_rfig_keymap" '^[[C' _rfig_choose
   bindkey -M "$_rfig_keymap" '^[OC' _rfig_choose
   bindkey -M "$_rfig_keymap" '^M' _rfig_accept_line
-  bindkey -M "$_rfig_keymap" '^E' _rfig_accept_ghost
+  bindkey -M "$_rfig_keymap" '^E' _rfig_end_of_line
   bindkey -M "$_rfig_keymap" '^I' expand-or-complete
 done
 unset _rfig_keymap

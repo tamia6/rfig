@@ -12,7 +12,7 @@ import subprocess
 import tempfile
 import termios
 import time
-from process_cleanup import cleanup_tmux
+from process_cleanup import cleanup_tmux, cleanup_process_tree
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -206,10 +206,13 @@ with tempfile.TemporaryDirectory() as temp:
         brew_rc_dir = brew_home / "zsh"
         brew_rc_dir.mkdir()
         brew_env = dict(os.environ, HOME=brew_temp, ZDOTDIR=str(brew_rc_dir), SHELL="/bin/zsh", PATH=str(brew_bin))
-        subprocess.run([str(brew_prefix / "bin/rfig"), "setup"], env=brew_env, check=True)
-        assert (brew_rc_dir / ".zshrc").read_text().strip() == f'source "{brew_home / ".config/rfig/rfig.zsh"}"'
-        assert (brew_home / ".config/rfig/rfig.zsh").read_bytes() == (ROOT / "rfig.zsh").read_bytes()
-        assert "brew" in (brew_home / ".config/rfig/commands.txt").read_text().splitlines()
+        try:
+            subprocess.run([str(brew_prefix / "bin/rfig"), "setup"], env=brew_env, check=True)
+            assert (brew_rc_dir / ".zshrc").read_text().strip() == f'source "{brew_home / ".config/rfig/rfig.zsh"}"'
+            assert (brew_home / ".config/rfig/rfig.zsh").read_bytes() == (ROOT / "rfig.zsh").read_bytes()
+            assert "brew" in (brew_home / ".config/rfig/commands.txt").read_text().splitlines()
+        finally:
+            assert not cleanup_process_tree(roots=[brew_home]), "brew setup worker survived cleanup"
     (home / ".zshrc").write_text(
         f"PROMPT=$'RFIG-TOP\\nRFIG> '\nautoload -Uz compinit; compinit -D\nfpath+=( {late_dir} )\nsource {ROOT / 'rfig.zsh'}\n"
         f"git() {{ print -r -- \"$*\" > {home / 'args'}; }}\n"
@@ -361,7 +364,7 @@ with tempfile.TemporaryDirectory() as temp:
 
         os.write(fd, b"rfigfixture")
         wait_for(fd, "→".encode())
-        os.write(fd, b"\x1b[B")  # zeta was just used, so select alpha explicitly.
+        os.write(fd, b"\x1b[B\x1b[B")  # Skip history and the recently used zeta candidate.
         time.sleep(0.1)
         os.write(fd, b"\x1b[C")
         wait_for_buffer(fd, home, "rfigfixture alpha")

@@ -48,8 +48,10 @@ class StrictShell(unittest.TestCase):
             rc.write_text(f'''PS1='RFIG> '
 _rfigprobe() {{ local label; COMPREPLY=(); while IFS= read -r label; do [[ $label == "$2"* ]] && COMPREPLY+=( "$label" ); done < "$RFIG_CHOICES"; }}
 _rfigslow() {{ mapfile -t COMPREPLY < <(command "$RFIG_SLOW"); }}
+_rfigdirs() {{ local dir typed=$2; [[ $typed == '~/'* ]] && typed="$HOME/${{typed#'~/'}}"; COMPREPLY=(); while IFS= read -r dir; do [[ $2 == '~/'* ]] && dir="~/${{dir#"$HOME/"}}"; COMPREPLY+=( "$dir/" ); done < <(compgen -d -- "$typed"); }}
 complete -F _rfigprobe rfigprobe
 complete -F _rfigslow rfigslow
+complete -F _rfigdirs cd
 source {ROOT}/rfig.bash
 ''')
             command=[EXE,'--noprofile','--rcfile',str(rc),'-i']
@@ -172,6 +174,21 @@ source {ROOT}/rfig.zsh
         assignment="set -gx RFIG_KEEP 'persistent value'" if SHELL=='fish' else "export RFIG_KEEP='persistent value'"
         self.run_line(assignment+'; rfigprobe "$RFIG_KEEP"',2)
         self.assertEqual(self.executed()[-1],['persistent value'])
+
+    def test_directory_completion_keeps_prefix(self):
+        self.call('resize-window', '-t', 'test', '-x', '220', '-y', '18')
+        parent = self.home / 'path-root'
+        target = parent / 'child dir'
+        (target / 'nested').mkdir(parents=True)
+        for prefix in (str(parent) + '/', './path-root/', '~/path-root/'):
+            self.type('cd ' + prefix + 'ch')
+            self.wait(lambda:'→' in self.current(), 'directory candidate')
+            self.keys('Right')
+            self.wait(lambda:'child' in self.current() and 'dir/' in self.current(), 'directory slash')
+            self.keys('Enter')
+            self.wait(lambda:Path(self.call('display-message','-p','-t','test','#{pane_current_path}').strip()).resolve() == target.resolve() and self.current() == '', 'selected directory execution')
+            self.type('cd ' + str(self.home)); self.keys('Enter')
+            self.wait(lambda:Path(self.call('display-message','-p','-t','test','#{pane_current_path}').strip()).resolve() == self.home.resolve() and self.current() == '', 'return home')
 
     def test_cancel_repeated_and_private_history(self):
         for _ in range(10):

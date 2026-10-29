@@ -1,0 +1,8 @@
+SHELL=zsh EXE=/usr/bin/zsh
+test_literal_candidates (__main__.StrictShell.test_literal_candidates) ... ok
+test_rapid_input_delete_and_wrapping (__main__.StrictShell.test_rapid_input_delete_and_wrapping) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 1.202s
+
+OK

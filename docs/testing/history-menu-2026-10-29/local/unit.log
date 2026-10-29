@@ -1,0 +1,27 @@
+warning: `/Users/tamia/.cargo/config` is deprecated in favor of `config.toml`
+  |
+  = help: if you need to support cargo 1.38 or earlier, you can symlink `config` to `config.toml`
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.09s
+     Running unittests src/main.rs (target/debug/deps/rfig-3db6d87125e57e07)
+
+running 17 tests
+test tests::filesystem_name_is_safe_in_shell ... ok
+test editor::geometry_tests::physical_prompt_rows_include_wrap_and_terminal_controls ... ok
+test tests::help_advertises_separate_global_options ... ok
+test engine::tests::completion_preserves_only_typed_home_expansion ... ok
+test tests::git_tab_replaces_prefix_and_keeps_suffix ... ok
+test tests::help_lists_subcommands_in_unpunctuated_sections ... ok
+test tests::git_without_space_opens_subcommands ... ok
+test engine::tests::tokenization_never_executes ... ok
+test tests::help_lists_subcommands_in_usage_and_command_sections ... ok
+test engine::tests::dash_filter_and_popular_limit ... ok
+test engine::tests::history_is_first_without_changing_regular_ranking ... ok
+test tests::help_marks_value_options_and_boolean_switches ... ok
+test tests::native_completion_extends_a_nested_command ... ok
+test tests::system_services_are_not_help_probed ... ok
+test tests::help_uses_declared_invocation_alias_and_full_reference ... ok
+test tests::unsupported_command_uses_shell_completion ... ok
+test tests::cd_completes_existing_directory ... ok
+
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

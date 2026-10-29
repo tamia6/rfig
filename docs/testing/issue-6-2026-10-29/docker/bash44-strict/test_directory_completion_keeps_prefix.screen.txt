@@ -1,0 +1,18 @@
+RFIG> cd /tmp/rfig-strict-1vfk_xbk/path-root/child\ dir/
+RFIG> cd /tmp/rfig-strict-1vfk_xbk
+RFIG> cd ./path-root/child\ dir/
+RFIG> cd /tmp/rfig-strict-1vfk_xbk
+RFIG> cd ~/path-root/child\ dir/
+RFIG> cd /tmp/rfig-strict-1vfk_xbk
+RFIG>
+
+
+
+
+
+
+
+
+
+
+

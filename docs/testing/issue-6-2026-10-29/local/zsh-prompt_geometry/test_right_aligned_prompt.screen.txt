@@ -1,0 +1,10 @@
+n/T/rfig-strict-pg_rltap/right-prompt
+
+LEFT                                        STATUS
+RFIG> rfigprobe space\ value
+LEFT                                        STATUS
+RFIG>
+
+
+
+

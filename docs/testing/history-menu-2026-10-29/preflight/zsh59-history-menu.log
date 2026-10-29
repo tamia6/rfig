@@ -1,0 +1,26 @@
+Traceback (most recent call last):
+  File "/work/tests/history_menu.py", line 72, in <module>
+    keys('C-c');wait(lambda:not screen().strip(),'cancel history')
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/tests/history_menu.py", line 45, in wait
+    raise AssertionError(message+'\n'+screen())
+AssertionError: cancel history
+plainfixture h
+→ ◷ plainfixture hello
+ History
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

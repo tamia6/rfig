@@ -75,10 +75,12 @@ pub fn context(line: &str) -> Context {
     }
 }
 
-pub fn quote(text: &str) -> String {
+pub fn quote(text: &str, typed: &str) -> String {
     let mut out = String::new();
-    for c in text.chars() {
-        if !(c.is_alphanumeric() || "_./-:=+@%".contains(c)) {
+    for (index, c) in text.chars().enumerate() {
+        // Retain a home expansion the user typed, without expanding literal candidates.
+        let home = index == 0 && c == '~' && text.starts_with("~/") && typed.starts_with("~/");
+        if !(home || c.is_alphanumeric() || "_./-:=+@%".contains(c)) {
             out.push('\\');
         }
         out.push(c);
@@ -147,6 +149,21 @@ impl Memory {
             .find(|l| l.starts_with(line) && *l != line)
             .map(|l| l[line.len()..].to_owned())
             .unwrap_or_default()
+    }
+    pub fn add_history(&self, line: &str, items: &mut Vec<Item>) {
+        let suffix = self.suggest(line);
+        if !suffix.is_empty() {
+            let label = format!("{line}{suffix}");
+            items.insert(
+                0,
+                Item {
+                    label,
+                    description: "History".into(),
+                    kind: "history".into(),
+                    popular: 0,
+                },
+            );
+        }
     }
     pub fn record(&mut self, kind: &str, context: &str, label: &str) {
         if label.is_empty() || !valid(context) || !valid(label) {
@@ -364,7 +381,35 @@ mod tests {
         assert_eq!(c.words, ["tool", "user", "alice smith"]);
         assert_eq!(c.prefix, "--ro");
         assert_eq!(context("tool a\\ b").prefix, "a b");
-        assert_eq!(quote("a b;$(no)"), "a\\ b\\;\\$\\(no\\)");
+        assert_eq!(quote("a b;$(no)", ""), "a\\ b\\;\\$\\(no\\)");
+    }
+    #[test]
+    fn completion_preserves_only_typed_home_expansion() {
+        assert_eq!(quote("~/space dir/", "~/spa"), "~/space\\ dir/");
+        assert_eq!(quote("~/space dir/", ""), "\\~/space\\ dir/");
+        assert_eq!(quote("~/space dir/", "\"~/spa"), "\\~/space\\ dir/");
+        assert_eq!(quote("~/space dir/", "\\~/spa"), "\\~/space\\ dir/");
+        assert_eq!(quote("~/$(touch PWN)/", "~/"), "~/\\$\\(touch\\ PWN\\)/");
+    }
+    #[test]
+    fn history_is_first_without_changing_regular_ranking() {
+        let mut memory = Memory::load(PathBuf::from("/nonexistent"), "dir".into());
+        memory.history = vec!["tool beta".into(), "tool alpha".into()];
+        let mut items = vec![Item {
+            label: "beta".into(),
+            description: String::new(),
+            kind: "subcommand".into(),
+            popular: 1,
+        }];
+        memory.add_history("tool", &mut items);
+        assert_eq!(items[0].label, "tool alpha");
+        assert_eq!(items[0].kind, "history");
+        assert_eq!(items[0].popular, 0);
+        assert_eq!(items[1].popular, 1);
+        let mut absent = Vec::new();
+        memory.add_history("", &mut absent);
+        memory.add_history("other", &mut absent);
+        assert!(absent.is_empty());
     }
     #[test]
     fn dash_filter_and_popular_limit() {

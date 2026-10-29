@@ -1,0 +1,262 @@
+[
+  {
+    "name": "unit",
+    "exit_code": 0,
+    "seconds": 0.04
+  },
+  {
+    "name": "process-cleanup",
+    "exit_code": 0,
+    "seconds": 0.14
+  },
+  {
+    "name": "setup",
+    "exit_code": 0,
+    "seconds": 0.78
+  },
+  {
+    "name": "archive-installer",
+    "exit_code": 0,
+    "seconds": 0.03
+  },
+  {
+    "name": "real-binary-installer",
+    "exit_code": 0,
+    "seconds": 3.75
+  },
+  {
+    "name": "linux-probe-safety",
+    "exit_code": 0,
+    "seconds": 0.17
+  },
+  {
+    "name": "setup_safety",
+    "exit_code": 0,
+    "seconds": 3.61
+  },
+  {
+    "name": "self_completion",
+    "exit_code": 0,
+    "seconds": 0.23
+  },
+  {
+    "name": "zsh_integration",
+    "exit_code": 0,
+    "seconds": 19.62
+  },
+  {
+    "name": "zsh_usage",
+    "exit_code": 0,
+    "seconds": 2.55
+  },
+  {
+    "name": "zsh_array_slices",
+    "exit_code": 0,
+    "seconds": 1.26
+  },
+  {
+    "name": "zsh_history_suggestions",
+    "exit_code": 1,
+    "seconds": 6.83
+  },
+  {
+    "name": "zsh_large_completion",
+    "exit_code": 0,
+    "seconds": 2.24
+  },
+  {
+    "name": "zsh_path_completion",
+    "exit_code": 0,
+    "seconds": 10.12
+  },
+  {
+    "name": "bash-system-history-menu",
+    "exit_code": 0,
+    "seconds": 0.64
+  },
+  {
+    "name": "bash-system-help-reference",
+    "exit_code": 0,
+    "seconds": 0.53
+  },
+  {
+    "name": "bash-system-emacs-1",
+    "exit_code": 0,
+    "seconds": 4.12
+  },
+  {
+    "name": "bash-system-emacs-2",
+    "exit_code": 0,
+    "seconds": 4.14
+  },
+  {
+    "name": "bash-system-emacs-3",
+    "exit_code": 0,
+    "seconds": 4.02
+  },
+  {
+    "name": "bash-system-vi-1",
+    "exit_code": 0,
+    "seconds": 4.11
+  },
+  {
+    "name": "bash-system-vi-2",
+    "exit_code": 0,
+    "seconds": 4.06
+  },
+  {
+    "name": "bash-system-vi-3",
+    "exit_code": 0,
+    "seconds": 4.06
+  },
+  {
+    "name": "bash-system-prompt-geometry",
+    "exit_code": 0,
+    "seconds": 3.44
+  },
+  {
+    "name": "bash-system-strict",
+    "exit_code": 0,
+    "seconds": 3.3
+  },
+  {
+    "name": "bash-system-ansi",
+    "exit_code": 0,
+    "seconds": 0.9
+  },
+  {
+    "name": "bash44-history-menu",
+    "exit_code": 0,
+    "seconds": 0.69
+  },
+  {
+    "name": "bash44-help-reference",
+    "exit_code": 0,
+    "seconds": 0.52
+  },
+  {
+    "name": "bash44-emacs-1",
+    "exit_code": 0,
+    "seconds": 4.01
+  },
+  {
+    "name": "bash44-emacs-2",
+    "exit_code": 0,
+    "seconds": 4.05
+  },
+  {
+    "name": "bash44-emacs-3",
+    "exit_code": 0,
+    "seconds": 4.12
+  },
+  {
+    "name": "bash44-vi-1",
+    "exit_code": 0,
+    "seconds": 4.11
+  },
+  {
+    "name": "bash44-vi-2",
+    "exit_code": 0,
+    "seconds": 4.05
+  },
+  {
+    "name": "bash44-vi-3",
+    "exit_code": 0,
+    "seconds": 4.13
+  },
+  {
+    "name": "bash44-prompt-geometry",
+    "exit_code": 0,
+    "seconds": 3.37
+  },
+  {
+    "name": "bash44-strict",
+    "exit_code": 0,
+    "seconds": 3.19
+  },
+  {
+    "name": "bash44-ansi",
+    "exit_code": 0,
+    "seconds": 0.9
+  },
+  {
+    "name": "fish-history-menu",
+    "exit_code": 0,
+    "seconds": 0.55
+  },
+  {
+    "name": "fish-help-reference",
+    "exit_code": 0,
+    "seconds": 0.44
+  },
+  {
+    "name": "fish-emacs-1",
+    "exit_code": 0,
+    "seconds": 3.8
+  },
+  {
+    "name": "fish-emacs-2",
+    "exit_code": 0,
+    "seconds": 3.86
+  },
+  {
+    "name": "fish-emacs-3",
+    "exit_code": 0,
+    "seconds": 3.77
+  },
+  {
+    "name": "fish-vi-1",
+    "exit_code": 0,
+    "seconds": 3.82
+  },
+  {
+    "name": "fish-vi-2",
+    "exit_code": 0,
+    "seconds": 3.83
+  },
+  {
+    "name": "fish-vi-3",
+    "exit_code": 0,
+    "seconds": 3.84
+  },
+  {
+    "name": "fish-prompt-geometry",
+    "exit_code": 0,
+    "seconds": 2.92
+  },
+  {
+    "name": "fish-strict",
+    "exit_code": 0,
+    "seconds": 2.8
+  },
+  {
+    "name": "fish-ansi",
+    "exit_code": 0,
+    "seconds": 0.82
+  },
+  {
+    "name": "zsh59-history-menu",
+    "exit_code": 1,
+    "seconds": 6.79
+  },
+  {
+    "name": "zsh59-help-reference",
+    "exit_code": 0,
+    "seconds": 0.74
+  },
+  {
+    "name": "zsh59-prompt-geometry",
+    "exit_code": 0,
+    "seconds": 3.42
+  },
+  {
+    "name": "zsh59-strict",
+    "exit_code": 1,
+    "seconds": 4.51
+  },
+  {
+    "name": "zsh59-ansi",
+    "exit_code": 0,
+    "seconds": 1.29
+  }
+]

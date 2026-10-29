@@ -1,0 +1,31 @@
+Traceback (most recent call last):
+  File "/work/tests/zsh_history_suggestions.py", line 7, in <module>
+    runpy.run_path(str(Path(__file__).with_name('history_menu.py')), run_name='__main__')
+  File "<frozen runpy>", line 291, in run_path
+  File "<frozen runpy>", line 98, in _run_module_code
+  File "<frozen runpy>", line 88, in _run_code
+  File "/work/tests/history_menu.py", line 72, in <module>
+    keys('C-c');wait(lambda:not screen().strip(),'cancel history')
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/tests/history_menu.py", line 45, in wait
+    raise AssertionError(message+'\n'+screen())
+AssertionError: cancel history
+plainfixture h
+→ ◷ plainfixture hello
+ History
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
