@@ -142,7 +142,7 @@ with tempfile.TemporaryDirectory(prefix="rfig-showcase-") as temp:
         "PROMPT='%F{magenta}>%f '\nRPROMPT=''\nbindkey -e\n"
         "autoload -Uz compinit; compinit -D\n"
         f"source {shlex.quote(str(ROOT / 'rfig.zsh'))}\n"
-        "_demo_snapshot() { print -rl -- \"$BUFFER\" \"$_rfig_ghost\" \"$POSTDISPLAY\" > "
+        "_demo_snapshot() { print -rl -- \"$BUFFER\" \"$_rfig_history_match\" \"$POSTDISPLAY\" > "
         f"{shlex.quote(str(snapshot))}" " }\n"
         "zle -N _demo_snapshot\nbindkey '^X' _demo_snapshot\n"
     )
@@ -187,7 +187,7 @@ with tempfile.TemporaryDirectory(prefix="rfig-showcase-") as temp:
         cursor = tuple(map(int, call("display-message", "-p", "-t", "demo", "#{cursor_x} #{cursor_y}").split()))
         frames.append(render(ansi, cursor, title))
         durations.append(duration)
-        records.append({"title": title, "buffer": lines[0], "ghost": lines[1], "screen": ansi})
+        records.append({"title": title, "buffer": lines[0], "history": lines[1], "screen": ansi})
         return lines
 
     def reset() -> None:
@@ -227,9 +227,11 @@ with tempfile.TemporaryDirectory(prefix="rfig-showcase-") as temp:
         reset()
 
         key("npm run", literal=True)
-        capture("03 / npm · package scripts", 900)
+        capture("03 / npm · history is the first menu row", 900)
+        key("Down")
         key("Right")
         capture("03 / npm · dynamic package.json candidates", 1200)
+        key("Down")
         key("Down")
         capture("03 / npm · ↓ switches the selection", 850)
         key("Right")

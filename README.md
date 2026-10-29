@@ -8,7 +8,7 @@ Built in Rust, rfig brings IDE-style command-line autocomplete to zsh, Bash, and
 
 rfig is an independent, Fig-inspired project and is not affiliated with Fig. It uses completion definitions and scripts available in your environment, with sandboxed help analysis as a conditional fallback; it does not promise completion for every command.
 
-Built-in **history-based autosuggestions** appear as inline gray text and replace the history suggestion functionality of plugins such as `zsh-autosuggestions`. **No separate autosuggestion plugin is required.** Menus use only what you actually type; autosuggestions match history from your current working directory. Both can appear together.
+Built-in **history-based suggestions** appear as the first menu row, marked `◷`. They match your current directory and typed prefix, so no separate history suggestion plugin is required. Ordinary completions use only what you actually type. There is no inline gray text; Enter always executes your actual input.
 
 ![rfig demonstrating progressive Git completion, dynamic branches, Brew services, and npm scripts in zsh](assets/rfig-showcase.gif)
 
@@ -16,9 +16,9 @@ The demo shows progressive Git completion from `g` to `gi` to `git`, then `check
 
 [Installation](#installation) · [Usage](#usage) · [Shell support](#shell-support) · [Completion sources](#completion-sources-and-background-enrichment) · [Testing](#testing)
 
-> rfig v0.2.2 supports macOS and Linux with zsh, Bash 4.4+, and Fish 3.6+. Install with Homebrew, a prebuilt binary, or the source code.
+> rfig v0.3.0 supports macOS and Linux with zsh, Bash 4.4+, and Fish 3.6+. Install with Homebrew, a prebuilt binary, or the source code.
 
-**At a glance:** terminal autocomplete and nested CLI completion · inline, directory-scoped command-history suggestions · local usage-based ranking · no AI service or cloud account required.
+**At a glance:** terminal autocomplete and nested CLI completion · directory-scoped history at the top of the menu · local usage-based ranking · no AI service or cloud account required.
 
 ## Features
 
@@ -26,7 +26,7 @@ The demo shows progressive Git completion from `g` to `gi` to `git`, then `check
 | --- | --- |
 | Menus as you type | Updates after typing or deleting, without pressing `Tab` or an artificial debounce delay |
 | Dynamic, nested completion | Queries available definitions for subcommands, branches, paths, and more; depth and content depend on the source |
-| History-based autosuggestions | Matches the current directory and typed prefix; appears alongside the menu and replaces a separate history suggestion plugin |
+| History-based autosuggestions | Shows at most one directory-scoped history match first, marked ◷; accept explicitly with Right |
 | Usage-based ranking | Selections and executed commands affect ranking; up to three candidates with usage records are marked `① ② ③` |
 | Category icons and theme colors | Category icons, an arrow pointer, and selected text use the terminal's ANSI palette |
 | Multiple completion sources | Native definitions, installed scripts, command-provided generators, the Cobra protocol, and cached help data |
@@ -93,17 +93,17 @@ Start typing to see candidates. Available completion definitions determine which
 | Key | Behavior |
 | --- | --- |
 | `↑` / `↓` | Select a candidate when a menu is visible; otherwise browse history |
-| `→` | At the end of the line, insert the selected menu item; without a menu, accept the autosuggestion; within the line, move right |
-| `Ctrl+E` | At the end of the line, accept the autosuggestion without executing it; otherwise move to the end |
-| `Enter` | Execute the full autosuggestion when present, or the typed command otherwise; does not accept the highlighted menu item |
+| `→` | At the end of the line, insert the selected item; a history row fills the whole command without executing it; within the line, move right |
+| `Ctrl+E` | Move to the end of the line without accepting a suggestion |
+| `Enter` | Execute only the actual input; never implicitly accept history or the highlighted menu item |
 | `Tab` | Use the shell's native completion without executing the command |
 | `Ctrl+C` | Cancel the current input |
 
-The menu displays up to five rows; use the arrow keys to browse the rest. A `-` prefix shows only single-hyphen options; `--` shows only double-hyphen options. This rule applies to all commands.
+The menu displays up to five rows; use the arrow keys to browse the rest. For ordinary option candidates, a `-` prefix shows only single-hyphen options; `--` shows only double-hyphen options. This rule applies to all commands.
 
 ### History and usage-based ranking
 
-- **Autosuggestions:** rfig maintains its own history and finds recent matches for the current directory and typed prefix. Typing `gi` may suggest `git checkout master`, while the menu still uses only `gi`.
+- **History suggestions:** rfig maintains its own directory-scoped history. Typing `gi` may show `◷ git checkout master` first; ordinary candidates still complete only `gi`. Select history with Right, then Enter to execute. With no history match, ordinary candidates start the menu. History does not use the `① ② ③` usage markers.
 - **Fresh installations:** history starts empty. Old shell history without working-directory information is not imported automatically.
 - **Ranking:** scores are accumulated per command context. Selecting a candidate adds 3; recording an execution adds 1. With equal scores, non-option candidates come first. Up to three candidates with usage records receive circled numbers; the rest keep their category icons.
 - **Local storage:** history and ranking records stay on your computer. Bash/Fish omit commands beginning with a space; zsh follows that rule when `HIST_IGNORE_SPACE` is enabled.

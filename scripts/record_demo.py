@@ -92,7 +92,7 @@ with tempfile.TemporaryDirectory(prefix="rfig-demo-") as temp:
         "autoload -Uz compinit; compinit -D\n"
         f"source {shlex.quote(str(ROOT / 'rfig.zsh'))}\n"
         "_demo_snapshot() {\n"
-        f"  print -rl -- \"$BUFFER\" \"$_rfig_ghost\" \"$POSTDISPLAY\" > {shlex.quote(str(snapshot))}\n"
+        f"  print -rl -- \"$BUFFER\" \"$_rfig_history_match\" \"$POSTDISPLAY\" > {shlex.quote(str(snapshot))}\n"
         "}\nzle -N _demo_snapshot\nbindkey '^X' _demo_snapshot\n"
     )
     tmux = [shutil.which("tmux"), "-L", f"rfig-demo-{os.getpid()}", "-f", "/dev/null"]
@@ -122,7 +122,7 @@ with tempfile.TemporaryDirectory(prefix="rfig-demo-") as temp:
         cursor = tuple(map(int, call("display-message", "-p", "-t", "demo", "#{cursor_x} #{cursor_y}").split()))
         frames.append(render(ansi, cursor, title))
         durations.append(duration)
-        records.append(dict(title=title, buffer=lines[0], ghost=lines[1], screen=ansi))
+        records.append(dict(title=title, buffer=lines[0], history=lines[1], screen=ansi))
         return lines
 
     def reset():
@@ -137,6 +137,7 @@ with tempfile.TemporaryDirectory(prefix="rfig-demo-") as temp:
         capture("01 / Command completion", 500)
         key("git stat", True)
         capture("01 / Type to filter the menu", 1200)
+        key("Down")
         key("Right")
         selected = capture("01 / Right arrow inserts the candidate", 1000)
         assert selected[0].strip() == "git status", selected
@@ -160,12 +161,12 @@ with tempfile.TemporaryDirectory(prefix="rfig-demo-") as temp:
         capture("03 / History-based autosuggestions", 250)
         key("i", True)
         suggested = capture("03 / Only 'gi' is typed; the rest is suggested", 2400)
-        assert suggested[0] == "gi" and suggested[1] == "t status --short --branch", suggested
+        assert suggested[0] == "gi" and suggested[1] == history_command, suggested
         assert "git" in "\n".join(suggested[3:]), suggested
-        assert "status" not in "\n".join(suggested[3:]), suggested
+        assert "◷ " + history_command in "\n".join(suggested[2:]), suggested
         frames[-1].save(EVIDENCE / "history-suggestion.png")
-        key("C-e")
-        accepted = capture("03 / Ctrl+E accepts without executing", 1800)
+        key("Right")
+        accepted = capture("03 / Right accepts history without executing", 1800)
         assert accepted[0] == history_command and not accepted[1], accepted
         frames[-1].save(EVIDENCE / "history-accepted.png")
         key("Enter")
@@ -173,13 +174,13 @@ with tempfile.TemporaryDirectory(prefix="rfig-demo-") as temp:
         capture("03 / Enter executes the accepted command", 1300)
         reset()
         key("gi", True)
-        suggested = capture("04 / Or execute the suggestion directly", 1800)
-        assert suggested[0] == "gi" and suggested[1] == "t status --short --branch", suggested
+        suggested = capture("04 / Enter executes only typed input", 1800)
+        assert suggested[0] == "gi" and suggested[1] == history_command, suggested
         key("Enter")
         time.sleep(0.3)
-        capture("04 / Enter runs the full suggestion", 1800)
+        capture("04 / Unaccepted history is not executed", 1800)
         plain = re.sub(r'\x1b\[[0-9;]*m', '', records[-1]['screen'])
-        assert history_command in plain and '## No commits yet on main' in plain, records[-1]
+        assert 'command not found: gi' in plain, records[-1]
         frames[-1].save(EVIDENCE / "history-executed.png")
     finally:
         subprocess.run(tmux + ["kill-server"], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
