@@ -33,7 +33,7 @@
         <p class="eyebrow">开源终端自动补全 · 受 Fig 启发的独立项目</p>
         <p class="hero-desc">输入时查看候选，用右箭头插入下一步。菜单与按目录匹配的历史命令自动建议同时显示，无需另外安装 zsh-autosuggestions 类命令自动建议插件。</p>
         <div class="actions"><a class="primary" href="#install">开始使用 <span>↗</span></a><a class="secondary" href="#demo">看看实际效果 ↓</a></div>
-        <p class="source-note">v0.2.2 支持 zsh、Bash 4.4+、Fish 3.6+。<a href="#support">查看支持范围与系统要求 ↗</a></p>
+        <p class="source-note">v0.3.0 支持 zsh、Bash 4.4+、Fish 3.6+。<a href="#support">查看支持范围与系统要求 ↗</a></p>
         <div class="hero-facts"><span><b>01</b> 输入即显示</span><span><b>02</b> 动态多级补全</span><span><b>03</b> 尊重本机环境</span></div>
       </div>
       <div class="hero-art" aria-label="rfig 补全菜单示意">
@@ -62,15 +62,15 @@
         <article class="feature-card big">
           <span class="card-index">01 / 直接出现</span>
           <div class="mini-demo" aria-hidden="true"><span class="prompt">❯</span> brew services <span class="mini-cursor"></span><div class="mini-list"><div>→ <b>↳</b> <strong>start</strong></div><div>　<b>↳</b> stop</div><div>　<b>↳</b> list</div></div></div>
-          <h3>补全菜单与自动建议，同时呈现。</h3><p>菜单根据实际输入提示候选，历史命令自动建议（History-based Autosuggestions）根据当前目录的历史匹配完整命令，以内联灰色文本显示。方向键浏览菜单，右箭头插入；Ctrl+E 接受自动建议，Enter 在有自动建议时执行完整建议，否则执行当前输入。</p>
+          <h3>历史置顶，补全紧随。</h3><p>当前目录匹配的历史建议最多一条放在菜单首行，以 ◷ 标识；普通候选只根据实际输入生成。方向键浏览，右箭头插入，选中历史行时填入完整命令但不执行。不再显示行内灰字；Enter 只执行实际输入，Ctrl+E 只移到行尾。</p>
         </article>
         <article class="feature-card"><span class="card-index">02 / 跟着环境走</span><div class="feature-symbol">{<span>git</span>}</div><h3>动态，不靠死表。</h3><p>优先使用当前 Shell 的补全定义，再结合可用脚本、协议和帮助缓存。分支、路径等候选随环境变化，多级能力取决于补全来源。</p></article>
         <article class="feature-card"><span class="card-index">03 / 越用越顺手</span><div class="rank-example">① 常用候选　 ② 第二选择　 ↳ 其他命令</div><h3>习惯决定排序。</h3><p>按命令上下文累计选择与执行记录。常用候选靠前，最多前三项标记圈号，其他候选仍可浏览；数据保存在本机。</p></article>
       </div>
-      <p class="under-note">输入 <code>gi</code> 时，即使自动建议给出完整的 <code>git checkout master</code>，菜单也只按 <code>gi</code> 提示。颜色使用终端的 ANSI 调色板，选中项由箭头与文字颜色标识。</p>
+      <p class="under-note">输入 <code>gi</code> 时，即使历史首行给出完整的 <code>git checkout master</code>，普通候选也只按 <code>gi</code> 提示。颜色使用终端的 ANSI 调色板，选中项由箭头与文字颜色标识。</p>
     </section>
     <section class="support container" id="support" aria-labelledby="support-title">
-      <div class="section-head"><div><p class="eyebrow">KNOW WHAT WORKS</p><h2 id="support-title">选你熟悉的 Shell。</h2></div><p>v0.2.2 支持以下 Shell，可按需分别启用。</p></div>
+      <div class="section-head"><div><p class="eyebrow">KNOW WHAT WORKS</p><h2 id="support-title">选你熟悉的 Shell。</h2></div><p>v0.3.0 支持以下 Shell，可按需分别启用。</p></div>
       <div class="support-table-wrap">
         <table class="support-table">
           <caption>当前源码的 Shell 支持范围。</caption>
@@ -97,7 +97,7 @@ rfig setup</code></pre><button id="copy" type="button">复制命令</button></di
       <details><summary>rfig 支持所有命令吗？</summary><p>不保证。候选范围取决于本机可用的补全定义、脚本、生成器和帮助缓存。有些命令可能没有候选，或只能获得基于帮助文本的基础候选。</p></details>
       <details><summary>rfig 会使用 AI 吗？</summary><p>不会。补全、历史建议和使用排序均在本机运行，无需 AI 服务或云端账号。</p></details>
       <details><summary>会导入旧历史、扫描整台电脑吗？</summary><p>不会自动导入缺少目录信息的旧 Shell 历史。命令扫描以当前 PATH 与常见补全目录为范围，不会遍历整块磁盘。历史、选择记录与缓存保存在 ~/.config/rfig/。</p></details>
-      <details><summary>菜单与自动建议同时出现，Enter 会执行什么？</summary><p>有自动建议时，Enter 执行完整建议；没有自动建议时，执行实际输入，不会接受高亮菜单项。光标在行尾时，右箭头优先插入菜单选中项，Ctrl+E 接受自动建议而不执行。</p></details>
+      <details><summary>Enter 会接受选中的历史建议吗？</summary><p>不会。Enter 只执行实际输入。光标在行尾时，用右箭头插入选中的历史行或普通候选，再按 Enter 执行。Ctrl+E 只移到行尾。</p></details>
       <details><summary>为什么有些命令没有候选？</summary><p>命令可能没有可用补全定义，或后台分析尚未完成、被跳过或失败。可查看 ~/.config/rfig/enrich.status；done 只表示处理结束，不代表每个命令都成功。可用 rfig analyze &lt;命令名&gt; 单独刷新。Linux 若缺少 Landlock 或被容器限制，会明确提示无法探测，不会退回无隔离执行。</p></details>
       <details><summary>怎样启用另一个 Shell？</summary><p>当前源码支持分别运行 rfig setup --shell zsh、rfig setup --shell bash 或 rfig setup --shell fish，再打开对应 Shell 的新会话。设置不会改变你的默认 Shell，各 Shell 的候选可能不同。</p></details>
     </section>
