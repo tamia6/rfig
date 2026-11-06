@@ -11,9 +11,14 @@ name=${COMP_WORDS[0]}
 if ! complete -p "$name" >/dev/null 2>&1; then
   if declare -F _completion_loader >/dev/null; then _completion_loader "$name" >/dev/null 2>&1; fi
 fi
-if ! complete -p "$name" >/dev/null 2>&1 && [[ $name != *[^a-zA-Z0-9_.+-]* && -r $HOME/.config/rfig/generated/$name.bash ]]; then
-    source "$HOME/.config/rfig/generated/$name.bash" >/dev/null 2>&1
-fi
+spec=$(complete -p "$name" 2>/dev/null) || spec=''
+case $spec in
+  ''|*' -F _minimal '*|*' -F _comp_complete_minimal '*)
+    # Generic file fallbacks must not hide a command's generated definition.
+    if [[ $name != *[^a-zA-Z0-9_.+-]* && -r $HOME/.config/rfig/generated/$name.bash ]]; then
+      source "$HOME/.config/rfig/generated/$name.bash" >/dev/null 2>&1
+    fi ;;
+esac
 spec=$(complete -p "$name" 2>/dev/null) || exit 0
 COMPREPLY=()
 if [[ $spec =~ -F[[:space:]]+([a-zA-Z_][a-zA-Z_0-9]*) ]]; then

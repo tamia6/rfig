@@ -1,0 +1,66 @@
+test_native_completion_output (__main__.CompletionOutput.test_native_completion_output) ... FAIL
+test_protocol_stderr_is_not_candidates (__main__.CompletionOutput.test_protocol_stderr_is_not_candidates) ... FAIL
+test_generated_script_loading_output (__main__.CompletionOutput.test_generated_script_loading_output) ... FAIL
+
+======================================================================
+FAIL: test_native_completion_output (__main__.CompletionOutput.test_native_completion_output)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/tamia/tamia-home/rfig/tests/completion_output.py", line 40, in test_native_completion_output
+    self.assert_clean_menu('rfigprobe')
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/Users/tamia/tamia-home/rfig/tests/completion_output.py", line 18, in assert_clean_menu
+    self.wait(lambda: 'alpha' in self.current() and 'beta' in self.current(), 'valid candidates')
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tamia/tamia-home/rfig/tests/strict_shell.py", line 101, in wait
+    self.fail(message+'\n'+self.screen())
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: valid candidates
+RFIG> source /var/folders/p4/h_3xm0f155l3cbgnxm3bsznr0000gn/T/rfig-strict-cgjix5
+cg/noisy-completion
+RFIG> rfigprobRFIG_UNSTRUCTURED
+RFIG_DIAGNOSTIC native warning
+e              RFIG_UNSTRUCTURED
+RFIG_DIAGNOSTIC native warning
+  beta
+
+
+
+
+
+
+
+
+
+
+
+
+
+======================================================================
+FAIL: test_protocol_stderr_is_not_candidates (__main__.CompletionOutput.test_protocol_stderr_is_not_candidates)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/tamia/tamia-home/rfig/tests/completion_output.py", line 55, in test_protocol_stderr_is_not_candidates
+    self.assert_clean_menu(probe.name)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "/Users/tamia/tamia-home/rfig/tests/completion_output.py", line 20, in assert_clean_menu
+    self.assertNotIn('RFIG_DIAGNOSTIC', self.screen())
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'RFIG_DIAGNOSTIC' unexpectedly found in 'RFIG> source /var/folders/p4/h_3xm0f155l3cbgnxm3bsznr0000gn/T/rfig-strict-vn0ajo\nqp/noisy-completion\nRFIG> rfigprotocolnoise\n  ↳  RFIG_DIAGNOSTIC protocol warning\n ➜ ↳   alpha\n  ↳  beta\n beta description\n\n\n\n\n\n\n\n\n\n\n\n'
+
+======================================================================
+FAIL: test_generated_script_loading_output (__main__.CompletionOutput.test_generated_script_loading_output)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/tamia/tamia-home/rfig/tests/completion_output.py", line 74, in test_generated_script_loading_output
+    self.assert_clean_menu(name)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/Users/tamia/tamia-home/rfig/tests/completion_output.py", line 21, in assert_clean_menu
+    self.assertNotIn('RFIG_UNSTRUCTURED', self.screen())
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'RFIG_UNSTRUCTURED' unexpectedly found in 'RFIG> source /var/folders/p4/h_3xm0f155l3cbgnxm3bsznr0000gn/T/rfig-strict-sy_7e_\nqq/noisy-completion\nRFIG> rfiggeneratednoisRFIG_UNSTRUCTURED startup\ne ⌘ rfiggeneratednoise\n  al alpha\n ➜ ●   beta\n\n\n\n\n\n\n\n\n\n\n\n\n'
+
+----------------------------------------------------------------------
+Ran 3 tests in 6.850s
+
+FAILED (failures=3)

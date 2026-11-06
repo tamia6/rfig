@@ -1,0 +1,18 @@
+RFIG> source /tmp/rfig-strict-rhq0xye_/noisy-completion
+RFIG> /tmp/rfig-strict-rhq0xye_/bin/noisy-provider
+RFIG_DIAGNOSTIC native warning
+alpha
+beta
+RFIG>
+
+
+
+
+
+
+
+
+
+
+
+

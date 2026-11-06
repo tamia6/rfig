@@ -1,0 +1,37 @@
+test_pnpm_warning (__main__.RealPnpm.test_pnpm_warning) ... FAIL
+
+======================================================================
+FAIL: test_pnpm_warning (__main__.RealPnpm.test_pnpm_warning)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/tamia/tamia-home/rfig/target/local-results/pnpm-output-20261105/real_pnpm.py", line 15, in test_pnpm_warning
+    self.wait(lambda:(self.current().splitlines() or [''])[0].strip()=='pnpm' and '→' in self.current() and any(word in self.current() for word in ('access','install','recursive')),'real pnpm candidates',seconds=6)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tamia/tamia-home/rfig/tests/strict_shell.py", line 101, in wait
+    self.fail(message+'\n'+self.screen())
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: real pnpm candidates
+RFIG> source /var/folders/p4/h_3xm0f155l3cbgnxm3bsznr0000gn/T/rfig-strict-daxox0
+ra/noisy-completion
+RFIG> ppnpm is running through Node.js because the script that installs its nati
+ve binary was skipped.
+pn⌘ poptlpnpm is running through Node.js because the script that installs its na
+tive binary was skipped.
+m pnpx    pnpm is running through Node.js because the script that installs its n
+ative binary was skipped.
+  init
+● recursive
+  ● multi
+  ● m
+
+
+
+
+
+
+
+
+----------------------------------------------------------------------
+Ran 1 test in 7.837s
+
+FAILED (failures=1)

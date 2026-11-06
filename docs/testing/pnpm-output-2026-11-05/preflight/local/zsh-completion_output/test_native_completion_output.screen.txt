@@ -1,0 +1,18 @@
+RFIG> source /var/folders/p4/h_3xm0f155l3cbgnxm3bsznr0000gn/T/rfig-strict-fo0hrh
+_f/noisy-completion
+RFIG> rfigprobe alpha
+RFIG> /var/folders/p4/h_3xm0f155l3cbgnxm3bsznr0000gn/T/rfig-strict-fo0hrh_f/bin/
+noisy-provider
+RFIG_DIAGNOSTIC native warning
+alpha
+beta
+RFIG>
+
+
+
+
+
+
+
+
+

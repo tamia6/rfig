@@ -1,0 +1,8 @@
+test_native_completion_output (__main__.CompletionOutput.test_native_completion_output) ... ok
+test_protocol_stderr_is_not_candidates (__main__.CompletionOutput.test_protocol_stderr_is_not_candidates) ... ok
+test_generated_script_loading_output (__main__.CompletionOutput.test_generated_script_loading_output) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 1.963s
+
+OK

@@ -1,0 +1,18 @@
+RFIG> source /tmp/rfig-strict-w50_aw2_/noisy-completion
+RFIG> rfiggeneratednoise alpha
+RFIG>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

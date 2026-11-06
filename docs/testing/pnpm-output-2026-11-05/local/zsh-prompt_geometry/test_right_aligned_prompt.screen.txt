@@ -1,0 +1,10 @@
+n/T/rfig-strict-f2pkzt0k/right-prompt
+
+LEFT                                        STATUS
+RFIG> rfigprobe space\ value
+LEFT                                        STATUS
+RFIG>
+
+
+
+

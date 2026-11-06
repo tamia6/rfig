@@ -172,7 +172,8 @@ _rfig_capture() {
   local previous=${functions[compadd]-} had_previous=$+functions[compadd]
   functions[compadd]=$functions[_rfig_compadd]
   {
-    _main_complete
+    # Candidates arrive through compadd; provider diagnostics must not redraw ZLE.
+    _main_complete >/dev/null 2>&1
   } always {
     if (( had_previous )); then
       functions[compadd]=$previous
@@ -305,7 +306,7 @@ _rfig_complete() {
       fi
     done
     if [[ -z ${_comps[$command_name]-} && -r "$HOME/.config/rfig/generated/$command_name.zsh" ]]; then
-      source "$HOME/.config/rfig/generated/$command_name.zsh" 2>/dev/null
+      source "$HOME/.config/rfig/generated/$command_name.zsh" >/dev/null 2>&1
     fi
   fi
   if (( $+commands[$command_name] )) && [[ -z ${_comps[$command_name]-} ]]; then

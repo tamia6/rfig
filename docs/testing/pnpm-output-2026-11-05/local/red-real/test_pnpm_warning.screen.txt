@@ -1,0 +1,18 @@
+RFIG> source /var/folders/p4/h_3xm0f155l3cbgnxm3bsznr0000gn/T/rfig-strict-daxox0
+ra/noisy-completion
+RFIG> ppnpm is running through Node.js because the script that installs its nati
+ve binary was skipped.
+pn⌘ poptlpnpm is running through Node.js because the script that installs its na
+tive binary was skipped.
+m pnpx    pnpm is running through Node.js because the script that installs its n
+ative binary was skipped.
+  init
+● recursive
+  ● multi
+  ● m
+
+
+
+
+
+

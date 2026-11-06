@@ -1,0 +1,42 @@
+test_native_completion_output (__main__.CompletionOutput.test_native_completion_output) ... ok
+test_protocol_stderr_is_not_candidates (__main__.CompletionOutput.test_protocol_stderr_is_not_candidates) ... ok
+test_generated_script_loading_output (__main__.CompletionOutput.test_generated_script_loading_output) ... FAIL
+
+======================================================================
+FAIL: test_generated_script_loading_output (__main__.CompletionOutput.test_generated_script_loading_output)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/tamia/tamia-home/rfig/tests/completion_output.py", line 78, in test_generated_script_loading_output
+    self.assert_clean_menu(name)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/Users/tamia/tamia-home/rfig/tests/completion_output.py", line 19, in assert_clean_menu
+    self.wait(lambda: 'alpha' in self.current() and 'beta' in self.current(), 'valid candidates')
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tamia/tamia-home/rfig/tests/strict_shell.py", line 101, in wait
+    self.fail(message+'\n'+self.screen())
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: valid candidates
+RFIG> source /var/folders/p4/h_3xm0f155l3cbgnxm3bsznr0000gn/T/rfig-strict-iwt116
+tq/noisy-completion
+RFIG> rfiggeneratednoise
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+----------------------------------------------------------------------
+Ran 3 tests in 5.134s
+
+FAILED (failures=1)

@@ -1,0 +1,21 @@
+Traceback (most recent call last):
+  File "/Users/tamia/tamia-home/rfig/tests/history_menu.py", line 72, in <module>
+    assert screen().splitlines()[0]=='plainfixture h',screen()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: plainfixture h
+→ ◷ plainfixture hello
+History
+
+
+
+
+
+
+
+
+
+
+
+
+
+

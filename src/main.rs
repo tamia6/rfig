@@ -608,7 +608,12 @@ fn help_output_status(
         .args(args)
         .stdin(Stdio::null())
         .stdout(Stdio::from(output.try_clone()?))
-        .stderr(Stdio::from(output));
+        // Help may be printed on stderr; completion protocols use stdout for records.
+        .stderr(if background_safe {
+            Stdio::from(output)
+        } else {
+            Stdio::null()
+        });
     unsafe {
         command.pre_exec(|| {
             let file = libc::rlimit {
