@@ -1,0 +1,51 @@
+EE
+======================================================================
+ERROR: test_full_reference_menu_and_acceptance (__main__.HelpReference.test_full_reference_menu_and_acceptance)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/tamia/tamia-home/rfig/tests/help_reference.py", line 9, in setUp
+    super().setUp()
+    ~~~~~~~~~~~~~^^
+  File "/Users/tamia/tamia-home/rfig/tests/strict_shell.py", line 81, in setUp
+    self.call('set-option','-g','status','off')
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tamia/tamia-home/rfig/tests/strict_shell.py", line 86, in call
+    return subprocess.check_output(self.tmux+list(args),env=self.env,text=True,stderr=subprocess.DEVNULL,timeout=5)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/lib/python3.15/subprocess.py", line 587, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+           ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+               **kwargs).stdout
+               ^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/lib/python3.15/subprocess.py", line 692, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command ['tmux', '-L', 'strict-bash-57096', '-f', '/dev/null', 'set-option', '-g', 'status', 'off'] returned non-zero exit status 1.
+
+======================================================================
+ERROR: test_failed_reference_preserves_cache (__main__.HelpReference.test_failed_reference_preserves_cache)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/tamia/tamia-home/rfig/tests/help_reference.py", line 9, in setUp
+    super().setUp()
+    ~~~~~~~~~~~~~^^
+  File "/Users/tamia/tamia-home/rfig/tests/strict_shell.py", line 81, in setUp
+    self.call('set-option','-g','status','off')
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tamia/tamia-home/rfig/tests/strict_shell.py", line 86, in call
+    return subprocess.check_output(self.tmux+list(args),env=self.env,text=True,stderr=subprocess.DEVNULL,timeout=5)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/lib/python3.15/subprocess.py", line 587, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+           ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+               **kwargs).stdout
+               ^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/lib/python3.15/subprocess.py", line 692, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command ['tmux', '-L', 'strict-bash-57096', '-f', '/dev/null', 'set-option', '-g', 'status', 'off'] returned non-zero exit status 1.
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.186s
+
+FAILED (errors=2)

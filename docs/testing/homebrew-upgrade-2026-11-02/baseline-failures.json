@@ -1,0 +1,8 @@
+{
+  "local": [
+    "zsh-strict_shell"
+  ],
+  "docker": [
+    "zsh59-strict"
+  ]
+}

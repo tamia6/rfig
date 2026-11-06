@@ -7,7 +7,7 @@ use std::{
     env, fs,
     io::{self, BufWriter, Read, Write},
     os::fd::AsRawFd,
-    os::unix::fs::PermissionsExt,
+    os::unix::fs::{symlink, PermissionsExt},
     os::unix::process::CommandExt,
     path::{Path, PathBuf},
     process::{Command, Stdio},
@@ -238,6 +238,46 @@ fn initialize_catalog() -> io::Result<()> {
     fs::write(directory.join("supported.txt"), supported.join("\n") + "\n")
 }
 
+fn homebrew_integration(shell: &str) -> Option<PathBuf> {
+    let executable = fs::canonicalize(env::current_exe().ok()?).ok()?;
+    let keg = executable.parent()?.parent()?;
+    let cellar = keg.parent()?.parent()?;
+    if cellar.file_name()? != "Cellar" {
+        return None;
+    }
+    // opt follows upgrades; a versioned Cellar path would keep loading the old script.
+    let opt = cellar.parent()?.join("opt/rfig");
+    if fs::canonicalize(opt.join("bin/rfig")).ok()? != executable {
+        return None;
+    }
+    let script = opt.join(format!("share/rfig/rfig.{shell}"));
+    script.is_file().then_some(script)
+}
+
+fn install_integration(script: &Path, shell: &str, contents: &str) -> io::Result<()> {
+    let staged = script.with_extension(format!("{shell}.{}.tmp", std::process::id()));
+    let mut created = false;
+    let result = (|| {
+        if let Some(packaged) = homebrew_integration(shell) {
+            symlink(packaged, &staged)?;
+            created = true;
+        } else {
+            let mut file = fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&staged)?;
+            created = true;
+            file.write_all(contents.as_bytes())?;
+        }
+        // Replace the link itself when changing install methods, never its package target.
+        fs::rename(&staged, script)
+    })();
+    if created && result.is_err() {
+        let _ = fs::remove_file(staged);
+    }
+    result
+}
+
 fn setup(requested: Option<&str>) -> io::Result<()> {
     let default_shell = env::var("SHELL").unwrap_or_default();
     let shell = requested.unwrap_or_else(|| default_shell.rsplit('/').next().unwrap_or(""));
@@ -258,7 +298,7 @@ fn setup(requested: Option<&str>) -> io::Result<()> {
     );
     let script = home.join(format!(".config/rfig/rfig.{shell}"));
     fs::create_dir_all(script.parent().unwrap())?;
-    fs::write(&script, contents)?;
+    install_integration(&script, shell, contents)?;
     initialize_catalog()?;
     let source = format!(
         "source \"{}\"",

@@ -1,0 +1,24 @@
+VERIFY> printf rfig_home
+rfig_home%
+VERIFY> printf rfig_homebrew_verified
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

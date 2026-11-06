@@ -1,0 +1,3 @@
+Before implementation: python3 tests/homebrew_upgrade.py
+AssertionError: zsh: setup left a stale adapter copy
+After implementation: real sourcing in zsh, Bash and Fish follows opt without repeating setup.

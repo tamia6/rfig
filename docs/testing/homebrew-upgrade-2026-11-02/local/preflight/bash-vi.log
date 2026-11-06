@@ -1,0 +1,17 @@
+no server running on /private/tmp/tmux-501/rfig-bash-57284
+Traceback (most recent call last):
+  File "/Users/tamia/tamia-home/rfig/tests/multi_shell_interaction.py", line 68, in <module>
+    call('set-option','-g','status','off')
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tamia/tamia-home/rfig/tests/multi_shell_interaction.py", line 56, in call
+    def call(*args):return subprocess.check_output(tmux+list(args),env=env,text=True)
+                           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/lib/python3.15/subprocess.py", line 587, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+           ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+               **kwargs).stdout
+               ^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/lib/python3.15/subprocess.py", line 692, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command ['tmux', '-L', 'rfig-bash-57284', '-f', '/dev/null', 'set-option', '-g', 'status', 'off'] returned non-zero exit status 1.

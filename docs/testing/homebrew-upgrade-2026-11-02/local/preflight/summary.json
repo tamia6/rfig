@@ -1,0 +1,157 @@
+[
+  {
+    "name": "unit",
+    "exit_code": 0,
+    "seconds": 1.08
+  },
+  {
+    "name": "build",
+    "exit_code": 0,
+    "seconds": 0.03
+  },
+  {
+    "name": "test_process_cleanup",
+    "exit_code": 0,
+    "seconds": 0.27
+  },
+  {
+    "name": "multi_shell_setup",
+    "exit_code": 0,
+    "seconds": 0.86
+  },
+  {
+    "name": "homebrew_upgrade",
+    "exit_code": 0,
+    "seconds": 1.65
+  },
+  {
+    "name": "install_archive",
+    "exit_code": 0,
+    "seconds": 0.15
+  },
+  {
+    "name": "install_binary",
+    "exit_code": 0,
+    "seconds": 1.06
+  },
+  {
+    "name": "setup_safety",
+    "exit_code": 0,
+    "seconds": 3.82
+  },
+  {
+    "name": "self_completion",
+    "exit_code": 0,
+    "seconds": 0.27
+  },
+  {
+    "name": "zsh_integration",
+    "exit_code": 0,
+    "seconds": 22.31
+  },
+  {
+    "name": "zsh_usage",
+    "exit_code": 0,
+    "seconds": 3.3
+  },
+  {
+    "name": "zsh_array_slices",
+    "exit_code": 0,
+    "seconds": 1.41
+  },
+  {
+    "name": "zsh_history_suggestions",
+    "exit_code": 0,
+    "seconds": 2.29
+  },
+  {
+    "name": "zsh_large_completion",
+    "exit_code": 0,
+    "seconds": 2.35
+  },
+  {
+    "name": "zsh_path_completion",
+    "exit_code": 0,
+    "seconds": 11.14
+  },
+  {
+    "name": "bash-history_menu",
+    "exit_code": 1,
+    "seconds": 0.15
+  },
+  {
+    "name": "bash-help_reference",
+    "exit_code": 1,
+    "seconds": 0.23
+  },
+  {
+    "name": "bash-prompt_geometry",
+    "exit_code": 1,
+    "seconds": 0.41
+  },
+  {
+    "name": "bash-strict_shell",
+    "exit_code": 1,
+    "seconds": 0.85
+  },
+  {
+    "name": "bash-emacs",
+    "exit_code": 1,
+    "seconds": 0.15
+  },
+  {
+    "name": "bash-vi",
+    "exit_code": 1,
+    "seconds": 0.14
+  },
+  {
+    "name": "fish-history_menu",
+    "exit_code": 0,
+    "seconds": 1.27
+  },
+  {
+    "name": "fish-help_reference",
+    "exit_code": 0,
+    "seconds": 1.06
+  },
+  {
+    "name": "fish-prompt_geometry",
+    "exit_code": 0,
+    "seconds": 4.97
+  },
+  {
+    "name": "fish-strict_shell",
+    "exit_code": 0,
+    "seconds": 8.04
+  },
+  {
+    "name": "fish-emacs",
+    "exit_code": 0,
+    "seconds": 4.36
+  },
+  {
+    "name": "fish-vi",
+    "exit_code": 0,
+    "seconds": 4.68
+  },
+  {
+    "name": "zsh-history_menu",
+    "exit_code": 0,
+    "seconds": 2.31
+  },
+  {
+    "name": "zsh-help_reference",
+    "exit_code": 0,
+    "seconds": 1.35
+  },
+  {
+    "name": "zsh-prompt_geometry",
+    "exit_code": 0,
+    "seconds": 5.89
+  },
+  {
+    "name": "zsh-strict_shell",
+    "exit_code": 1,
+    "seconds": 10.04
+  }
+]

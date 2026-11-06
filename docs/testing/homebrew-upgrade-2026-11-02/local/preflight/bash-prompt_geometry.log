@@ -1,0 +1,85 @@
+EEEE
+======================================================================
+ERROR: test_dynamic_prompt_scroll_resize (__main__.PromptGeometry.test_dynamic_prompt_scroll_resize)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/tamia/tamia-home/rfig/tests/strict_shell.py", line 81, in setUp
+    self.call('set-option','-g','status','off')
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tamia/tamia-home/rfig/tests/strict_shell.py", line 86, in call
+    return subprocess.check_output(self.tmux+list(args),env=self.env,text=True,stderr=subprocess.DEVNULL,timeout=5)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/lib/python3.15/subprocess.py", line 587, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+           ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+               **kwargs).stdout
+               ^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/lib/python3.15/subprocess.py", line 692, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command ['tmux', '-L', 'strict-bash-57115', '-f', '/dev/null', 'set-option', '-g', 'status', 'off'] returned non-zero exit status 1.
+
+======================================================================
+ERROR: test_wrapped_input_resize (__main__.PromptGeometry.test_wrapped_input_resize)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/tamia/tamia-home/rfig/tests/strict_shell.py", line 81, in setUp
+    self.call('set-option','-g','status','off')
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tamia/tamia-home/rfig/tests/strict_shell.py", line 86, in call
+    return subprocess.check_output(self.tmux+list(args),env=self.env,text=True,stderr=subprocess.DEVNULL,timeout=5)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/lib/python3.15/subprocess.py", line 587, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+           ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+               **kwargs).stdout
+               ^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/lib/python3.15/subprocess.py", line 692, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command ['tmux', '-L', 'strict-bash-57115', '-f', '/dev/null', 'set-option', '-g', 'status', 'off'] returned non-zero exit status 1.
+
+======================================================================
+ERROR: test_right_aligned_prompt (__main__.PromptGeometry.test_right_aligned_prompt)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/tamia/tamia-home/rfig/tests/strict_shell.py", line 81, in setUp
+    self.call('set-option','-g','status','off')
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tamia/tamia-home/rfig/tests/strict_shell.py", line 86, in call
+    return subprocess.check_output(self.tmux+list(args),env=self.env,text=True,stderr=subprocess.DEVNULL,timeout=5)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/lib/python3.15/subprocess.py", line 587, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+           ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+               **kwargs).stdout
+               ^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/lib/python3.15/subprocess.py", line 692, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command ['tmux', '-L', 'strict-bash-57115', '-f', '/dev/null', 'set-option', '-g', 'status', 'off'] returned non-zero exit status 1.
+
+======================================================================
+ERROR: test_promptvars_disabled (__main__.PromptGeometry.test_promptvars_disabled)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/tamia/tamia-home/rfig/tests/strict_shell.py", line 81, in setUp
+    self.call('set-option','-g','status','off')
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tamia/tamia-home/rfig/tests/strict_shell.py", line 86, in call
+    return subprocess.check_output(self.tmux+list(args),env=self.env,text=True,stderr=subprocess.DEVNULL,timeout=5)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/lib/python3.15/subprocess.py", line 587, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+           ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+               **kwargs).stdout
+               ^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/lib/python3.15/subprocess.py", line 692, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command ['tmux', '-L', 'strict-bash-57115', '-f', '/dev/null', 'set-option', '-g', 'status', 'off'] returned non-zero exit status 1.
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.364s
+
+FAILED (errors=4)
