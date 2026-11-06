@@ -1,0 +1,2 @@
+/opt/homebrew/bin/rfig
+/Users/tamia/.config/rfig/rfig.zsh

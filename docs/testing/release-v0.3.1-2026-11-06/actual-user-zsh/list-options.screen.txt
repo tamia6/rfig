@@ -1,0 +1,18 @@
+VERIFY> cf workers versions list --
+→ ⚑ --dry-run
+  ⚑ --help
+  ⚑ --local
+  ◇ --mode
+  ◇ --page
+
+
+
+
+
+
+
+
+
+
+
+

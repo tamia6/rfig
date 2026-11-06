@@ -1,0 +1,14 @@
+[
+  {
+    "asset": "rfig-v0.3.1-linux-aarch64.tar.gz",
+    "architecture": "ELF 64-bit LSB pie executable, ARM aarch64, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux-aarch64.so.1, BuildID[sha1]=ab677ea6b1746b0ec7622e1add8ccd7166177172, for GNU/Linux 3.7.0, not stripped"
+  },
+  {
+    "asset": "rfig-v0.3.1-linux-x86_64.tar.gz",
+    "architecture": "ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=f85c50a069858cb163011271d23e8d48fe2e4a72, not stripped"
+  },
+  {
+    "asset": "rfig-v0.3.1-macos-universal.tar.gz",
+    "architecture": "Mach-O universal binary with 2 architectures: [x86_64:Mach-O 64-bit executable x86_64] [arm64]\n/var/folders/p4/h_3xm0f155l3cbgnxm3bsznr0000gn/T/rfig-v031-assets-xb0vcnmc/rfig-v0.3.1-macos-universal (for architecture x86_64):\tMach-O 64-bit executable x86_64\n/var/folders/p4/h_3xm0f155l3cbgnxm3bsznr0000gn/T/rfig-v031-assets-xb0vcnmc/rfig-v0.3.1-macos-universal (for architecture arm64):\tMach-O 64-bit executable arm64"
+  }
+]

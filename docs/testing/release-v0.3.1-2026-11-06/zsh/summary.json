@@ -1,0 +1,13 @@
+{
+  "shell": "zsh",
+  "cached_workers_contexts": 27,
+  "ui_swept_contexts": 27,
+  "ui_selected_contexts": 27,
+  "width": 58,
+  "selected": [
+    "versions",
+    "list",
+    "--page"
+  ],
+  "command_executed": false
+}

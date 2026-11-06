@@ -1,0 +1,18 @@
+n/T/rfig-strict-nn64qmsm/noisy-completion
+
+RFIG> cf workers versions list --
+→ ⚑ --dry-run
+  ⚑ --help
+  ⚑ --local
+  ◇ --mode
+  ◇ --page
+
+
+
+
+
+
+
+
+
+

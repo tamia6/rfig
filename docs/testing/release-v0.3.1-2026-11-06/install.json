@@ -1,0 +1,7 @@
+{
+  "binary": "/opt/homebrew/Cellar/rfig/0.3.1/bin/rfig",
+  "adapter": "/opt/homebrew/Cellar/rfig/0.3.1/share/rfig/rfig.zsh",
+  "zsh_sha256": "9ea6153ba2a86ed6da619bd0687305154d34d9bd635f11b0cadce6247decfe4d",
+  "bash_sha256": "cb02012a5dcb210ff7040673f26aa2335d81f05fa4b07e89d597e931ddfd1faa",
+  "fish_sha256": "ac2aad4f68890e8e883bc7a15b1bbc0e2c113cba89baae6117c38c3901916ea1"
+}

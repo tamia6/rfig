@@ -1,0 +1,18 @@
+n/T/rfig-strict-nn64qmsm/noisy-completion
+
+RFIG> cf workers versions
+→ ↳ create
+  ↳ delete
+  ↳ get
+  ↳ list
+  ↳ profile
+
+
+
+
+
+
+
+
+
+

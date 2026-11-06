@@ -1,0 +1,18 @@
+VERIFY> cf workers versions
+→ ↳ create
+  ↳ delete
+  ↳ get
+  ↳ list
+  ↳ profile
+
+
+
+
+
+
+
+
+
+
+
+

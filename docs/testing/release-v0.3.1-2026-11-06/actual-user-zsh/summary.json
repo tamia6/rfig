@@ -1,0 +1,13 @@
+{
+  "binary": "/opt/homebrew/bin/rfig",
+  "adapter": "/Users/tamia/.config/rfig/rfig.zsh",
+  "source": "actual ~/.zshrc and actual HOME cache",
+  "width": 58,
+  "selected": [
+    "versions",
+    "list",
+    "--page"
+  ],
+  "resource_command_executed": false,
+  "cancel_cleanup": "pass"
+}

@@ -1,0 +1,18 @@
+VERIFY> cf workers
+→ ① -h
+  ↳ check
+  ↳ delete
+  ↳ deployments
+  ↳ get
+
+
+
+
+
+
+
+
+
+
+
+

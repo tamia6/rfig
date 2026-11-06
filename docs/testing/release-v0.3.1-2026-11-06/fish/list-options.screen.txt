@@ -1,0 +1,18 @@
+RFIG> source /var/folders/p4/h_3xm0f155l3cbgnxm3bsznr0000g
+n/T/rfig-strict-jz1he5ef/noisy-completion
+RFIG> cf workers versions list --
+→ ⚑ --dry-run
+  ⚑ --help
+  ⚑ --local
+  ◇ --mode
+  ◇ --page
+
+
+
+
+
+
+
+
+
+

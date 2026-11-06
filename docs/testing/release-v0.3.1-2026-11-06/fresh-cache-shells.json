@@ -1,0 +1,17 @@
+[
+  {
+    "shell": "zsh",
+    "exit_code": 0,
+    "seconds": 6.96
+  },
+  {
+    "shell": "bash",
+    "exit_code": 0,
+    "seconds": 5.87
+  },
+  {
+    "shell": "fish",
+    "exit_code": 0,
+    "seconds": 4.5
+  }
+]

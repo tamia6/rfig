@@ -1,0 +1,7 @@
+{
+  "test_owned_processes": {},
+  "rfig_test_containers": [],
+  "unrelated_existing_containers_preserved": [
+    "41260a63e0f9 xyz-master-install-test Exited (130) 4 weeks ago"
+  ]
+}
