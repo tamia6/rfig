@@ -18,6 +18,7 @@ Bash 4.4 从 GNU 官方源码构建，源码 SHA256 会写入容器 `/work/bash4
 ## 覆盖范围
 
 - Rust 单元测试、三个 Shell 的 setup 重复安装与生成脚本一致性。
+- 模拟 Homebrew 的 opt 版本切换，验证三个 Shell 无需再次 setup 就能读取新版脚本；切回独立安装不会改写软件包文件。
 - 源码安装脚本的流程（模拟 cargo）；Linux/macOS 识别平台及架构，拒绝错误安装包。
 - Bash/Fish：Emacs、Vi 插入模式各重复三轮，Vi 使用多行提示符。
 - 真正的 tmux/PTY 交互：菜单、嵌套候选、灰字与输入分离、目录历史、使用排序、

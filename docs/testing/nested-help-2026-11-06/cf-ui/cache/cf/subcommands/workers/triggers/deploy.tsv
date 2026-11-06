@@ -1,0 +1,14 @@
+--dry-run	flag
+--help	flag
+--mode	option
+--prebuilt	flag
+--profile	option
+--quiet	flag
+--version	flag
+--worker	option
+--zone	option
+-h	flag
+-m	option
+-q	flag
+-v	flag
+-z	option

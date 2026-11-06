@@ -1,0 +1,18 @@
+  ↳ delete
+  ↳ get
+  ↳ profile
+
+RFIG> cf workers delete --delete-with-references
+→ ⚑ --delete-with-references
+  ⚑ --dry-run
+  ⚑ --force
+  ⚑ --help
+  ⚑ --local
+
+RFIG> cf workers deployments create --
+→ ◇ --body
+  ⚑ --bypass-deployment-checks
+  ◇ --code-update-strategy-max-delay
+  ◇ --code-update-strategy-mode
+  ⚑ --dry-run
+

@@ -1,0 +1,17 @@
+create	subcommand
+delete	subcommand
+get	subcommand
+list	subcommand
+--help	flag
+--local	flag
+--mode	option
+--persist-to	option
+--profile	option
+--quiet	flag
+--version	flag
+--zone	option
+-h	flag
+-m	option
+-q	flag
+-v	flag
+-z	option

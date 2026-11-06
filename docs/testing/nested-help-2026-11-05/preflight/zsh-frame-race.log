@@ -1,0 +1,15 @@
+test_recursive_help (__main__.NestedHelp.test_recursive_help) ... FAIL
+
+======================================================================
+FAIL: test_recursive_help (__main__.NestedHelp.test_recursive_help)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/tamia/tamia-home/rfig/tests/nested_help.py", line 55, in test_recursive_help
+    self.assertNotIn('versions', '\n'.join(self.current().splitlines()[1:]))
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'versions' unexpectedly found in '→ ↳ versions'
+
+----------------------------------------------------------------------
+Ran 1 test in 4.710s
+
+FAILED (failures=1)

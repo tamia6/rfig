@@ -1,0 +1,18 @@
+  ⚑ --include-runtime
+  ⚑ --local
+  ◇ --mode
+
+RFIG> cf workers versions create --dry-run
+→ ⚑ --dry-run
+  ⚑ --help
+  ◇ --message
+  ◇ --mode
+  ⚑ --prebuilt
+
+RFIG> cf workers versions delete --
+→ ⚑ --dry-run
+  ⚑ --force
+  ⚑ --help
+  ⚑ --local
+  ◇ --mode
+

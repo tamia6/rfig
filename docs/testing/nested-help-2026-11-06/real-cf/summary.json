@@ -1,0 +1,11 @@
+{
+  "cached_contexts": 3738,
+  "unavailable_paths": [
+    "rfig: cf workers check: help unavailable; keeping cached data",
+    "rfig: cf cloudforce-one credential-monitor domains: help unavailable; keeping cached data",
+    "rfig: cf cloudforce-one scans config: help unavailable; keeping cached data"
+  ],
+  "repeated_parent_responses": 107,
+  "result": "cf: 65323 candidates analyzed",
+  "full_cache_location": "/Users/tamia/tamia-home/rfig/target/local-results/nested-help-20261105/real-cf-home/.config/rfig/help/cf"
+}

@@ -1,0 +1,187 @@
+[
+  {
+    "name": "unit",
+    "exit_code": 0,
+    "seconds": 0.16
+  },
+  {
+    "name": "build",
+    "exit_code": 0,
+    "seconds": 0.04
+  },
+  {
+    "name": "test_process_cleanup",
+    "exit_code": 0,
+    "seconds": 0.64
+  },
+  {
+    "name": "multi_shell_setup",
+    "exit_code": 0,
+    "seconds": 1.01
+  },
+  {
+    "name": "homebrew_upgrade",
+    "exit_code": 0,
+    "seconds": 1.71
+  },
+  {
+    "name": "install_archive",
+    "exit_code": 0,
+    "seconds": 0.14
+  },
+  {
+    "name": "install_binary",
+    "exit_code": 0,
+    "seconds": 1.29
+  },
+  {
+    "name": "setup_safety",
+    "exit_code": 0,
+    "seconds": 5.33
+  },
+  {
+    "name": "self_completion",
+    "exit_code": 0,
+    "seconds": 0.29
+  },
+  {
+    "name": "zsh_integration",
+    "exit_code": 0,
+    "seconds": 22.92
+  },
+  {
+    "name": "zsh_usage",
+    "exit_code": 0,
+    "seconds": 3.26
+  },
+  {
+    "name": "zsh_array_slices",
+    "exit_code": 0,
+    "seconds": 1.21
+  },
+  {
+    "name": "zsh_history_suggestions",
+    "exit_code": 0,
+    "seconds": 2.24
+  },
+  {
+    "name": "zsh_large_completion",
+    "exit_code": 0,
+    "seconds": 2.44
+  },
+  {
+    "name": "zsh_path_completion",
+    "exit_code": 0,
+    "seconds": 11.24
+  },
+  {
+    "name": "bash-nested_help",
+    "exit_code": 0,
+    "seconds": 7.75
+  },
+  {
+    "name": "bash-completion_output",
+    "exit_code": 0,
+    "seconds": 2.49
+  },
+  {
+    "name": "bash-history_menu",
+    "exit_code": 0,
+    "seconds": 1.24
+  },
+  {
+    "name": "bash-help_reference",
+    "exit_code": 0,
+    "seconds": 2.09
+  },
+  {
+    "name": "bash-prompt_geometry",
+    "exit_code": 0,
+    "seconds": 6.01
+  },
+  {
+    "name": "bash-strict_shell",
+    "exit_code": 0,
+    "seconds": 9.8
+  },
+  {
+    "name": "bash-emacs",
+    "exit_code": 0,
+    "seconds": 4.88
+  },
+  {
+    "name": "bash-vi",
+    "exit_code": 0,
+    "seconds": 4.78
+  },
+  {
+    "name": "fish-nested_help",
+    "exit_code": 0,
+    "seconds": 5.42
+  },
+  {
+    "name": "fish-completion_output",
+    "exit_code": 0,
+    "seconds": 2.0
+  },
+  {
+    "name": "fish-history_menu",
+    "exit_code": 0,
+    "seconds": 1.5
+  },
+  {
+    "name": "fish-help_reference",
+    "exit_code": 0,
+    "seconds": 2.07
+  },
+  {
+    "name": "fish-prompt_geometry",
+    "exit_code": 0,
+    "seconds": 4.63
+  },
+  {
+    "name": "fish-strict_shell",
+    "exit_code": 0,
+    "seconds": 10.83
+  },
+  {
+    "name": "fish-emacs",
+    "exit_code": 0,
+    "seconds": 4.4
+  },
+  {
+    "name": "fish-vi",
+    "exit_code": 0,
+    "seconds": 4.75
+  },
+  {
+    "name": "zsh-nested_help",
+    "exit_code": 0,
+    "seconds": 19.05
+  },
+  {
+    "name": "zsh-completion_output",
+    "exit_code": 0,
+    "seconds": 6.21
+  },
+  {
+    "name": "zsh-history_menu",
+    "exit_code": 0,
+    "seconds": 2.39
+  },
+  {
+    "name": "zsh-help_reference",
+    "exit_code": 0,
+    "seconds": 2.17
+  },
+  {
+    "name": "zsh-prompt_geometry",
+    "exit_code": 0,
+    "seconds": 6.39
+  },
+  {
+    "name": "zsh-strict_shell",
+    "exit_code": 1,
+    "seconds": 11.07
+  }
+]

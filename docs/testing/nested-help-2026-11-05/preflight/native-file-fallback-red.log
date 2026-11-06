@@ -1,0 +1,40 @@
+test_recursive_help (__main__.NestedHelp.test_recursive_help) ... FAIL
+
+======================================================================
+FAIL: test_recursive_help (__main__.NestedHelp.test_recursive_help)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/tamia/tamia-home/rfig/tests/nested_help.py", line 67, in test_recursive_help
+    self.wait_menu(name+' workers ', ['versions','deploy'])
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tamia/tamia-home/rfig/tests/nested_help.py", line 15, in wait_menu
+    self.wait(ready, 'menu for '+line)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tamia/tamia-home/rfig/tests/strict_shell.py", line 101, in wait
+    self.fail(message+'\n'+self.screen())
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: menu for rfigtree workers 
+RFIG> rfigtree workers
+→ ● bin/
+  ● tmp/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+----------------------------------------------------------------------
+Ran 1 test in 6.323s
+
+FAILED (failures=1)

@@ -1,0 +1,37 @@
+test_workers_menus (__main__.CfMenus.test_workers_menus) ... FAIL
+
+======================================================================
+FAIL: test_workers_menus (__main__.CfMenus.test_workers_menus)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/work/cf-menu-proof/verify_cf.py", line 50, in test_workers_menus
+    self.wait_menu('cf workers versions list --',['--dry-run','--help','--local'])
+  File "/work/tests/nested_help.py", line 15, in wait_menu
+    self.wait(ready, 'menu for '+line)
+  File "/work/tests/strict_shell.py", line 101, in wait
+    self.fail(message+'\n'+self.screen())
+AssertionError: menu for cf workers versions list --
+RFIG> source /tmp/rfig-strict-vee2p006/noisy-completion
+RFIG> cf workers versions list
+→ ● bin/
+  ● choices
+  ● definition-loaded
+  ● noisy-completion
+  ● slow-provider
+
+
+
+
+
+
+
+
+
+
+
+
+
+----------------------------------------------------------------------
+Ran 1 test in 3.419s
+
+FAILED (failures=1)

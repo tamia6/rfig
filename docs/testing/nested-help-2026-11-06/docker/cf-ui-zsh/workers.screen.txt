@@ -1,0 +1,18 @@
+RFIG> source /tmp/rfig-strict-ocgqhipb/noisy-completion
+RFIG> cf workers
+→ ↳ check
+  ↳ delete
+  ↳ deployments
+  ↳ get
+  ↳ list
+
+
+
+
+
+
+
+
+
+
+

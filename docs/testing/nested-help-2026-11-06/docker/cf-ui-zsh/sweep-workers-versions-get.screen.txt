@@ -1,0 +1,18 @@
+  ◇ --message
+  ◇ --mode
+  ⚑ --prebuilt
+
+RFIG> cf workers versions delete --dry-run
+→ ⚑ --dry-run
+  ⚑ --force
+  ⚑ --help
+  ⚑ --local
+  ◇ --mode
+
+RFIG> cf workers versions get --
+→ ⚑ --dry-run
+  ⚑ --help
+  ◇ --include
+  ⚑ --local
+  ◇ --mode
+

@@ -336,6 +336,13 @@ _rfig_complete() {
         fi
         _rfig_hits+=( "$item"$'\t'"${(q)item}"$'\t'"$description"$'\t'"$kind" )
       done
+    elif [[ ${external_lines[1]-} == cache ]]; then
+      for record in "${external_lines[@]:1}"; do
+        item=${record%%$'\t'*}
+        kind=${record#*$'\t'}
+        [[ -n $item && $item == "$typed"* && ( $kind == subcommand || $kind == option || $kind == flag ) ]] || continue
+        _rfig_hits+=( "$item"$'\t'"${(q)item}"$'\t'$'\t'"$kind" )
+      done
     else
       [[ $remainder != *' '* ]] || return
       [[ -r $fallback ]] || return

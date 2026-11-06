@@ -1,0 +1,18 @@
+RFIG> source /tmp/rfig-strict-7f09k82u/noisy-completion
+RFIG> rfigtree workers versions get dyn
+→ ● dynamic-item
+
+RFIG> source /tmp/rfig-strict-7f09k82u/noisy-completion
+RFIG> rfigother workers versions get dyn
+→ ● dynamic-item
+
+RFIG>
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,13 @@
+{
+  "shell": "bash",
+  "cached_workers_contexts": 26,
+  "ui_swept_contexts": 26,
+  "ui_selected_contexts": 26,
+  "width": 58,
+  "selected": [
+    "versions",
+    "list",
+    "--page"
+  ],
+  "command_executed": false
+}

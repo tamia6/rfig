@@ -1,0 +1,18 @@
+RFIG> source /tmp/rfig-strict-6ue7wjcg/noisy-completion
+RFIG> cf workers triggers
+→ ↳ deploy
+  ⚑ --dry-run
+  ⚑ --help
+  ⚑ --local
+  ◇ --mode
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,18 @@
+  ⚑ --local
+  ◇ --mode
+  ◇ --order
+
+RFIG> cf workers scripts search --dry-run
+→ ⚑ --dry-run
+  ⚑ --help
+  ◇ --id
+  ⚑ --local
+  ◇ --mode
+
+RFIG> cf workers scripts
+→ ↳ search
+  ⚑ --help
+  ⚑ --local
+  ◇ --mode
+  ◇ --persist-to
+

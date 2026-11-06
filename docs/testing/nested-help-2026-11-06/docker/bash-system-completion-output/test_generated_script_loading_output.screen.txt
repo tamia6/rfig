@@ -1,0 +1,18 @@
+RFIG> source /tmp/rfig-strict-mx1ra_cd/noisy-completion
+RFIG> source /tmp/rfig-strict-mx1ra_cd/noisy-completion
+RFIG>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

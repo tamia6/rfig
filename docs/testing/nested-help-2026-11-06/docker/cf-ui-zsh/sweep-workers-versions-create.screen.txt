@@ -1,0 +1,18 @@
+  ◇ --mode
+  ⚑ --prebuilt
+  ◇ --profile
+
+RFIG> cf workers types --dry-run
+→ ⚑ --dry-run
+  ⚑ --help
+  ⚑ --include-runtime
+  ⚑ --local
+  ◇ --mode
+
+RFIG> cf workers versions create --
+→ ⚑ --dry-run
+  ⚑ --help
+  ◇ --message
+  ◇ --mode
+  ⚑ --prebuilt
+

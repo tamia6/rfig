@@ -1,0 +1,18 @@
+  ◇ --mode
+
+RFIG> cf workers versions get --dry-run
+→ ⚑ --dry-run
+  ⚑ --help
+  ◇ --include
+  ⚑ --local
+  ◇ --mode
+
+RFIG> cf workers versions list --page
+RFIG> cf workers versions profile --actor-id
+RFIG> cf workers versions
+→ ① list
+  ↳ create
+  ↳ delete
+  ↳ get
+  ↳ profile
+

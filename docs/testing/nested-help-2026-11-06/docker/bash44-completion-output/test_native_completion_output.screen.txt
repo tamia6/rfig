@@ -1,0 +1,18 @@
+RFIG> source /tmp/rfig-strict-0gbn47py/noisy-completion
+RFIG> /tmp/rfig-strict-0gbn47py/bin/noisy-provider
+RFIG_DIAGNOSTIC native warning
+alpha
+beta
+RFIG>
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,17 @@
+test_recursive_help (__main__.NestedHelp.test_recursive_help) ... FAIL
+
+======================================================================
+FAIL: test_recursive_help (__main__.NestedHelp.test_recursive_help)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/tamia/tamia-home/rfig/tests/nested_help.py", line 52, in test_recursive_help
+    self.assertEqual(old.read_text(), 'cached-child\tsubcommand\n', 'failed help must preserve previous cache')
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: '' != 'cached-child\tsubcommand\n'
++ cached-child	subcommand
+ : failed help must preserve previous cache
+
+----------------------------------------------------------------------
+Ran 1 test in 3.572s
+
+FAILED (failures=1)

@@ -1,0 +1,18 @@
+RFIG> source /var/folders/p4/h_3xm0f155l3cbgnxm3bsznr0000gn/T/rfig-strict-ok3_ba
+do/noisy-completion
+RFIG> source /var/folders/p4/h_3xm0f155l3cbgnxm3bsznr0000gn/T/rfig-strict-ok3_ba
+do/noisy-completion
+RFIG>
+
+
+
+
+
+
+
+
+
+
+
+
+

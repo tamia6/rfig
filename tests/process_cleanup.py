@@ -71,5 +71,7 @@ def cleanup_tmux(tmux, roots=()):
         pane_pids = [int(line) for line in output.splitlines() if line.strip().isdigit()]
     except (OSError, subprocess.CalledProcessError):
         pass
+    # Capture children before killing tmux reparents them and loses the pane ancestry.
+    pane_pids = _descendants(_processes(), pane_pids)
     subprocess.run(tmux + ["kill-server"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     return cleanup_process_tree(pane_pids, roots)

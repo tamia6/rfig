@@ -1,0 +1,2 @@
+lsof -i :: 144ms; all 5,000 unique ports retained
+telnet localhost : 146ms; all 5,000 unique ports retained

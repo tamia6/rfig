@@ -1,0 +1,22 @@
+Traceback (most recent call last):
+  File "/work/tests/history_menu.py", line 13, in <module>
+    with tempfile.TemporaryDirectory(prefix='rfig-history-menu-') as temp:
+  File "/usr/lib/python3.11/tempfile.py", line 1052, in __exit__
+    self.cleanup()
+  File "/usr/lib/python3.11/tempfile.py", line 1056, in cleanup
+    self._rmtree(self.name, ignore_errors=self._ignore_cleanup_errors)
+  File "/usr/lib/python3.11/tempfile.py", line 1038, in _rmtree
+    _rmtree(name, onerror=onerror)
+  File "/usr/lib/python3.11/shutil.py", line 732, in rmtree
+    _rmtree_safe_fd(fd, path, onerror)
+  File "/usr/lib/python3.11/shutil.py", line 660, in _rmtree_safe_fd
+    _rmtree_safe_fd(dirfd, fullname, onerror)
+  File "/usr/lib/python3.11/shutil.py", line 660, in _rmtree_safe_fd
+    _rmtree_safe_fd(dirfd, fullname, onerror)
+  File "/usr/lib/python3.11/shutil.py", line 660, in _rmtree_safe_fd
+    _rmtree_safe_fd(dirfd, fullname, onerror)
+  File "/usr/lib/python3.11/shutil.py", line 666, in _rmtree_safe_fd
+    onerror(os.rmdir, fullname, sys.exc_info())
+  File "/usr/lib/python3.11/shutil.py", line 664, in _rmtree_safe_fd
+    os.rmdir(entry.name, dir_fd=topfd)
+OSError: [Errno 39] Directory not empty: 'generated_completions'

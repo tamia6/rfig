@@ -1,0 +1,18 @@
+  ◇ --file
+  ⚑ --help
+  ⚑ --local
+
+RFIG> cf workers triggers deploy --dry-run
+→ ⚑ --dry-run
+  ⚑ --help
+  ◇ --mode
+  ⚑ --prebuilt
+  ◇ --profile
+
+RFIG> cf workers triggers
+→ ↳ deploy
+  ⚑ --dry-run
+  ⚑ --help
+  ⚑ --local
+  ◇ --mode
+

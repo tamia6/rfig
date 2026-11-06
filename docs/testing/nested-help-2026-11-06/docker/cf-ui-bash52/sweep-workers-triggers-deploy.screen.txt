@@ -1,0 +1,18 @@
+RFIG> source /tmp/rfig-strict-qldtl6so/noisy-completion
+RFIG> cf workers triggers deploy --
+→ ⚑ --dry-run
+  ⚑ --help
+  ◇ --mode
+  ⚑ --prebuilt
+  ◇ --profile
+
+
+
+
+
+
+
+
+
+
+

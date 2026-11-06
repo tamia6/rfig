@@ -1,0 +1,14 @@
+..F
+======================================================================
+FAIL: test_tmux_captures_detached_children_before_parent_exit (__main__.ProcessCleanupTests.test_tmux_captures_detached_children_before_parent_exit)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/tamia/tamia-home/rfig/tests/test_process_cleanup.py", line 29, in test_tmux_captures_detached_children_before_parent_exit
+    self.assertTrue(child not in _processes() or _processes()[child][2].startswith('Z'),'detached cache writer survived tmux cleanup')
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : detached cache writer survived tmux cleanup
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.512s
+
+FAILED (failures=1)

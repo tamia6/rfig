@@ -1,0 +1,18 @@
+RFIG> source /tmp/rfig-strict-wrwox9e8/noisy-completion
+RFIG> rfigtree workers versions get
+→ ◇ --role
+  ⚑ --verbose
+
+RFIG> source /tmp/rfig-strict-wrwox9e8/noisy-completion
+RFIG> rfigother workers versions get
+→ ◇ --role
+  ⚑ --verbose
+
+RFIG>
+
+
+
+
+
+
+

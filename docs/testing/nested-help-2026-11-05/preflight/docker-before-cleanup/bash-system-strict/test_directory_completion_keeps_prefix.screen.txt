@@ -1,0 +1,18 @@
+RFIG> cd /tmp/rfig-strict-ysclz8o5/path-root/child\ dir/
+RFIG> cd /tmp/rfig-strict-ysclz8o5
+RFIG> cd ./path-root/child\ dir/
+RFIG> cd /tmp/rfig-strict-ysclz8o5
+RFIG> cd ~/path-root/child\ dir/
+RFIG> cd /tmp/rfig-strict-ysclz8o5
+RFIG>
+
+
+
+
+
+
+
+
+
+
+

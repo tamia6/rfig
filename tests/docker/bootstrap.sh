@@ -10,7 +10,12 @@ cd /work
 cargo build --locked -j 2
 cargo test --locked -j 2
 if [ "${BUILD_BASH44:-0}" = 1 ]; then
-  curl --fail --location --retry 2 --max-time 90 https://ftp.gnu.org/gnu/bash/bash-4.4.tar.gz -o /tmp/bash-4.4.tar.gz
+  if [ -r /source/target/test-deps/bash-4.4.tar.gz ]; then
+    cp /source/target/test-deps/bash-4.4.tar.gz /tmp/bash-4.4.tar.gz
+  else
+    curl --fail --location --retry 2 --max-time 90 https://ftp.gnu.org/gnu/bash/bash-4.4.tar.gz -o /tmp/bash-4.4.tar.gz
+  fi
+  printf 'd86b3392c1202e8ff5a423b302e6284db7f8f435ea9f39b5b1b20fd3ac36dfcb  /tmp/bash-4.4.tar.gz\n' | sha256sum -c -
   sha256sum /tmp/bash-4.4.tar.gz > /work/bash44-source.sha256
   tar -xzf /tmp/bash-4.4.tar.gz -C /tmp
   cd /tmp/bash-4.4

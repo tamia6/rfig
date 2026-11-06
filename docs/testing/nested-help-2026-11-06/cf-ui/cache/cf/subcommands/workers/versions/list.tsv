@@ -1,0 +1,17 @@
+--dry-run	flag
+--help	flag
+--local	flag
+--mode	option
+--page	option
+--per-page	option
+--persist-to	option
+--profile	option
+--quiet	flag
+--version	flag
+--worker-id	option
+--zone	option
+-h	flag
+-m	option
+-q	flag
+-v	flag
+-z	option

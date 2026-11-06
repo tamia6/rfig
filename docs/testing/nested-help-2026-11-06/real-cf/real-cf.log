@@ -1,0 +1,183 @@
+rfig: cf: 50 contexts analyzed, 320 pending
+rfig: cf: 100 contexts analyzed, 537 pending
+rfig: cf: 150 contexts analyzed, 707 pending
+rfig: cf: 200 contexts analyzed, 746 pending
+rfig: cf: 250 contexts analyzed, 798 pending
+rfig: cf: 300 contexts analyzed, 844 pending
+rfig: cf complete bash: parent help repeated; stopping this branch
+rfig: cf complete zsh: parent help repeated; stopping this branch
+rfig: cf complete fish: parent help repeated; stopping this branch
+rfig: cf: 350 contexts analyzed, 882 pending
+rfig: cf: 400 contexts analyzed, 910 pending
+rfig: cf: 450 contexts analyzed, 974 pending
+rfig: cf: 500 contexts analyzed, 1065 pending
+rfig: cf: 550 contexts analyzed, 1185 pending
+rfig: cf: 600 contexts analyzed, 1192 pending
+rfig: cf: 650 contexts analyzed, 1306 pending
+rfig: cf: 700 contexts analyzed, 1348 pending
+rfig: cf: 750 contexts analyzed, 1393 pending
+rfig: cf workers check: help unavailable; keeping cached data
+rfig: cf: 800 contexts analyzed, 1441 pending
+rfig: cf: 850 contexts analyzed, 1562 pending
+rfig: cf: 900 contexts analyzed, 1523 pending
+rfig: cf: 950 contexts analyzed, 1501 pending
+rfig: cf: 1000 contexts analyzed, 1460 pending
+rfig: cf: 1050 contexts analyzed, 1453 pending
+rfig: cf: 1100 contexts analyzed, 1420 pending
+rfig: cf: 1150 contexts analyzed, 1394 pending
+rfig: cf cloudforce-one credential-monitor domains: help unavailable; keeping cached data
+rfig: cf cloudforce-one scans config: help unavailable; keeping cached data
+rfig: cf: 1200 contexts analyzed, 1422 pending
+rfig: cf: 1250 contexts analyzed, 1395 pending
+rfig: cf: 1300 contexts analyzed, 1387 pending
+rfig: cf: 1350 contexts analyzed, 1342 pending
+rfig: cf email-security sending-domain-restrictions sending-domain-restrictions: parent help repeated; stopping this branch
+rfig: cf: 1400 contexts analyzed, 1301 pending
+rfig: cf: 1450 contexts analyzed, 1273 pending
+rfig: cf: 1500 contexts analyzed, 1236 pending
+rfig: cf: 1550 contexts analyzed, 1199 pending
+rfig: cf: 1600 contexts analyzed, 1157 pending
+rfig: cf managed-defense vulnerability-discovery vulnerability-discovery: parent help repeated; stopping this branch
+rfig: cf: 1650 contexts analyzed, 1142 pending
+rfig: cf: 1700 contexts analyzed, 1118 pending
+rfig: cf: 1750 contexts analyzed, 1080 pending
+rfig: cf: 1800 contexts analyzed, 1036 pending
+rfig: cf: 1850 contexts analyzed, 1056 pending
+rfig: cf: 1900 contexts analyzed, 1061 pending
+rfig: cf: 1950 contexts analyzed, 1076 pending
+rfig: cf: 2000 contexts analyzed, 1037 pending
+rfig: cf: 2050 contexts analyzed, 997 pending
+rfig: cf: 2100 contexts analyzed, 971 pending
+rfig: cf: 2150 contexts analyzed, 949 pending
+rfig: cf user memberships user-s-account-membe: parent help repeated; stopping this branch
+rfig: cf user memberships rships-membership-details: parent help repeated; stopping this branch
+rfig: cf: 2200 contexts analyzed, 920 pending
+rfig: cf workers-for-platforms dispatch-namespaces dispatch-namespaces: parent help repeated; stopping this branch
+rfig: cf: 2250 contexts analyzed, 879 pending
+rfig: cf: 2300 contexts analyzed, 1017 pending
+rfig: cf: 2350 contexts analyzed, 1118 pending
+rfig: cf: 2400 contexts analyzed, 1084 pending
+rfig: cf addressing prefixes advertisement-status advertisement-status: parent help repeated; stopping this branch
+rfig: cf ai-gateway dynamic-routing deployments deployments: parent help repeated; stopping this branch
+rfig: cf api-security schema-validation schemas schemas: parent help repeated; stopping this branch
+rfig: cf api-security schema-validation settings settings: parent help repeated; stopping this branch
+rfig: cf api-security token-validation configurations configurations: parent help repeated; stopping this branch
+rfig: cf api-security vulnerability-scanner credential-sets credential-sets: parent help repeated; stopping this branch
+rfig: cf api-security vulnerability-scanner scans scans: parent help repeated; stopping this branch
+rfig: cf api-security vulnerability-scanner target-environments target-environments: parent help repeated; stopping this branch
+rfig: cf: 2500 contexts analyzed, 993 pending
+rfig: cf cloudforce-one credential-monitor matches matches: parent help repeated; stopping this branch
+rfig: cf cloudforce-one priority-intelligence constants constants: parent help repeated; stopping this branch
+rfig: cf cloudforce-one priority-intelligence filters filters: parent help repeated; stopping this branch
+rfig: cf cloudforce-one priority-intelligence interests interests: parent help repeated; stopping this branch
+rfig: cf cloudforce-one priority-intelligence matches matches: parent help repeated; stopping this branch
+rfig: cf cloudforce-one priority-intelligence profile profile: parent help repeated; stopping this branch
+rfig: cf cloudforce-one priority-intelligence quota quota: parent help repeated; stopping this branch
+rfig: cf: 2550 contexts analyzed, 951 pending
+rfig: cf cloudforce-one requests legal-response legal-response: parent help repeated; stopping this branch
+rfig: cf: 2600 contexts analyzed, 907 pending
+rfig: cf cloudforce-one threat-intel indicators indicators: parent help repeated; stopping this branch
+rfig: cf cloudforce-one threat-signals articles articles: parent help repeated; stopping this branch
+rfig: cf cloudforce-one threat-signals categories categories: parent help repeated; stopping this branch
+rfig: cf cloudforce-one threat-signals indicators indicators: parent help repeated; stopping this branch
+rfig: cf custom-hostnames certificate-pack certificates certificates: parent help repeated; stopping this branch
+rfig: cf custom-pages account-custom-pages preview-tokens preview-tokens: parent help repeated; stopping this branch
+rfig: cf: 2650 contexts analyzed, 868 pending
+rfig: cf email-security analytics monthly-report monthly-report: parent help repeated; stopping this branch
+rfig: cf: 2700 contexts analyzed, 829 pending
+rfig: cf intel attack-surface-report issue-types issue-types: parent help repeated; stopping this branch
+rfig: cf load-balancers monitor-groups references references: parent help repeated; stopping this branch
+rfig: cf: 2750 contexts analyzed, 780 pending
+rfig: cf magic-transit advanced-dns-protection configs configs: parent help repeated; stopping this branch
+rfig: cf magic-transit advanced-tcp-protection configs configs: parent help repeated; stopping this branch
+rfig: cf: 2800 contexts analyzed, 730 pending
+rfig: cf: 2850 contexts analyzed, 688 pending
+rfig: cf r2 super-slurper connectivity-precheck connectivity-precheck: parent help repeated; stopping this branch
+rfig: cf: 2900 contexts analyzed, 648 pending
+rfig: cf: 2950 contexts analyzed, 622 pending
+rfig: cf: 3000 contexts analyzed, 601 pending
+rfig: cf security-insights partners shadow-hosts shadow-hosts: parent help repeated; stopping this branch
+rfig: cf security-insights partners shadow-zone-hosts shadow-zone-hosts: parent help repeated; stopping this branch
+rfig: cf security-insights partners shadow-zones shadow-zones: parent help repeated; stopping this branch
+rfig: cf ssl certificate-authorities hostname-associations hostname-associations: parent help repeated; stopping this branch
+rfig: cf ssl origin-tls-client-auth hostname-associations hostname-associations: parent help repeated; stopping this branch
+rfig: cf ssl origin-tls-client-auth hostname-certificates hostname-certificates: parent help repeated; stopping this branch
+rfig: cf ssl origin-tls-client-auth zone-certificates zone-certificates: parent help repeated; stopping this branch
+rfig: cf: 3100 contexts analyzed, 524 pending
+rfig: cf: 3150 contexts analyzed, 486 pending
+rfig: cf zero-trust access saml-encryption-certificates saml-encryption-certificates: parent help repeated; stopping this branch
+rfig: cf: 3200 contexts analyzed, 445 pending
+rfig: cf: 3250 contexts analyzed, 407 pending
+rfig: cf: 3300 contexts analyzed, 360 pending
+rfig: cf zero-trust devices emergency-disconnect emergency-disconnect: parent help repeated; stopping this branch
+rfig: cf: 3350 contexts analyzed, 335 pending
+rfig: cf zero-trust dlp data-tag-category-templates data-tag-category-templates: parent help repeated; stopping this branch
+rfig: cf: 3400 contexts analyzed, 298 pending
+rfig: cf zero-trust dlp sensitivity-group-templates sensitivity-group-templates: parent help repeated; stopping this branch
+rfig: cf zero-trust gateway dns-destination-ips dns-destination-ips: parent help repeated; stopping this branch
+rfig: cf: 3450 contexts analyzed, 256 pending
+rfig: cf zero-trust identity-providers federation-grants federation-grants: parent help repeated; stopping this branch
+rfig: cf zero-trust identity-providers saml-certificate saml-certificate: parent help repeated; stopping this branch
+rfig: cf zero-trust organization trust-settings trust-settings: parent help repeated; stopping this branch
+rfig: cf analytics query data-security content-findings content-findings: parent help repeated; stopping this branch
+rfig: cf analytics query data-security findings findings: parent help repeated; stopping this branch
+rfig: cf basin-catalog namespaces tables maintenance-configs maintenance-configs: parent help repeated; stopping this branch
+rfig: cf basin-catalog namespaces tables maintenance-runs maintenance-runs: parent help repeated; stopping this branch
+rfig: cf browser-run devtools browser live-view live-view: parent help repeated; stopping this branch
+rfig: cf: 3500 contexts analyzed, 214 pending
+rfig: cf cloudforce-one threat-intel datasets access access: parent help repeated; stopping this branch
+rfig: cf cloudforce-one threat-intel events attackers attackers: parent help repeated; stopping this branch
+rfig: cf cloudforce-one threat-intel events categories categories: parent help repeated; stopping this branch
+rfig: cf cloudforce-one threat-intel events countries countries: parent help repeated; stopping this branch
+rfig: cf cloudforce-one threat-intel events legacy legacy: parent help repeated; stopping this branch
+rfig: cf cloudforce-one threat-intel events queries queries: parent help repeated; stopping this branch
+rfig: cf cloudforce-one threat-intel events raw raw: parent help repeated; stopping this branch
+rfig: cf cloudforce-one threat-intel events relationships relationships: parent help repeated; stopping this branch
+rfig: cf cloudforce-one threat-intel events target-industries target-industries: parent help repeated; stopping this branch
+rfig: cf cloudforce-one threat-intel tags actors actors: parent help repeated; stopping this branch
+rfig: cf cloudforce-one threat-intel tags categories categories: parent help repeated; stopping this branch
+rfig: cf cloudforce-one threat-intel tags indicators indicators: parent help repeated; stopping this branch
+rfig: cf cloudforce-one threat-intel tags relationships relationships: parent help repeated; stopping this branch
+rfig: cf cloudforce-one threat-signals feeds skills skills: parent help repeated; stopping this branch
+rfig: cf cloudforce-one threat-signals skills tag-categories tag-categories: parent help repeated; stopping this branch
+rfig: cf: 3550 contexts analyzed, 169 pending
+rfig: cf: 3600 contexts analyzed, 126 pending
+rfig: cf spectrum analytics aggregates currents currents: parent help repeated; stopping this branch
+rfig: cf user load-balancers monitors references references: parent help repeated; stopping this branch
+rfig: cf zero-trust access applications policies policies: parent help repeated; stopping this branch
+rfig: cf zero-trust access applications policy-tests policy-tests: parent help repeated; stopping this branch
+rfig: cf zero-trust access applications settings settings: parent help repeated; stopping this branch
+rfig: cf zero-trust access applications short-lived-certificates short-lived-certificates: parent help repeated; stopping this branch
+rfig: cf zero-trust access applications user-policy-checks user-policy-checks: parent help repeated; stopping this branch
+rfig: cf zero-trust access infrastructure audit-ssh-settings audit-ssh-settings: parent help repeated; stopping this branch
+rfig: cf zero-trust access infrastructure ssh-ca ssh-ca: parent help repeated; stopping this branch
+rfig: cf zero-trust access logs access-requests access-requests: parent help repeated; stopping this branch
+rfig: cf zero-trust access mfa authenticator-catalog authenticator-catalog: parent help repeated; stopping this branch
+rfig: cf zero-trust access mtls-certificates settings settings: parent help repeated; stopping this branch
+rfig: cf zero-trust access user-populations users users: parent help repeated; stopping this branch
+rfig: cf zero-trust access users active-sessions active-sessions: parent help repeated; stopping this branch
+rfig: cf zero-trust access users last-seen-identity last-seen-identity: parent help repeated; stopping this branch
+rfig: cf zero-trust casb applications auth-methods auth-methods: parent help repeated; stopping this branch
+rfig: cf zero-trust casb finding-types remediation-types remediation-types: parent help repeated; stopping this branch
+rfig: cf: 3650 contexts analyzed, 80 pending
+rfig: cf zero-trust cws basic-auth-credentials secrets secrets: parent help repeated; stopping this branch
+rfig: cf zero-trust cws tenant-structures nodes nodes: parent help repeated; stopping this branch
+rfig: cf zero-trust devices client-versions target-environments target-environments: parent help repeated; stopping this branch
+rfig: cf zero-trust devices posture integrations integrations: parent help repeated; stopping this branch
+rfig: cf zero-trust devices registrations override-codes override-codes: parent help repeated; stopping this branch
+rfig: cf zero-trust dex commands eligible-devices eligible-devices: parent help repeated; stopping this branch
+rfig: cf zero-trust dex test-results traceroute traceroute: parent help repeated; stopping this branch
+rfig: cf zero-trust dlp validators proximity-words proximity-words: parent help repeated; stopping this branch
+rfig: cf: 3700 contexts analyzed, 34 pending
+rfig: cf zero-trust identity-providers scim groups groups: parent help repeated; stopping this branch
+rfig: cf zero-trust identity-providers scim users users: parent help repeated; stopping this branch
+rfig: cf zero-trust risk-scoring integrations references references: parent help repeated; stopping this branch
+rfig: cf realtime kit analytics livestreams daily daily: parent help repeated; stopping this branch
+rfig: cf realtime kit meetings participants tokens tokens: parent help repeated; stopping this branch
+rfig: cf zero-trust dex devices aggregates live live: parent help repeated; stopping this branch
+rfig: cf zero-trust dex devices aggregates over-time over-time: parent help repeated; stopping this branch
+rfig: cf zero-trust dex overview tests unique-devices unique-devices: parent help repeated; stopping this branch
+rfig: cf zero-trust dex test-results http percentiles percentiles: parent help repeated; stopping this branch
+rfig: cf zero-trust dlp validators worker status status: parent help repeated; stopping this branch
+rfig: cf radar email security top tlds malicious malicious: parent help repeated; stopping this branch
+cf: 65323 candidates analyzed

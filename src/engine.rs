@@ -94,6 +94,111 @@ pub fn config() -> PathBuf {
     PathBuf::from(env::var_os("HOME").unwrap_or_default()).join(".config/rfig")
 }
 
+pub fn help_file(root: &Path, words: &[String]) -> Option<PathBuf> {
+    if words.is_empty() || words.iter().any(|word| !super::safe_command_name(word)) {
+        return None;
+    }
+    let mut file = root.join("help").join(&words[0]);
+    if words.len() == 1 {
+        file.push("root.tsv");
+    } else {
+        file.push("subcommands");
+        for word in &words[1..words.len() - 1] {
+            file.push(word);
+        }
+        file.push(format!("{}.tsv", words.last()?));
+    }
+    Some(file)
+}
+
+pub fn cached_items(root: &Path, words: &[String]) -> Vec<Item> {
+    fn read(file: &Path) -> Vec<Item> {
+        fs::read_to_string(file)
+            .unwrap_or_default()
+            .lines()
+            .filter_map(|line| {
+                let (label, kind) = line.split_once('\t')?;
+                if label.is_empty()
+                    || !valid(label)
+                    || !matches!(kind, "subcommand" | "option" | "flag")
+                {
+                    return None;
+                }
+                Some(Item {
+                    label: label.into(),
+                    description: String::new(),
+                    kind: kind.into(),
+                    popular: 0,
+                })
+            })
+            .collect()
+    }
+    let Some(file) = help_file(root, &words[..words.len().min(1)]) else {
+        return Vec::new();
+    };
+    let mut items = if file.is_file() {
+        read(&file)
+    } else if words.len() == 1 {
+        read(&root.join("fallback").join(format!("{}.tsv", words[0])))
+    } else {
+        return Vec::new();
+    };
+    let mut path = vec![words[0].clone()];
+    let mut value = false;
+    for word in &words[1..] {
+        if value {
+            value = false;
+            continue;
+        }
+        if word == "--" {
+            return Vec::new();
+        }
+        if word.starts_with('-') {
+            let (option, inline) = word
+                .split_once('=')
+                .map_or((word.as_str(), false), |(key, _)| (key, true));
+            let Some(item) = items
+                .iter()
+                .find(|item| item.label == option && item.kind != "subcommand")
+            else {
+                return Vec::new();
+            };
+            value = item.kind == "option" && !inline;
+            continue;
+        }
+        if !items
+            .iter()
+            .any(|item| item.label == *word && item.kind == "subcommand")
+        {
+            return Vec::new();
+        }
+        path.push(word.clone());
+        let Some(file) = help_file(root, &path) else {
+            return Vec::new();
+        };
+        items = read(&file);
+    }
+    if value {
+        Vec::new()
+    } else {
+        items
+    }
+}
+
+pub fn prefer_cached(cached: &[Item], source: &str) -> bool {
+    if cached.is_empty() {
+        return false;
+    }
+    let mut labels = source
+        .lines()
+        .map(|row| row.split('\t').next().unwrap_or(""))
+        .filter(|label| !label.is_empty())
+        .peekable();
+    labels.peek().is_none()
+        || (cached.iter().any(|item| item.kind == "subcommand")
+            && labels.all(|label| Path::new(label).exists()))
+}
+
 pub struct Memory {
     pub history: Vec<String>,
     pub scores: HashMap<(String, String), u64>,
@@ -323,13 +428,25 @@ pub fn complete(
     if source.is_none() {
         source = super::external_completion(name, &input).ok().flatten();
     }
-    let option_kinds: HashMap<String, String> =
+    let cached = cached_items(&config(), &ctx.words);
+    // An empty provider or a group's filesystem fallback must not hide known children.
+    source = source.filter(|rows| !prefer_cached(&cached, rows));
+    let mut option_kinds: HashMap<String, String> =
         fs::read_to_string(config().join("options").join(format!("{name}.tsv")))
             .unwrap_or_default()
             .lines()
             .filter_map(|l| l.split_once('\t'))
             .map(|(a, b)| (a.to_owned(), b.to_owned()))
             .collect();
+    if ctx.words.len() > 1 {
+        option_kinds.clear();
+    }
+    option_kinds.extend(
+        cached
+            .iter()
+            .filter(|item| item.kind != "subcommand")
+            .map(|item| (item.label.clone(), item.kind.clone())),
+    );
     if let Some(source) = source {
         for line in source.lines() {
             let (label, desc) = line.split_once('\t').unwrap_or((line, ""));
@@ -354,20 +471,8 @@ pub fn complete(
                 popular: 0,
             });
         }
-    } else if ctx.words.len() == 1 && super::safe_command_name(name) {
-        for line in fs::read_to_string(config().join("fallback").join(format!("{name}.tsv")))
-            .unwrap_or_default()
-            .lines()
-        {
-            if let Some((label, kind)) = line.split_once('\t') {
-                items.push(Item {
-                    label: label.into(),
-                    description: String::new(),
-                    kind: kind.into(),
-                    popular: 0,
-                });
-            }
-        }
+    } else {
+        items = cached;
     }
     (ctx, items)
 }
@@ -375,6 +480,25 @@ pub fn complete(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn known_groups_replace_file_fallback_but_leaf_dynamic_values_survive() {
+        let group = vec![Item {
+            label: "child".into(),
+            kind: "subcommand".into(),
+            description: String::new(),
+            popular: 0,
+        }];
+        assert!(prefer_cached(&group, ".\tDirectory\n"));
+        assert!(!prefer_cached(&group, "dynamic-value\n"));
+        let leaf = vec![Item {
+            label: "--help".into(),
+            kind: "flag".into(),
+            description: String::new(),
+            popular: 0,
+        }];
+        assert!(!prefer_cached(&leaf, ".\tDirectory\n"));
+        assert!(prefer_cached(&leaf, "\n"));
+    }
     #[test]
     fn tokenization_never_executes() {
         let c = context("echo done && tool user 'alice smith' --ro");

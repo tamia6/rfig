@@ -3,7 +3,7 @@ mod engine;
 mod sandbox;
 use libc::{flock, kill, setrlimit, setsid};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, VecDeque},
     env, fs,
     io::{self, BufWriter, Read, Write},
     os::fd::AsRawFd,
@@ -11,6 +11,7 @@ use std::{
     os::unix::process::CommandExt,
     path::{Path, PathBuf},
     process::{Command, Stdio},
+    sync::Arc,
     thread,
     time::{Duration, Instant},
 };
@@ -415,11 +416,32 @@ fn setup(requested: Option<&str>) -> io::Result<()> {
 
 fn parse_help_options(help: &str) -> HashMap<String, &'static str> {
     let mut kinds = HashMap::new();
+    let mut previous: Vec<String> = Vec::new();
     for line in help.lines() {
         let spec = line.trim_start().split("  ").next().unwrap_or("");
+        let annotated = if line.contains("[boolean]") {
+            Some("flag")
+        } else if ["[string]", "[number]", "[array]"]
+            .iter()
+            .any(|hint| line.contains(hint))
+        {
+            Some("option")
+        } else {
+            None
+        };
         if !spec.starts_with('-') {
+            if line.starts_with(char::is_whitespace) {
+                if let Some(kind) = annotated {
+                    for name in &previous {
+                        kinds.insert(name.clone(), kind);
+                    }
+                }
+            } else {
+                previous.clear();
+            }
             continue;
         }
+        previous.clear();
         for chunk in spec.split(',') {
             let chunk = chunk.trim_start();
             let end = chunk
@@ -430,7 +452,9 @@ fn parse_help_options(help: &str) -> HashMap<String, &'static str> {
                 continue;
             }
             let tail = chunk[end..].trim_start();
-            let kind = if let Some(value) = tail.strip_prefix('=') {
+            let kind = if let Some(kind) = annotated {
+                kind
+            } else if let Some(value) = tail.strip_prefix('=') {
                 let value = value
                     .split(':')
                     .next()
@@ -471,6 +495,7 @@ fn parse_help_options(help: &str) -> HashMap<String, &'static str> {
                 continue;
             };
             kinds.insert(name.to_owned(), kind);
+            previous.push(name.to_owned());
         }
     }
     kinds
@@ -521,8 +546,15 @@ fn advertised_full_help(help: &str) -> Option<Vec<&str>> {
 
 fn parse_help_subcommands<'a>(name: &str, help: &'a str) -> Vec<&'a str> {
     let mut commands = Vec::new();
-    let invocation = help_invocation(help).unwrap_or(name);
+    let (root, suffix) = name.split_once(' ').unwrap_or((name, ""));
+    let invocation = format!(
+        "{}{}{}",
+        help_invocation(help).unwrap_or(root),
+        if suffix.is_empty() { "" } else { " " },
+        suffix
+    );
     let mut in_section = false;
+    let mut section_indent = None;
     for line in help.lines() {
         let trimmed = line.trim();
         let heading = trimmed.trim_end_matches(':');
@@ -532,9 +564,12 @@ fn parse_help_subcommands<'a>(name: &str, help: &'a str) -> Vec<&'a str> {
                 .chars()
                 .all(|ch| ch.is_ascii_uppercase() || ch.is_ascii_whitespace() || ch == '_');
         if heading.to_ascii_lowercase().contains("command")
-            && (trimmed.ends_with(':') || uppercase_heading)
+            && (trimmed.ends_with(':')
+                || uppercase_heading
+                || heading.eq_ignore_ascii_case("commands"))
         {
             in_section = true;
+            section_indent = None;
             continue;
         }
         let candidate = if in_section {
@@ -542,14 +577,28 @@ fn parse_help_subcommands<'a>(name: &str, help: &'a str) -> Vec<&'a str> {
                 in_section = false;
                 None
             } else {
+                let indent = line.len() - line.trim_start().len();
+                if section_indent.is_some_and(|first| indent > first) {
+                    continue;
+                }
+                section_indent.get_or_insert(indent);
+                let field = trimmed.split("  ").next().unwrap_or(trimmed);
+                let root_prefix = format!("{} ", help_invocation(help).unwrap_or(root));
+                if field.starts_with(&root_prefix) && !field.starts_with(&format!("{invocation} "))
+                {
+                    continue;
+                }
                 trimmed
+                    .strip_prefix(invocation.as_str())
+                    .and_then(|rest| rest.strip_prefix(char::is_whitespace))
+                    .unwrap_or(trimmed)
                     .split_whitespace()
                     .next()
                     .map(|word| word.trim_end_matches(':'))
             }
         } else {
             trimmed
-                .strip_prefix(invocation)
+                .strip_prefix(invocation.as_str())
                 .and_then(|rest| rest.strip_prefix(char::is_whitespace))
                 .and_then(|rest| rest.split_whitespace().next())
                 .filter(|_| line.starts_with(char::is_whitespace))
@@ -678,6 +727,8 @@ fn help_output_status(
 
 fn safe_command_name(name: &str) -> bool {
     !name.is_empty()
+        && name != "."
+        && name != ".."
         && name
             .bytes()
             .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, b'-' | b'_' | b'.' | b'+'))
@@ -800,6 +851,143 @@ fn cache_completion_protocol(name: &str, help: &str, directory: &Path, scratch: 
     false
 }
 
+fn help_identity<'a>(name: &str, help: &'a str) -> &'a str {
+    let mut offset = 0;
+    for line in help.split_inclusive('\n') {
+        let text = line.trim_end();
+        let heading = text.trim_end_matches(':').to_ascii_lowercase();
+        if !line.starts_with(char::is_whitespace)
+            && (heading == "usage"
+                || heading.starts_with("usage:")
+                || heading.contains("commands")
+                || text == name
+                || text.starts_with(&format!("{name} ")))
+        {
+            return help[offset..].trim();
+        }
+        offset += line.len();
+    }
+    help.trim()
+}
+
+fn checked_help(name: &str, args: &[&str], scratch: &Path) -> io::Result<String> {
+    let (text, success) = help_output_status(name, args, scratch, true)?;
+    let invocation = std::iter::once(name)
+        .chain(args.iter().take(args.len().saturating_sub(1)).copied())
+        .collect::<Vec<_>>()
+        .join(" ");
+    let identity = help_identity(name, &text);
+    if !success
+        && help_invocation(&text).is_none()
+        && parse_help_options(&text).is_empty()
+        && parse_help_subcommands(&invocation, &text).is_empty()
+        && identity != invocation
+        && !identity.starts_with(&format!("{invocation}\n"))
+    {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "help command failed without recognizable help",
+        ));
+    }
+    Ok(text)
+}
+
+fn cache_help_tree(
+    name: &str,
+    help: &str,
+    entries: &[(String, &str)],
+    config: &Path,
+    scratch: &Path,
+) -> io::Result<usize> {
+    let mut pending = VecDeque::from([(
+        vec![name.to_owned()],
+        Some(Arc::<str>::from(help_identity(name, help))),
+        Vec::<Arc<str>>::new(),
+    )]);
+    let mut total = 0;
+    let mut contexts = 0;
+    while let Some((words, help, mut ancestors)) = pending.pop_front() {
+        let help = if let Some(help) = help {
+            help
+        } else {
+            let mut args: Vec<_> = words.iter().skip(1).map(String::as_str).collect();
+            args.push("--help");
+            let first = checked_help(name, &args, scratch);
+            let mut child_help = first.as_ref().cloned().unwrap_or_default();
+            if parse_help_options(&child_help).is_empty()
+                || parse_help_subcommands(&words.join(" "), &child_help).is_empty()
+            {
+                *args.last_mut().unwrap() = "-h";
+                if let Ok(short) = checked_help(name, &args, scratch) {
+                    if child_help.is_empty()
+                        || (!parse_help_subcommands(&words.join(" "), &short).is_empty()
+                            && parse_help_subcommands(&words.join(" "), &child_help).is_empty())
+                    {
+                        child_help = short;
+                    }
+                }
+            }
+            if child_help.is_empty() && first.is_err() {
+                eprintln!(
+                    "rfig: {}: help unavailable; keeping cached data",
+                    words.join(" ")
+                );
+                continue;
+            }
+            Arc::from(help_identity(name, &child_help))
+        };
+        let repeated = ancestors
+            .iter()
+            .any(|parent| parent.as_ref() == help.as_ref());
+        let invocation = words.join(" ");
+        let children = if repeated {
+            Vec::new()
+        } else {
+            parse_help_subcommands(&invocation, &help)
+        };
+        let mut options: Vec<_> = if repeated {
+            Vec::new()
+        } else if words.len() == 1 {
+            entries.to_vec()
+        } else {
+            parse_help_options(&help).into_iter().collect()
+        };
+        options.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+        let mut records = children
+            .iter()
+            .map(|child| format!("{child}\tsubcommand\n"))
+            .collect::<String>();
+        for (option, kind) in &options {
+            records.push_str(&format!("{option}\t{kind}\n"));
+        }
+        let file = engine::help_file(config, &words)
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "invalid help path"))?;
+        fs::create_dir_all(file.parent().unwrap())?;
+        let temporary = file.with_extension(format!("{}.tmp", std::process::id()));
+        fs::write(&temporary, records)?;
+        fs::rename(temporary, file)?;
+        total += children.len() + options.len();
+        contexts += 1;
+        if repeated {
+            eprintln!("rfig: {invocation}: parent help repeated; stopping this branch");
+            continue;
+        }
+        ancestors.push(help.clone());
+        for child in children {
+            let mut path = words.clone();
+            path.push(child.to_owned());
+            pending.push_back((path, None, ancestors.clone()));
+        }
+        if contexts % 50 == 0 {
+            eprintln!(
+                "rfig: {name}: {contexts} contexts analyzed, {} pending",
+                pending.len()
+            );
+        }
+    }
+    Ok(total)
+}
+
 fn analyze_command(name: &str, directory: &Path) -> io::Result<usize> {
     if !safe_command_name(name) {
         return Err(io::Error::new(
@@ -815,13 +1003,13 @@ fn analyze_command(name: &str, directory: &Path) -> io::Result<usize> {
     }
     fs::create_dir_all(directory)?;
     let scratch = directory.join(format!(".help-{}", std::process::id()));
-    let first_help = help_output(name, &["--help"], &scratch, true);
+    let first_help = checked_help(name, &["--help"], &scratch);
     let mut help = first_help.as_ref().cloned().unwrap_or_default();
     let mut got_help = first_help.is_ok();
     let mut separate_options = help_advertises_option_command(name, &help);
     let mut kinds = parse_help_options(&help);
     if kinds.is_empty() || parse_help_subcommands(name, &help).is_empty() {
-        if let Ok(short_help) = help_output(name, &["-h"], &scratch, true) {
+        if let Ok(short_help) = checked_help(name, &["-h"], &scratch) {
             got_help = true;
             separate_options |= help_advertises_option_command(name, &short_help);
             if kinds.is_empty() {
@@ -878,6 +1066,9 @@ fn analyze_command(name: &str, directory: &Path) -> io::Result<usize> {
         }
         fs::create_dir_all(config.join("fallback"))?;
         fs::write(config.join("fallback").join(format!("{name}.tsv")), "")?;
+        let file = engine::help_file(config, &[name.to_owned()]).unwrap();
+        fs::create_dir_all(file.parent().unwrap())?;
+        fs::write(file, "")?;
         return Ok(0);
     }
     let config = directory.parent().unwrap();
@@ -912,7 +1103,9 @@ fn analyze_command(name: &str, directory: &Path) -> io::Result<usize> {
     let temporary = fallback.join(format!(".{name}-{}", std::process::id()));
     fs::write(&temporary, result)?;
     fs::rename(temporary, fallback.join(format!("{name}.tsv")))?;
-    Ok(entries.len() + subcommands.len())
+    let result = cache_help_tree(name, &help, &entries, config, &scratch);
+    let _ = fs::remove_file(&scratch);
+    result
 }
 
 fn analyze_catalog(name: Option<&str>) -> io::Result<()> {
@@ -1554,7 +1747,15 @@ fn run() -> io::Result<i32> {
             let (Some(name), Some(line)) = (args.next(), args.next()) else {
                 return Ok(2);
             };
-            if let Some(output) = external_completion(&name, &line)? {
+            let ctx = engine::context(&line);
+            let cached = if ctx.words.first() == Some(&name) {
+                engine::cached_items(&engine::config(), &ctx.words)
+            } else {
+                Vec::new()
+            };
+            if let Some(output) = external_completion(&name, &line)?
+                .filter(|rows| !engine::prefer_cached(&cached, rows))
+            {
                 println!("provider");
                 let prefix = line.split_whitespace().last().unwrap_or("");
                 let prefix = if line.ends_with(' ') { "" } else { prefix };
@@ -1566,6 +1767,15 @@ fn run() -> io::Result<i32> {
                         && !description.chars().any(char::is_control)
                     {
                         println!("{label}\t{description}");
+                    }
+                }
+            } else {
+                println!("cache");
+                if ctx.words.first() == Some(&name) {
+                    for item in cached {
+                        if item.label.starts_with(&ctx.prefix) {
+                            println!("{}\t{}", item.label, item.kind);
+                        }
                     }
                 }
             }
@@ -1717,6 +1927,27 @@ mod tests {
     fn help_lists_subcommands_in_unpunctuated_sections() {
         let help = "USAGE\n  tool [flags] <subcommand>\n\nSUBCOMMANDS\n  up       Connect\n  status   Show status\n\nFLAGS\n  --socket value  Socket path\n";
         assert_eq!(parse_help_subcommands("tool", help), vec!["up", "status"]);
+    }
+
+    #[test]
+    fn nested_help_strips_the_full_invocation_and_ignores_wrapped_prose() {
+        let help = "Usage: short workers versions <command>\n\nCommands\n  short workers versions list  List versions\n                               with pagination\n  short workers versions get <id>  Get version\n\nOptions:\n  --help  Help\n";
+        assert_eq!(
+            parse_help_subcommands("wrapper workers versions", help),
+            vec!["list", "get"]
+        );
+    }
+
+    #[test]
+    fn nested_help_rejects_another_context_and_reads_wrapped_types() {
+        assert!(
+            parse_help_subcommands("tool missing", "Commands\n  tool workers  Workers\n")
+                .is_empty()
+        );
+        let kinds = parse_help_options("  -z, --zone  Zone ID\n                         [string]\n  --quiet  Quiet [boolean]\n");
+        assert_eq!(kinds.get("--zone"), Some(&"option"));
+        assert_eq!(kinds.get("-z"), Some(&"option"));
+        assert_eq!(kinds.get("--quiet"), Some(&"flag"));
     }
 
     #[test]

@@ -1,0 +1,17 @@
+--delete-with-references	flag
+--dry-run	flag
+--force	flag
+--help	flag
+--local	flag
+--mode	option
+--persist-to	option
+--profile	option
+--quiet	flag
+--version	flag
+--zone	option
+-f	flag
+-h	flag
+-m	option
+-q	flag
+-v	flag
+-z	option

@@ -1,0 +1,18 @@
+RFIG> source /tmp/rfig-strict-11foyrg4/noisy-completion
+RFIG> rfigprotocolnoise alpha
+→ ● alpha
+  ● beta
+ beta description
+RFIG>
+
+
+
+
+
+
+
+
+
+
+
+

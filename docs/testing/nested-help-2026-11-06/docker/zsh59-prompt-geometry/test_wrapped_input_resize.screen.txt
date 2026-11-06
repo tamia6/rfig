@@ -1,0 +1,10 @@
+RFIG> rfigprobe xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+RFIG>
+
+
+
+
+
+
+

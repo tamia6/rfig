@@ -1,0 +1,18 @@
+RFIG> source /tmp/rfig-strict-3wxc2pg3/noisy-completion
+RFIG> cf workers deployments create --
+→ ◇ --body
+  ⚑ --bypass-deployment-checks
+  ◇ --code-update-strategy-max-delay
+  ◇ --code-update-strategy-mode
+  ⚑ --dry-run
+
+
+
+
+
+
+
+
+
+
+

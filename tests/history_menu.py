@@ -69,7 +69,7 @@ with tempfile.TemporaryDirectory(prefix='rfig-history-menu-') as temp:
         execute('alpha\n')
         # History is offered even without a usable completion definition.
         type_('plainfixture h');wait(lambda:'◷ plainfixture hello' in screen(),'history-only menu')
-        assert screen().splitlines()[0]=='plainfixture h',screen()
+        wait(lambda:screen().startswith('plainfixture h\n'),'history-only input remains unchanged')
         keys('Left');keys('C-e')
         if SHELL=='zsh':
             # Wait for native completion in Ctrl+E to finish before sending SIGINT.

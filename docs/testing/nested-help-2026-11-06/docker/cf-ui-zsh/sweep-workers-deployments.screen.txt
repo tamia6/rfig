@@ -1,0 +1,18 @@
+  ⚑ --local
+  ◇ --mode
+  ◇ --persist-to
+
+RFIG> cf workers deployments list --dry-run
+→ ⚑ --dry-run
+  ⚑ --help
+  ⚑ --local
+  ◇ --mode
+  ◇ --page
+
+RFIG> cf workers deployments
+→ ↳ create
+  ↳ delete
+  ↳ get
+  ↳ list
+  ⚑ --help
+
