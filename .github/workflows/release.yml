@@ -58,7 +58,7 @@ jobs:
           apt-get install -y -qq python3 zsh fish bash-completion
           useradd -m tester
           chown -R tester:tester "$GITHUB_WORKSPACE"
-          su tester -s /bin/sh -c "cd '$GITHUB_WORKSPACE' && python3 tests/linux_sandbox.py && python3 tests/setup_safety.py && python3 tests/self_completion.py && python3 tests/install_binary.py"
+          su tester -s /bin/sh -c "cd '$GITHUB_WORKSPACE' && python3 tests/linux_sandbox.py && python3 tests/setup_safety.py && python3 tests/self_completion.py && python3 tests/install_binary.py && python3 tests/homebrew_upgrade.py"
       - name: Package
         env:
           ARCH: ${{ matrix.arch }}

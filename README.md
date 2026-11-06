@@ -16,7 +16,7 @@ The demo shows progressive Git completion from `g` to `gi` to `git`, then `check
 
 [Installation](#installation) · [Usage](#usage) · [Shell support](#shell-support) · [Completion sources](#completion-sources-and-background-enrichment) · [Testing](#testing)
 
-> rfig v0.3.0 supports macOS and Linux with zsh, Bash 4.4+, and Fish 3.6+. Install with Homebrew, a prebuilt binary, or the source code.
+> rfig v0.3.1 supports macOS and Linux with zsh, Bash 4.4+, and Fish 3.6+. Install with Homebrew, a prebuilt binary, or the source code.
 
 **At a glance:** terminal autocomplete and nested CLI completion · directory-scoped history at the top of the menu · local usage-based ranking · no AI service or cloud account required.
 
@@ -53,8 +53,10 @@ The installer builds rfig into `~/.local/bin/rfig`, then runs `rfig setup`. It d
 
 ```sh
 brew install tamia6/tap/rfig
-rfig setup
+"$(brew --prefix rfig)/bin/rfig" setup
 ```
+
+Homebrew setup links the integration scripts for zsh, Bash, and Fish to the package's stable `opt` path. After `brew upgrade rfig`, open a new shell session to load the updated scripts; no additional setup is needed. For an older installation, run setup once with the updated version to migrate copied scripts. Already open sessions keep their loaded functions until restarted.
 
 ### Prebuilt binaries (no Rust required)
 
@@ -76,7 +78,7 @@ rfig setup --shell bash
 rfig setup --shell fish
 ```
 
-Open a new session of the configured shell afterward. Setup can be repeated: it writes the integration script, adds `~/.local/bin` when needed, and avoids duplicate source lines. Background enrichment jobs for the same installation run sequentially.
+Open a new session of the configured shell afterward. Setup can be repeated: it installs the integration script (a stable package link for Homebrew, an embedded copy for source/binary installs), adds `~/.local/bin` when needed, and avoids duplicate source lines. Background enrichment jobs for the same installation run sequentially.
 
 | Shell | Configuration location |
 | --- | --- |
@@ -84,7 +86,7 @@ Open a new session of the configured shell afterward. Setup can be repeated: it 
 | Bash | `~/.bashrc`; adds a source line to the login configuration if it does not mention `.bashrc` |
 | Fish | `$XDG_CONFIG_HOME/fish/conf.d/rfig.fish`, or `~/.config/fish/conf.d/rfig.fish` by default |
 
-If source and Homebrew installations coexist, use `command -v rfig` to check which one is active. To configure the Homebrew version explicitly, run `"$(brew --prefix rfig)/bin/rfig" setup`.
+Use `command -v rfig` to check the active installation. If a previous source/binary install at `~/.local/bin/rfig` shadows Homebrew, back it up outside `$PATH` and remove that duplicate executable. Keep a single installation method so the executable and integration scripts stay in sync. Reconfigure each shell you use with `"$(brew --prefix rfig)/bin/rfig" setup --shell zsh` (or `bash` / `fish`), then open new sessions. History and usage records in `~/.config/rfig/` are preserved.
 
 ## Usage
 
@@ -150,9 +152,11 @@ rfig does not maintain a fixed completion database for every command. Each adapt
 | zsh | Registered definitions first; otherwise `$fpath` scripts, generated zsh scripts, external sources, and cached help data |
 | Bash/Fish | Current-shell definitions and autoloaded scripts, generated scripts for that shell, external sources, and cached help data |
 | External sources | Recognized Cobra `__complete` protocols and locally installed Fish/Bash scripts |
-| Help cache | Extracted top-level subcommands and options when no other source is available; does not replace arbitrary-depth dynamic completion |
+| Help cache | Cached subcommands and options for each analyzed command path when no other source is available; dynamic arguments still need a completion provider |
 
 Definitions and loading behavior differ between shells, so candidates may differ. Background enrichment does not eliminate queries while typing: dynamic completion scripts still run when needed. Use trusted completion scripts.
+
+Help analysis walks declared subcommands breadth first, querying each path with `--help` / `-h` until it reaches a leaf, with no fixed depth limit. Each path has its own cached options and children, shared by zsh, Bash, and Fish. Probes remain sequential and sandboxed with existing per-process limits; repeated parent help stops that branch. Failed probes keep existing cache data and are reported. Menus read this cache without running new help scans while typing. Help cannot discover dynamic resource names or positional values by itself. At a known subcommand group, filesystem-only fallback does not override cached children; an empty source can also use the cache. Native dynamic results at leaf commands remain preferred.
 
 ### After setup: quick scan, then sequential enrichment
 
@@ -165,7 +169,7 @@ Definitions and loading behavior differ between shells, so candidates may differ
 ```sh
 rfig setup                         # Rescan after PATH or installed commands change
 cat ~/.config/rfig/enrich.status    # View analyzed / skipped / failed counts
-rfig analyze <command>             # Refresh one command's cache; requires a sandbox
+rfig analyze <command>             # Refresh a command and its nested help tree's cache; requires a sandbox
 rfig --help                        # List public commands and usage
 ```
 
@@ -176,9 +180,10 @@ In `enrich.status`, `done` means processing has finished, not that every command
 | Path relative to `~/.config/rfig/` | Purpose |
 | --- | --- |
 | `commands.txt` / `supported.txt` | Discovered command names / commands with discovered definitions |
-| `rfig.zsh` / `rfig.bash` / `rfig.fish` | Integration scripts written from the binary during setup |
+| `rfig.zsh` / `rfig.bash` / `rfig.fish` | Integration scripts: stable package links for Homebrew, embedded copies for source/binary installations |
 | `generated/*.{zsh,bash,fish}` / `protocol/*` | Generated, syntax-checked scripts / recognized protocols |
-| `options/*.tsv` / `fallback/*.tsv` | Option categories / candidates extracted from help |
+| `options/*.tsv` / `fallback/*.tsv` | Root option categories / legacy root candidates |
+| `help/<command>/` | Per-path help cache, including nested subcommands and leaf options |
 | `enrich.status` / `enrich.lock` | Background progress / lock preventing duplicate jobs |
 | `usage.log` | Candidate selection and command execution records for ranking |
 | `history.tsv` | Command history with working directories, permissions `0600` |

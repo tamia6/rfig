@@ -16,7 +16,7 @@ rfig 是受 Fig 启发的独立项目，与 Fig 无隶属关系。它使用本�
 
 [安装](#安装) · [使用](#使用) · [Shell 支持](#shell-支持) · [补全来源](#补全来源与后台优化) · [测试验证](#测试验证)
 
-> rfig v0.3.0 支持 macOS 和 Linux，以及 zsh、Bash 4.4+、Fish 3.6+。Homebrew 与二进制安装方式见下文。
+> rfig v0.3.1 支持 macOS 和 Linux，以及 zsh、Bash 4.4+、Fish 3.6+。Homebrew 与二进制安装方式见下文。
 
 **快速了解：**终端自动补全与多级 CLI 补全 · 按目录匹配的内联历史建议 · 本地使用习惯排序 · 无需 AI 服务或云端账号。
 
@@ -53,8 +53,10 @@ sh install.sh --shell fish
 
 ```sh
 brew install tamia6/tap/rfig
-rfig setup
+"$(brew --prefix rfig)/bin/rfig" setup
 ```
+
+Homebrew 安装执行 setup 后，zsh、Bash、Fish 的集成脚本会链接到软件包的稳定 `opt` 路径。以后执行 `brew upgrade rfig`，打开新 Shell 会话即可加载新版脚本，无需再次 setup。旧安装需用更新后的版本执行一次 setup，将原来的脚本副本迁移为链接。已经打开的会话需重启才能更新已加载的函数。
 
 ### 下载二进制（无需 Rust）
 
@@ -76,7 +78,7 @@ rfig setup --shell bash
 rfig setup --shell fish
 ```
 
-配置完成后打开对应 Shell 的新会话。`setup` 可重复运行，写入集成脚本并按需加入 `~/.local/bin`，相同加载行不会重复添加；同一安装目录的后台优化任务串行执行。
+配置完成后打开对应 Shell 的新会话。`setup` 可重复运行，安装集成脚本（Homebrew 使用稳定的软件包链接，源码或二进制安装使用内置脚本副本）并按需加入 `~/.local/bin`，相同加载行不会重复添加；同一安装目录的后台优化任务串行执行。
 
 | Shell | 配置位置 |
 | --- | --- |
@@ -84,7 +86,7 @@ rfig setup --shell fish
 | Bash | `~/.bashrc`；登录配置未提及 `.bashrc` 时补充加载行 |
 | Fish | `$XDG_CONFIG_HOME/fish/conf.d/rfig.fish`，默认 `~/.config/fish/conf.d/rfig.fish` |
 
-如果源码安装与 Homebrew 并存，先用 `command -v rfig` 检查实际使用的版本。需要配置 Homebrew 版本时执行 `"$(brew --prefix rfig)/bin/rfig" setup`。
+用 `command -v rfig` 检查实际使用的安装入口。如果之前安装的 `~/.local/bin/rfig` 覆盖了 Homebrew，先将该文件备份到 `$PATH` 之外，再移除重复的可执行文件。保留一种安装方式，避免程序与集成脚本版本不一致。为使用的各个 Shell 执行 `"$(brew --prefix rfig)/bin/rfig" setup --shell zsh`（或 `bash` / `fish`），再打开新会话。`~/.config/rfig/` 中的历史和使用记录会保留。
 
 ## 使用
 
@@ -152,7 +154,9 @@ rfig 不维护一份覆盖所有命令的固定补全库，各适配层按可用
 | zsh | 当前会话已注册定义优先；未注册时查找 `$fpath` 脚本、生成的 zsh 脚本，再尝试外部来源和帮助缓存 |
 | Bash/Fish | 当前 Shell 的定义与自动加载脚本、相应 Shell 的生成脚本，再尝试外部来源和帮助缓存 |
 | 外部来源 | 已识别的 Cobra `__complete` 协议，以及本机 Fish/Bash 补全脚本 |
-| 帮助缓存 | 无可用补全来源时使用已提取的首级子命令和选项，不能替代任意层级的动态补全 |
+| 帮助缓存 | 无可用补全来源时使用各命令路径下的子命令和选项缓存；动态参数仍需补全提供器 |
+
+帮助分析按层串行遍历声明的子命令，对每条路径查询 `--help` / `-h`，直到叶子节点，不限制固定层数。每层分别缓存子命令和选项，由 zsh、Bash、Fish 共用。探测继续使用沙箱与已有的单进程资源限制；重复返回父级帮助时停止该分支，失败节点保留已有缓存并报告。输入时只读缓存，不额外扫描帮助；动态资源名称和位置参数值仍需其他补全来源。已知子命令分组中的纯文件兜底不会覆盖缓存；原生结果为空时也会读取缓存。叶子命令的原生动态参数结果仍优先保留。
 
 不同 Shell 的定义和加载方式不同，候选不保证完全一致。后台优化不意味着输入时完全不运行查询：动态补全脚本仍会在需要时执行，补全脚本应来自可信来源。
 
@@ -167,7 +171,7 @@ rfig 不维护一份覆盖所有命令的固定补全库，各适配层按可用
 ```sh
 rfig setup                         # PATH 或命令安装变化后重新扫描
 cat ~/.config/rfig/enrich.status    # 查看 analyzed / skipped / failed 计数
-rfig analyze <命令名>               # 单独刷新一个命令的分析缓存（需可用沙箱）
+rfig analyze <命令名>               # 刷新一个命令及其多层子命令缓存（需可用沙箱）
 rfig --help                        # 查看公开命令和用法
 ```
 
@@ -178,9 +182,10 @@ rfig --help                        # 查看公开命令和用法
 | 路径（相对于 `~/.config/rfig/`） | 用途 |
 | --- | --- |
 | `commands.txt` / `supported.txt` | 扫描的命令名 / 已发现补全定义的命令名 |
-| `rfig.zsh` / `rfig.bash` / `rfig.fish` | setup 从二进制写出的 Shell 集成脚本 |
+| `rfig.zsh` / `rfig.bash` / `rfig.fish` | Shell 集成脚本：Homebrew 使用稳定的软件包链接，源码或二进制安装使用内置副本 |
 | `generated/*.{zsh,bash,fish}` / `protocol/*` | 生成并检查的补全脚本 / 识别的协议 |
-| `options/*.tsv` / `fallback/*.tsv` | 选项类别 / 帮助文本提取的候选 |
+| `options/*.tsv` / `fallback/*.tsv` | 首层选项分类和旧版首层候选 |
+| `help/<command>/` | 各命令路径的帮助缓存，含多层子命令和叶子选项 |
 | `enrich.status` / `enrich.lock` | 后台进度 / 防止重复后台任务的锁 |
 | `usage.log` | 候选选择与命令执行记录，用于排序 |
 | `history.tsv` | 包含工作目录的命令历史，文件权限 `0600` |
