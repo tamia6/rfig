@@ -26,7 +26,7 @@ EVIDENCE.mkdir(parents=True, exist_ok=True)
 FONT = os.environ.get("RFIG_DEMO_FONT", "/System/Library/Fonts/Menlo.ttc")
 font = ImageFont.truetype(FONT, 22)
 small = ImageFont.truetype(FONT, 16)
-symbols = ImageFont.truetype(os.environ.get("RFIG_DEMO_SYMBOL_FONT", "/System/Library/Fonts/Supplemental/Arial Unicode.ttf"), 22)
+symbols = ImageFont.truetype(os.environ.get("RFIG_DEMO_SYMBOL_FONT", "/System/Library/Fonts/Apple Symbols.ttf"), 22)
 BG, FG = "#262633", "#d5d8ed"
 COLORS = dict(zip(
     ["black", "red", "green", "brown", "blue", "magenta", "cyan", "white",
@@ -63,7 +63,7 @@ def render(ansi, cursor, title):
             if not cell.data.strip():
                 continue
             fg = color(cell.fg, FG)
-            draw.text((48+col*14, 93+row*30), cell.data, font=font, fill=fg,
+            draw.text((48+col*14, 93+row*30), cell.data, font=symbols if cell.data in "⌘↳●◇⚑›◷" else font, fill=fg,
                       stroke_width=0.25 if cell.bold else 0)
     x, y = cursor
     draw.line((48+x*14, 96+y*30, 48+x*14, 120+y*30), fill=FG, width=2)

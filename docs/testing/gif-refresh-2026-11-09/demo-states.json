@@ -1,0 +1,50 @@
+[
+  {
+    "title": "01 / Command completion",
+    "buffer": ""
+  },
+  {
+    "title": "01 / Type to refine the suggestion",
+    "buffer": "git stat"
+  },
+  {
+    "title": "01 / Tab inserts the selected candidate",
+    "buffer": "git status "
+  },
+  {
+    "title": "01 / Enter runs the command",
+    "buffer": ""
+  },
+  {
+    "title": "02 / Paths from the working directory",
+    "buffer": "cd s"
+  },
+  {
+    "title": "02 / Tab completes the path",
+    "buffer": "cd src/"
+  },
+  {
+    "title": "03 / History-based autosuggestions",
+    "buffer": "g"
+  },
+  {
+    "title": "03 / Only 'gi' is typed; the rest is suggested",
+    "buffer": "gi"
+  },
+  {
+    "title": "03 / Tab accepts history without executing",
+    "buffer": "git status --short --branch"
+  },
+  {
+    "title": "03 / Enter executes the accepted command",
+    "buffer": ""
+  },
+  {
+    "title": "04 / Enter executes only typed input",
+    "buffer": "gi"
+  },
+  {
+    "title": "04 / Unaccepted history is not executed",
+    "buffer": ""
+  }
+]
