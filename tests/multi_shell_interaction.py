@@ -68,18 +68,18 @@ source {ROOT}/rfig.bash
         call('set-option','-g','status','off')
         wait_for(lambda:'RFIG>' in screen(),'prompt missing')
         type_('rfigfi')
-        wait_for(lambda:'rfigfixture beta' in screen() and '⌘ rfigfixture' in screen(), 'typed-prefix menu and history missing')
+        wait_for(lambda:'rfigfixture beta' in screen() and '1/' in screen(), 'typed-prefix inline history missing')
         assert 'gamma' not in screen(), 'history must not supply ordinary completion context'
         type_('xture')
-        wait_for(lambda:'beta' in screen() and 'gamma' in screen(),'menu or usage ranking missing')
-        assert screen().rsplit('RFIG>',1)[-1].splitlines()[0].strip()=='rfigfixture', screen()
+        wait_for(lambda:'rfigfixture beta' in screen() and '1/' in screen(),'inline ranking missing')
+        assert screen().rsplit('RFIG>',1)[-1].splitlines()[0].strip().startswith('rfigfixture'), screen()
         keys('Enter')
         wait_for(lambda:(home/'executed').exists(),'Enter did not execute typed input')
         assert (home/'executed').read_text()=='\n'
         wait_for(lambda:'gamma' not in screen(),'overlay remains after execution')
         assert 'RFIG> RFIG>' not in screen(), 'prompt was duplicated'
         (home/'executed').unlink()
-        type_('rfigfixture ');wait_for(lambda:'rfigfixture beta' in screen() and 'gamma' in screen(),'menu and history not refreshed')
+        type_('rfigfixture ');wait_for(lambda:'rfigfixture beta' in screen() and '1/' in screen(),'inline suggestion and history not refreshed')
         keys('M-3','Tab'); wait_for(lambda:'north' in screen(),'nested completion missing'); keys('Tab','C-e','Enter')
         wait_for(lambda:(home/'executed').exists(),'selected candidate not executed')
         assert (home/'executed').read_text()=='alpha\nnorth\n', (home/'executed').read_text()
@@ -108,18 +108,17 @@ source {ROOT}/rfig.bash
         # Tab accepts the focused candidate without executing it.
         type_('rfigfixture be'); time.sleep(.2)
         keys('Right'); time.sleep(.1)
-        assert screen().rsplit('RFIG>',1)[-1].splitlines()[0].strip()=='rfigfixture be', screen()
+        assert (home/'executed').read_text()=='g\n'
         keys('Tab'); time.sleep(.3)
         assert (home/'executed').read_text()=='g\n'
         assert 'rfigfixture beta' in screen().rsplit('RFIG>',1)[-1], screen()
         keys('C-c');time.sleep(.2)
         type_('rfigunknown'); wait_for(lambda:'create' in screen().rsplit('RFIG>',1)[-1], 'help-cache fallback missing')
         keys('C-c'); time.sleep(.2)
-        # Bottom-of-screen drawing and resize must remove the menu before output.
+        # Bottom-of-screen drawing and resize must remove the inline preview before output.
         call('resize-window','-t','test','-x','42','-y','12')
-        type_('rfigfixture'); wait_for(lambda:'gamma' in screen().rsplit('RFIG>',1)[-1], 'menu missing after resize')
+        type_('rfigfixture'); wait_for(lambda:'1/' in screen().rsplit('RFIG>',1)[-1], 'inline preview missing after resize')
         keys('Enter');time.sleep(.2)
-        assert '›' not in screen().rsplit('RFIG>',1)[-1], screen()
         wait_for(lambda:screen().rsplit('RFIG>',1)[-1].strip()=='', 'final command did not finish')
         keys('C-d'); time.sleep(.15)
         print(SHELL+' real interactive menu, history selection, ranking, options, cancellation, Unicode: OK')

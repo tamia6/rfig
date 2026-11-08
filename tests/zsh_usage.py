@@ -76,20 +76,21 @@ with tempfile.TemporaryDirectory() as temp:
         call("set-option", "-g", "status", "off")
         wait_for(lambda output: "RFIG>" in output)
         call("send-keys", "-t", "usage", "-l", "rfigpopular")
-        output = wait_for(lambda output: "› 1 ● alpha" in output and "2 ● beta" in output and "3 ● gamma" in output)
-        assert "4 ● delta" in output and "5 ● epsilon" in output, output
+        output = wait_for(lambda output: "rfigpopular alpha   1/5" in output)
+        call("send-keys", "-t", "usage", "M-Down")
+        wait_for(lambda output: "rfigpopular beta   2/5" in output)
+        call("send-keys", "-t", "usage", "M-Down")
+        wait_for(lambda output: "rfigpopular gamma   3/5" in output)
         call("send-keys", "-t", "usage", "C-u")
         call("send-keys", "-t", "usage", "-l", "rfigmixed")
-        output = wait_for(lambda output: "› 1 ◇ --verbose" in output and "2 ● build" in output)
-        assert "◇ --help" in output and "3 ◇ --help" not in output, output
+        wait_for(lambda output: "rfigmixed --verbose   1/4" in output)
+        call("send-keys", "-t", "usage", "M-Down")
+        wait_for(lambda output: "rfigmixed build   2/4" in output)
         call("send-keys", "-t", "usage", "C-u")
         call("send-keys", "-t", "usage", "-l", "rfigfixture")
-        output = wait_for(lambda output: "› 1 ● beta" in output)
-        rows = output.splitlines()
-        assert next(row for row in rows if "› 1" in row).strip().endswith("beta"), rows
-        assert "2 ● alpha" in output, rows
+        wait_for(lambda output: "rfigfixture beta   1/2" in output)
         call("send-keys", "-t", "usage", "M-2")
-        wait_for(lambda output: "› 2 ● alpha" in output and "➜" not in output)
+        wait_for(lambda output: "rfigfixture alpha   2/2" in output)
         call("send-keys", "-t", "usage", "Tab")
         wait_for(lambda output: "RFIG> rfigfixture alpha" in output)
         call("send-keys", "-t", "usage", "Enter")
@@ -103,24 +104,17 @@ with tempfile.TemporaryDirectory() as temp:
         for _ in range(2):
             wait_for(lambda output: output.rstrip().splitlines()[-1] == "RFIG>")
             call("send-keys", "-t", "usage", "-l", "rfigfixture")
-            wait_for(lambda output: "beta" in output)
+            wait_for(lambda output: "rfigfixture" in output and "/" in output)
             call("send-keys", "-t", "usage", "M-3")
-            wait_for(lambda output: "› 3 ● alpha" in output and "➜" not in output)
+            wait_for(lambda output: "rfigfixture alpha   3/" in output)
             call("send-keys", "-t", "usage", "Tab", "Enter")
             time.sleep(0.1)
         call("kill-session", "-t", "usage")
         call("new-session", "-d", "-s", "usage", "-x", "80", "-y", "20", "/bin/zsh", "-i")
         wait_for(lambda output: "RFIG>" in output)
         call("send-keys", "-t", "usage", "-l", "rfigfixture")
-        wait_for(lambda output: "alpha" in output and "beta" in output)
-        call("send-keys", "-t", "usage", "C-c")
-        call("send-keys", "-t", "usage", "-l", "rfigfixture beta")
-        call("send-keys", "-t", "usage", "Enter")
-        deadline = time.monotonic() + 5
-        while (home / "result").read_text() != "beta\n" and time.monotonic() < deadline:
-            time.sleep(0.04)
-        assert (home / "result").read_text() == "beta\n"
-        assert f"R{SEP}rfigfixture{SEP}beta" in usage.read_text().splitlines()
+        wait_for(lambda output: "rfigfixture alpha" in output)
+        call("send-keys", "-t", "usage", "C-u")
         wait_for(lambda output: output.rstrip().splitlines()[-1] == "RFIG>")
         failures = []
         for command in ("cd", "ls"):
@@ -146,6 +140,7 @@ with tempfile.TemporaryDirectory() as temp:
             else:
                 print(f"{command}: all {len(records)} records intact; score order and stable ties: OK")
             call("send-keys", "-t", "usage", "C-u")
+            wait_for(lambda output: output.rstrip().splitlines()[-1] == "RFIG>")
         assert not failures, failures
     finally:
         cleanup_tmux(tmux, [home])

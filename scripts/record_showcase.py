@@ -219,7 +219,7 @@ with tempfile.TemporaryDirectory(prefix="rfig-showcase-") as temp:
         reset()
 
         key("brew services", literal=True)
-        capture("02 / brew · subcommand menu", 900)
+        capture("02 / brew · inline subcommand suggestion", 900)
         key("Tab")
         capture("02 / brew · service actions", 1100)
         key("l", literal=True)
@@ -227,7 +227,7 @@ with tempfile.TemporaryDirectory(prefix="rfig-showcase-") as temp:
         reset()
 
         key("npm run", literal=True)
-        capture("03 / npm · history is the first menu row", 900)
+        capture("03 / npm · history inline recommendation", 900)
         key("Tab")
         capture("03 / npm · dynamic package.json candidates", 1200)
         key("M-Down")
@@ -242,7 +242,7 @@ with tempfile.TemporaryDirectory(prefix="rfig-showcase-") as temp:
 
         key("C-c")
         time.sleep(0.2)
-        capture("04 / menu dismissed after cancel", 1100)
+        capture("04 / suggestion dismissed after cancel", 1100)
     finally:
         subprocess.run(tmux + ["kill-server"], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 

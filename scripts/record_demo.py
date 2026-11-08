@@ -136,7 +136,7 @@ with tempfile.TemporaryDirectory(prefix="rfig-demo-") as temp:
         time.sleep(0.5)
         capture("01 / Command completion", 500)
         key("git stat", True)
-        capture("01 / Type to filter the menu", 1200)
+        capture("01 / Type to refine the suggestion", 1200)
         key("M-Down")
         key("Tab")
         selected = capture("01 / Tab inserts the selected candidate", 1000)
@@ -162,8 +162,8 @@ with tempfile.TemporaryDirectory(prefix="rfig-demo-") as temp:
         key("i", True)
         suggested = capture("03 / Only 'gi' is typed; the rest is suggested", 2400)
         assert suggested[0] == "gi" and suggested[1] == history_command, suggested
-        assert "git" in "\n".join(suggested[3:]), suggested
-        assert "◷ " + history_command in "\n".join(suggested[2:]), suggested
+        assert "git" in "\n".join(suggested[1:]), suggested
+        assert "status --short" in "\n".join(suggested[2:]), suggested
         frames[-1].save(EVIDENCE / "history-suggestion.png")
         key("Tab")
         accepted = capture("03 / Tab accepts history without executing", 1800)

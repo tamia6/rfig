@@ -148,6 +148,7 @@ impl Screen {
         point: usize,
         items: &[Item],
         selected: usize,
+        ctx: &engine::Context,
     ) -> io::Result<()> {
         self.clear()?;
         let (cols, rows) = terminal::size()?;
@@ -155,13 +156,17 @@ impl Screen {
         self.rows = rows.max(1);
         self.x = self.x.min(self.cols - 1);
         self.y = self.y.min(self.rows - 1);
-        let line_rows = (self.x as usize + UnicodeWidthStr::width(line)) / self.cols as usize + 1;
-        let menu_rows = if items.is_empty() {
-            0
-        } else {
-            items.len().min(5) + 1
-        };
-        let height = (line_rows + menu_rows).min(self.rows as usize) as u16;
+        let mut suggestion = items
+            .get(selected)
+            .and_then(|item| preview_suffix(item, &ctx, line, point))
+            .unwrap_or_default();
+        if !suggestion.is_empty() && items.len() > 1 {
+            suggestion.push_str(&format!("  {}/{}", selected + 1, items.len()));
+        }
+        let rendered = format!("{line}{suggestion}");
+        let line_rows =
+            (self.x as usize + UnicodeWidthStr::width(rendered.as_str())) / self.cols as usize + 1;
+        let height = line_rows.min(self.rows as usize) as u16;
         let scroll = (self.y + height).saturating_sub(self.rows);
         if scroll > 0 {
             queue!(
@@ -171,64 +176,14 @@ impl Screen {
             )?;
             self.y = self.y.saturating_sub(scroll);
         }
-        queue!(self.tty, MoveTo(self.x, self.y), Print(line), ResetColor)?;
-        let first = selected.saturating_sub(4);
-        let menu_y = self.y.saturating_add(line_rows as u16);
-        for (offset, item) in items.iter().enumerate().skip(first).take(5) {
-            let y = menu_y + (offset - first) as u16;
-            if y >= self.rows {
-                break;
-            }
-            let active = offset == selected;
-            let icon = match item.kind.as_str() {
-                "history" => "◷",
-                "command" => "⌘",
-                "subcommand" => "↳",
-                "option" => "◇",
-                "flag" => "⚑",
-                _ => "●",
-            };
-            let pointer = if active { "› " } else { "  " };
-            let shortcut = offset - first + 1;
-            let prefix = format!("{pointer}{shortcut} {icon} ");
-            let width = (self.cols as usize)
-                .saturating_sub(UnicodeWidthStr::width(prefix.as_str()) + 1)
-                .min(41);
+        queue!(self.tty, MoveTo(self.x, self.y), Print(line))?;
+        if !suggestion.is_empty() {
             queue!(
                 self.tty,
-                MoveTo(0, y),
                 SetForegroundColor(Color::DarkGrey),
-                Print(prefix)
+                Print(suggestion),
+                ResetColor
             )?;
-            if active {
-                queue!(self.tty, SetAttribute(Attribute::Bold))?;
-            }
-            queue!(
-                self.tty,
-                Print(crate::padded(&item.label, width)),
-                ResetColor,
-                SetAttribute(Attribute::Reset)
-            )?;
-        }
-        if let Some(item) = items.get(selected) {
-            let y = menu_y + items.len().min(5) as u16;
-            if y < self.rows {
-                let mut footer = item.description.clone();
-                if !footer.is_empty() {
-                    footer.push_str("  ·  ");
-                }
-                footer.push_str("Alt+↑↓ select · Alt+1–5 jump · Tab accept");
-                queue!(
-                    self.tty,
-                    MoveTo(0, y),
-                    SetForegroundColor(Color::DarkGrey),
-                    Print(crate::padded(
-                        &footer,
-                        (self.cols as usize).saturating_sub(1)
-                    )),
-                    ResetColor
-                )?;
-            }
         }
         self.drawn = height;
         let pos = self.x as usize + UnicodeWidthStr::width(&line[..point]);
@@ -270,6 +225,18 @@ fn next(line: &str, point: usize) -> usize {
         .chars()
         .next()
         .map_or(point, |c| point + c.len_utf8())
+}
+
+fn preview_suffix(item: &Item, ctx: &engine::Context, line: &str, point: usize) -> Option<String> {
+    if point != line.len() {
+        return None;
+    }
+    let mut preview = line.to_owned();
+    let mut preview_point = point;
+    insert_item(item, ctx, &mut preview, &mut preview_point);
+    preview
+        .starts_with(line)
+        .then(|| preview[point..].to_owned())
 }
 
 fn insert_item(item: &Item, ctx: &engine::Context, line: &mut String, point: &mut usize) -> bool {
@@ -459,7 +426,7 @@ pub fn run(
             }
         }
         if dirty {
-            screen.draw(&line, point, &items, selected)?;
+            screen.draw(&line, point, &items, selected, &ctx)?;
             dirty = false;
         }
         if !event::poll(Duration::from_millis(15))? {
@@ -686,7 +653,8 @@ pub fn run(
 
 #[cfg(test)]
 mod geometry_tests {
-    use super::prompt_position;
+    use super::{preview_suffix, prompt_position};
+    use crate::engine::{self, Item};
 
     #[test]
     fn physical_prompt_rows_include_wrap_and_terminal_controls() {
@@ -701,5 +669,22 @@ mod geometry_tests {
             (2, 1)
         );
         assert_eq!(prompt_position("12345678\n$ ", 8), (2, 1));
+    }
+
+    #[test]
+    fn inline_preview_contains_only_the_missing_suffix() {
+        let line = "git che";
+        let ctx = engine::context(line);
+        let item = Item {
+            label: "checkout".into(),
+            description: String::new(),
+            kind: "subcommand".into(),
+            popular: 0,
+        };
+        assert_eq!(
+            preview_suffix(&item, &ctx, line, line.len()),
+            Some("ckout ".into())
+        );
+        assert_eq!(preview_suffix(&item, &ctx, line, 3), None);
     }
 }

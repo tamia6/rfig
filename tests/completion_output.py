@@ -16,14 +16,13 @@ class CompletionOutput(StrictShell):
 
     def assert_clean_menu(self, command):
         self.type(command + ' ')
-        self.wait(lambda: 'alpha' in self.current() and 'beta' in self.current(), 'valid candidates')
+        self.wait(lambda: 'alpha' in self.current() and '1/' in self.current(), 'valid inline suggestion')
         self.keys('M-1')
-        self.wait(lambda: '› 1' in self.current(), 'number shortcut selection')
+        self.wait(lambda: '1/' in self.current(), 'number shortcut selection')
         self.assertNotIn('RFIG_DIAGNOSTIC', self.screen())
         self.assertNotIn('RFIG_UNSTRUCTURED', self.screen())
-        self.assertEqual(self.current().splitlines()[0].strip(), command)
         self.keys('Tab')
-        self.wait(lambda: self.current().splitlines()[0].strip() == command + ' alpha', 'insert real candidate')
+        self.wait(lambda: self.current().splitlines()[0].strip().startswith(command + ' alpha'), 'insert real candidate')
         self.keys('C-c')
         self.wait(lambda: self.current() == '', 'cancel menu')
 

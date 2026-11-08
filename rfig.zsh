@@ -201,52 +201,24 @@ _rfig_render() {
   region_highlight=(${region_highlight:#*memo=rfig})
   POSTDISPLAY=''
   (( $#_rfig_hits )) || return
-  local first=$(( _rfig_selected > 5 ? _rfig_selected - 4 : 1 ))
-  local index visible row start kind icon rest record label label_offset width footer
-  for (( index = first; index <= $#_rfig_hits && index < first + 5; index++ )); do
-    record=${_rfig_hits[index]}
-    label=${record%%$'\t'*}
-    kind=${record##*$'\t'}
-    [[ -n $label ]] || continue
-    case $kind in
-      history) icon='◷' ;;
-      command) icon='⌘' ;;
-      subcommand) icon='↳' ;;
-      argument) icon='●' ;;
-      option) icon='◇' ;;
-      flag) icon='⚑' ;;
-    esac
-    POSTDISPLAY+=$'\n'
-    start=$(( ${#BUFFER} + ${#POSTDISPLAY} ))
-    visible=$(( index - first + 1 ))
-    label_offset=6
-    width=41
-    (( width = COLUMNS - label_offset - 1 < width ? COLUMNS - label_offset - 1 : width ))
-    (( width < 0 )) && width=0
-    if (( index == _rfig_selected )); then
-      printf -v row '› %d %s %-*.*s' "$visible" "$icon" $width $width "$label"
-    else
-      printf -v row '  %d %s %-*.*s' "$visible" "$icon" $width $width "$label"
-    fi
-    POSTDISPLAY+=$row
-    if (( index == _rfig_selected )); then
-      region_highlight+=( "$start $((start + ${#row})) fg=8,bold memo=rfig" )
-    else
-      region_highlight+=( "$start $((start + ${#row})) fg=8 memo=rfig" )
-    fi
-  done
-  POSTDISPLAY+=$'\n'
-  width=$(( COLUMNS > 2 ? COLUMNS - 2 : 0 ))
-  (( width > 64 )) && width=64
-  rest=${_rfig_hits[_rfig_selected]#*$'\t'}
-  rest=${rest#*$'\t'}
-  footer=${rest%%$'\t'*}
-  [[ -n $footer ]] && footer+='  ·  '
-  footer+='Alt+↑↓ select · Alt+1–5 jump · Tab accept'
-  printf -v row '%-*.*s' $width $width "$footer"
-  POSTDISPLAY+=$row
-  start=$(( ${#BUFFER} + ${#POSTDISPLAY} - ${#row} ))
-  region_highlight+=( "$start $((start + ${#row})) fg=8 memo=rfig" )
+  (( CURSOR == ${#BUFFER} )) || return
+  local record=${_rfig_hits[_rfig_selected]}
+  local kind=${record##*$'\t'} rest=${record#*$'\t'} insert suggestion prospective
+  insert=${rest%%$'\t'*}
+  if [[ $kind == history ]]; then
+    [[ $insert == "$BUFFER"* ]] || return
+    prospective=$insert
+  else
+    local prefix=${BUFFER[1,_rfig_start]} space=' '
+    (( _rfig_injected )) && prefix+=' '
+    [[ $insert == */ ]] && space=''
+    prospective="$prefix$insert$space"
+  fi
+  suggestion=${prospective[$(( CURSOR + 1 )),-1]}
+  (( $#_rfig_hits > 1 )) && suggestion+="  ${_rfig_selected}/${#_rfig_hits}"
+  [[ -n $suggestion ]] || return
+  POSTDISPLAY=$suggestion
+  region_highlight+=( "$(( ${#BUFFER} )) $(( ${#BUFFER} + ${#suggestion} )) fg=8 memo=rfig" )
 }
 
 _rfig_complete() {

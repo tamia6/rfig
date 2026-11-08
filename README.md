@@ -2,33 +2,33 @@
 
 **English** · [简体中文](README.zh-CN.md) · [Website](https://tamia6.github.io/rfig/)
 
-**An open-source terminal autocomplete tool with a quiet suggestion menu and history-based suggestions.**
+**An open-source terminal autocomplete tool with inline gray suggestions and history-based recommendations.**
 
-Built in Rust, rfig brings IDE-style command-line autocomplete to zsh, Bash, and Fish on macOS and Linux. Candidates appear as muted suggestions while you type; choose a row with Option/Alt plus an arrow or number, then press Tab to insert it. Your shell still owns ordinary cursor movement, history, and command execution.
+Built in Rust, rfig brings IDE-style command-line autocomplete to zsh, Bash, and Fish on macOS and Linux. One recommended completion appears inline in muted gray after the cursor; Command plus an arrow or number changes the recommendation, and Tab inserts it. Your shell still owns ordinary cursor movement, history, and command execution.
 
 rfig is an independent, Fig-inspired project and is not affiliated with Fig. It uses completion definitions and scripts available in your environment, with sandboxed help analysis as a conditional fallback; it does not promise completion for every command.
 
-Built-in **history-based suggestions** appear as the first menu row, marked `◷`. They match your current directory and typed prefix, so no separate history suggestion plugin is required. Ordinary completions use only what you actually type. Suggestions stay muted gray, and Enter always executes your actual input.
+Built-in **history-based suggestions** match your current directory and typed prefix, so no separate history suggestion plugin is required. They use the same gray inline recommendation as ordinary completions. Enter always executes your actual input.
 
 ![rfig demonstrating progressive Git completion, dynamic branches, Brew services, and npm scripts in zsh](assets/rfig-showcase.gif)
 
-The demo shows progressive Git completion from `g` to `gi` to `git`, then `checkout` and a real branch from the current repository. It also demonstrates dynamic Brew service candidates, npm scripts, keyboard selection, insertion, execution, and menu dismissal.
+The demo shows progressive Git completion from `g` to `gi` to `git`, then `checkout` and a real branch from the current repository. It also demonstrates dynamic Brew service candidates, npm scripts, keyboard selection, insertion, execution, and suggestion dismissal.
 
 [Installation](#installation) · [Usage](#usage) · [Shell support](#shell-support) · [Completion sources](#completion-sources-and-background-enrichment) · [Testing](#testing)
 
 > rfig v0.3.1 supports macOS and Linux with zsh, Bash 4.4+, and Fish 3.6+. Install with Homebrew, a prebuilt binary, or the source code.
 
-**At a glance:** terminal autocomplete and nested CLI completion · directory-scoped history at the top of the menu · local usage-based ranking · no AI service or cloud account required.
+**At a glance:** terminal autocomplete and nested CLI completion · directory-scoped history · one gray inline recommendation · local usage-based ranking · no AI service or cloud account required.
 
 ## Features
 
 | Feature | Behavior |
 | --- | --- |
-| Menus as you type | Updates after typing or deleting, without pressing `Tab` or an artificial debounce delay |
+| Inline suggestions as you type | Updates after typing or deleting, without pressing `Tab` or an artificial debounce delay |
 | Dynamic, nested completion | Queries available definitions for subcommands, branches, paths, and more; depth and content depend on the source |
-| History-based autosuggestions | Shows at most one directory-scoped history match first, marked ◷; accept explicitly with Tab |
+| History-based autosuggestions | Uses directory-scoped history as a gray inline recommendation; accept explicitly with Tab |
 | Usage-based ranking | Selections and executed commands affect ordering without adding visual badges |
-| Quiet suggestion menu | Category icons and candidates use muted ANSI gray; the selected row is bold rather than brightly colored |
+| Quiet inline display | One recommended completion suffix uses muted ANSI gray; no candidate dropdown is shown |
 | Multiple completion sources | Native definitions, installed scripts, command-provided generators, the Cobra protocol, and cached help data |
 | Background enrichment after setup | Quickly scans `$PATH`, then analyzes eligible user commands sequentially on macOS/Linux when a sandbox is available |
 | Shell coverage | zsh ✅, Bash 4.4+ ✅, Fish 3.6+ ✅; other shells are not yet supported |
@@ -86,62 +86,55 @@ Open a new session of the configured shell afterward. Setup can be repeated: it 
 | Bash | `~/.bashrc`; adds a source line to the login configuration if it does not mention `.bashrc` |
 | Fish | `$XDG_CONFIG_HOME/fish/conf.d/rfig.fish`, or `~/.config/fish/conf.d/rfig.fish` by default |
 
+On macOS, run `rfig terminal-keys` once and open a new Terminal.app window. This maps `Command+arrow` and `Command+1…5` into terminal sequences while preserving other Terminal.app shortcuts. rfig prints the preference backup path. Other terminal emulators can use Option/Alt directly or configure them to forward their Super/Command key sequences.
+
 Use `command -v rfig` to check the active installation. If a previous source/binary install at `~/.local/bin/rfig` shadows Homebrew, back it up outside `$PATH` and remove that duplicate executable. Keep a single installation method so the executable and integration scripts stay in sync. Reconfigure each shell you use with `"$(brew --prefix rfig)/bin/rfig" setup --shell zsh` (or `bash` / `fish`), then open new sessions. History and usage records in `~/.config/rfig/` are preserved.
 
 ## Usage
 
-Start typing to see candidates. Available completion definitions determine which subcommands and dynamic arguments appear; no menu is shown without a usable source. For example, a Git completion definition can query branches in the current repository.
+Start typing to see one gray recommendation inline. Available completion definitions determine which subcommands and dynamic arguments can be recommended; no gray text is shown without a usable source. For example, a Git completion definition can query branches in the current repository.
 
 | Key | Behavior |
 | --- | --- |
-| `Option/Alt+↑/↓` or `Option/Alt+←/→` | Move through visible candidates without taking over native history navigation |
-| `Option/Alt+1` … `Option/Alt+5` | Focus the corresponding visible candidate |
-| `Tab` | Insert the focused candidate; with no candidate menu, use the shell's native completion |
+| `Command+↑/↓` or `Command+←/→` | Change the inline recommendation on configured macOS terminals |
+| `Command+1` … `Command+5` | Jump to a ranked recommendation |
+| `Option/Alt+↑/↓`, `Option/Alt+←/→`, `Option/Alt+1…5` | Portable fallback for terminals that do not forward Command |
+| `Tab` | Insert the gray recommendation; with no recommendation, use the shell's native completion |
 | `↑` / `↓` | Use the shell's native history navigation |
 | `→` / `←` | Use the shell's native cursor movement |
 | `Ctrl+E` | Move to the end of the line without accepting a suggestion |
-| `Enter` | Execute only the actual input; never implicitly accept history or the highlighted menu item |
+| `Enter` | Execute only the actual input; never implicitly accept the gray recommendation |
 | `Ctrl+C` | Cancel the current input |
 
-The menu displays up to five numbered rows. Moving beyond the fifth row scrolls the visible shortcuts. On macOS, Terminal and many other terminal apps reserve Command+arrow for their own window or text actions and never send it to the shell. rfig therefore uses Option/Alt as the portable selector and also accepts forwarded Super/Command sequences when a terminal is configured to send them. For ordinary option candidates, a `-` prefix shows only single-hyphen options; `--` shows only double-hyphen options. This rule applies to all commands.
+Only the selected recommendation is displayed. A small `2/7` counter indicates its position in the ranked set without opening a candidate menu. macOS Terminal.app consumes Command+arrow by default, so run `rfig terminal-keys`; Ghostty, WezTerm, Kitty, iTerm2, and other emulators may need equivalent Super forwarding. Option/Alt always remains available as a fallback. For ordinary option candidates, a `-` prefix recommends single-hyphen options and `--` recommends double-hyphen options.
 
 ### History and usage-based ranking
 
-- **History suggestions:** rfig maintains its own directory-scoped history. Typing `gi` may show `◷ git checkout master` first; ordinary candidates still complete only `gi`. Focus history with Option/Alt navigation or `Option/Alt+1`, press Tab to insert it, then Enter to execute. With no history match, ordinary candidates start the menu.
+- **History suggestions:** rfig maintains its own directory-scoped history. Typing `gi` can show `git checkout master` as the gray inline recommendation. Command or Option/Alt navigation changes between history and ordinary completion recommendations; Tab inserts the selected one.
 - **Fresh installations:** history starts empty. Old shell history without working-directory information is not imported automatically.
 - **Ranking:** scores are accumulated per command context. Selecting a candidate adds 3; recording an execution adds 1. With equal scores, non-option candidates come first. Ranking changes order without covering labels with extra badges.
 - **Local storage:** history and ranking records stay on your computer. Bash/Fish omit commands beginning with a space; zsh follows that rule when `HIST_IGNORE_SPACE` is enabled.
 
 When using rfig's autosuggestions, remove the `zsh-autosuggestions` source line from `.zshrc` or your plugin manager configuration, then open a new session. Fish integration disables Fish's native autosuggestions and uses rfig's directory-scoped history instead.
 
-### Icons and colors
+### Inline display
 
-| Category | Icon |
-| --- | --- |
-| Command | `⌘` |
-| Subcommand | `↳` |
-| Argument | `●` |
-| Option that takes a value | `◇` |
-| Boolean flag | `⚑` |
-
-Colors follow the terminal's ANSI palette; rfig does not parse individual terminal theme files. Candidate icons, labels, shortcuts, and descriptions use muted gray. The focused row uses a `›` pointer and bold text, with no color flashes or shifting animation.
-
-Categories use available metadata. Without option analysis, `--` entries are provisionally treated as options and single `-` entries as flags, so classification may be approximate.
+The recommendation is rendered with ANSI gray after the cursor, followed by a compact ranked position such as `2/7`. There is no dropdown, pointer animation, icon row, or color flash. Commands that produce no completion source show no gray text.
 
 ## Shell support
 
 | Capability | zsh | Bash 4.4+ | Fish 3.6+ |
 | --- | --- | --- | --- |
-| Menus, nested candidates, autosuggestions separate from typed input | ✅ | ✅ | ✅ |
-| Directory-scoped history, usage ranking, quiet candidate colors, numeric shortcuts | ✅ | ✅ | ✅ |
+| Inline gray recommendations and nested candidates separate from typed input | ✅ | ✅ | ✅ |
+| Directory-scoped history, usage ranking, Command/Alt shortcuts | ✅ | ✅ | ✅ |
 | Setup integration and completion for rfig itself | ✅ | ✅ | ✅ |
 | Multiline paste without automatic execution | ✅ | ✅ Returns to native editor | ✅ Returns to native editor |
 
 zsh uses ZLE; Bash/Fish share a Rust editing layer. `cd`, functions, and variable changes still run in the current shell. Bash/Fish support default Emacs editing and Vi insert mode. `Esc` returns to the native editor; `Ctrl+R` uses native history search. Stale completion results are discarded.
 
-**Linux requirements:** x86_64 and ARM64 are supported, with the shell versions listed above. Help analysis uses built-in Landlock + seccomp and needs no additional sandbox tool. It requires Landlock ABI 3+ (typically Linux 6.2+) and permission to use the relevant system calls. Older kernels or restricted containers refuse help probing; menus, history, and existing completion definitions remain available. Check the kernel with `uname -r` and actual probing with `rfig analyze <command>`. A distribution name alone does not determine kernel capabilities.
+**Linux requirements:** x86_64 and ARM64 are supported, with the shell versions listed above. Help analysis uses built-in Landlock + seccomp and needs no additional sandbox tool. It requires Landlock ABI 3+ (typically Linux 6.2+) and permission to use the relevant system calls. Older kernels or restricted containers refuse help probing; inline recommendations, history, and existing completion definitions remain available. Check the kernel with `uname -r` and actual probing with `rfig analyze <command>`. A distribution name alone does not determine kernel capabilities.
 
-macOS uses the system `sandbox-exec`. Linux binaries target glibc 2.36; older userspaces may try building from source. Windows and other shells are not yet supported.
+macOS uses the system `sandbox-exec`. Linux binaries target glibc 2.36; older userspaces may try building from source. `rfig terminal-keys` is macOS Terminal.app only. Windows and other shells are not yet supported.
 
 ## Completion sources and background enrichment
 
@@ -158,7 +151,7 @@ rfig does not maintain a fixed completion database for every command. Each adapt
 
 Definitions and loading behavior differ between shells, so candidates may differ. Background enrichment does not eliminate queries while typing: dynamic completion scripts still run when needed. Use trusted completion scripts.
 
-Help analysis walks declared subcommands breadth first, querying each path with `--help` / `-h` until it reaches a leaf, with no fixed depth limit. Each path has its own cached options and children, shared by zsh, Bash, and Fish. Probes remain sequential and sandboxed with existing per-process limits; repeated parent help stops that branch. Failed probes keep existing cache data and are reported. Menus read this cache without running new help scans while typing. Help cannot discover dynamic resource names or positional values by itself. At a known subcommand group, filesystem-only fallback does not override cached children; an empty source can also use the cache. Native dynamic results at leaf commands remain preferred.
+Help analysis walks declared subcommands breadth first, querying each path with `--help` / `-h` until it reaches a leaf, with no fixed depth limit. Each path has its own cached options and children, shared by zsh, Bash, and Fish. Probes remain sequential and sandboxed with existing per-process limits; repeated parent help stops that branch. Failed probes keep existing cache data and are reported. Inline recommendations read this cache without running new help scans while typing. Help cannot discover dynamic resource names or positional values by itself. At a known subcommand group, filesystem-only fallback does not override cached children; an empty source can also use the cache. Native dynamic results at leaf commands remain preferred.
 
 ### After setup: quick scan, then sequential enrichment
 
@@ -166,7 +159,7 @@ Help analysis walks declared subcommands breadth first, querying each path with 
 2. **Select:** skip commands with existing definitions. Automatically probe only permitted, common user installation directories. System commands and other sources may be cataloged without being executed automatically.
 3. **Enrich:** on macOS/Linux, read `--help`, then `-h` if needed, one command at a time in an available sandbox. Identify advertised generators, generate and syntax-check scripts for installed shells, recognize Cobra protocols, and cache subcommands and option categories. Recognition and syntax checks do not guarantee semantic correctness for every candidate.
 4. **Constrain:** probing denies file writes and network access, with a 500 ms timeout per process invocation plus CPU and output limits. Linux additionally limits file metadata changes, process-group escape, address space, and process count. Writes to pre-opened output pipes/files and `/dev/null` are allowed. Script syntax checks also use the sandbox and timeout. Complex, resource-intensive, or network-dependent commands may yield no results. See [Linux implementation and boundaries (Chinese)](docs/linux.md).
-5. **Refresh:** rerunning setup reanalyzes caches older than the command executable or rfig. Some commands may have no menu until enrichment finishes or a usable definition is available.
+5. **Refresh:** rerunning setup reanalyzes caches older than the command executable or rfig. Some commands may have no inline recommendation until enrichment finishes or a usable definition is available.
 
 ```sh
 rfig setup                         # Rescan after PATH or installed commands change
@@ -210,7 +203,7 @@ No. Completion, history suggestions, and usage ranking run locally; no AI servic
 
 ## Testing
 
-Tests send real keystrokes through tmux/PTY and check the screen and arguments received by commands. Coverage includes autosuggestions, menus, ranking, directory-scoped history, special characters, multiline paste, and process cleanup.
+Tests send real keystrokes through tmux/PTY and check the screen and arguments received by commands. Coverage includes inline autosuggestions, Command-key selection, ranking, directory-scoped history, special characters, multiline paste, and process cleanup.
 
 ```sh
 cargo test

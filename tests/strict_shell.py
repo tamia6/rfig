@@ -92,6 +92,10 @@ source {ROOT}/rfig.zsh
         return text in screen or ''.join('\\'+c if c in ' ;$()' else c for c in text) in screen
     def current(self):return self.screen().rsplit('RFIG>',1)[-1].strip()
     def keys(self,*args):self.call('send-keys','-t','test',*args)
+    def command_key(self,direction):
+        suffix={'Up':'A','Down':'B','Left':'D','Right':'C'}[direction]
+        sequence=b'\x1b[1;9'+suffix.encode()
+        self.call('send-keys','-H','-t','test',*(f'{byte:02x}' for byte in sequence))
     def type(self,text):self.keys('-l',text)
     def wait(self,predicate,message,seconds=3):
         start=time.monotonic()
@@ -145,6 +149,16 @@ source {ROOT}/rfig.zsh
             self.wait(lambda:self.current()=='','prompt after literal')
         self.assertFalse((self.home/'PWN').exists(),'candidate was evaluated as shell code')
 
+    def test_command_arrow_selects_inline_suggestion(self):
+        self.type('rfigprobe ')
+        self.wait(lambda:'1/4' in self.current(),'first inline recommendation')
+        before=self.current()
+        self.command_key('Down')
+        self.wait(lambda:'2/4' in self.current() and self.current()!=before,'Command+Down recommendation')
+        self.keys('Tab','Enter')
+        self.wait(lambda:len(self.executed())==1,'Command selection execution')
+        self.wait(lambda:self.current()=='','prompt after Command selection')
+
     def test_rapid_input_delete_and_wrapping(self):
         self.type('rfigprobe '+'x'*220)
         self.keys('-N','100','BSpace')
@@ -156,7 +170,7 @@ source {ROOT}/rfig.zsh
 
     def test_multiline_bracketed_paste(self):
         self.type('rfigprobe ')
-        self.wait(lambda:self.label_visible('space value'),'menu before paste')
+        self.wait(lambda:'1/4' in self.current(),'inline suggestion before paste')
         self.call('set-buffer','--','one\nrfigprobe two')
         self.call('paste-buffer','-p','-t','test')
         time.sleep(.25)
@@ -182,7 +196,7 @@ source {ROOT}/rfig.zsh
         (target / 'nested').mkdir(parents=True)
         for prefix in (str(parent) + '/', './path-root/', '~/path-root/'):
             self.type('cd ' + prefix + 'ch')
-            self.wait(lambda:'›' in self.current(), 'directory candidate')
+            self.wait(lambda:'child' in self.current() and 'dir/' in self.current(), 'directory candidate')
             self.keys('Tab')
             self.wait(lambda:'child' in self.current() and 'dir/' in self.current(), 'directory slash')
             self.keys('Enter')

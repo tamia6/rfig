@@ -37,7 +37,7 @@ with tempfile.TemporaryDirectory(prefix='rfig-history-menu-') as temp:
     def keys(*args):call('send-keys','-t','test',*args)
     def type_(text):
         keys('-l',text)
-        wait(lambda:bool(screen().splitlines()) and screen().splitlines()[0]==text, 'typed input without inline text')
+        wait(lambda:bool(screen().splitlines()) and screen().splitlines()[0].startswith(text), 'typed input with inline text')
     def screen():return call('capture-pane','-p','-t','test').rsplit('HIST>',1)[-1].removeprefix(' ')
     def wait(check,message):
         end=time.monotonic()+6
@@ -51,40 +51,38 @@ with tempfile.TemporaryDirectory(prefix='rfig-history-menu-') as temp:
     try:
         call('new-session','-d','-s','test','-c',str(a),'-x','100','-y','22',*command);call('set-option','-g','status','off')
         wait(lambda:'HIST>' in call('capture-pane','-p','-t','test'),'initial prompt')
-        type_('rfigfi');wait(lambda:'◷ rfigfixture beta' in screen() and '⌘ rfigfixture' in screen(),'history first with typed-prefix completions')
-        assert screen().splitlines()[0]=='rfigfi',screen()
+        type_('rfigfi');wait(lambda:'rfigfixture beta' in screen() and '1/' in screen(),'inline history suggestion')
+        assert screen().splitlines()[0].startswith('rfigfixture beta'),screen()
         assert 'gamma' not in screen(),screen()
-        keys('C-u');type_('rfigfixture');wait(lambda:'beta' in screen(),'ranked regular candidate')
-        rows=screen().splitlines();assert '› 1 ◷ rfigfixture beta' in rows[1],rows
+        keys('C-u');type_('rfigfixture');wait(lambda:'beta' in screen() and '1/' in screen(),'ranked regular candidate')
         keys('C-e');execute('\n')
         # Explicit history selection inserts the whole command, without executing.
-        type_('rfigfixture be');wait(lambda:'◷ rfigfixture beta' in screen(),'history suggestion')
+        type_('rfigfixture be');wait(lambda:'rfigfixture beta' in screen(),'history suggestion')
         keys('Right');time.sleep(.08)
-        assert screen().splitlines()[0]=='rfigfixture be',screen()
+        assert screen().splitlines()[0].startswith('rfigfixture beta'),screen()
         execute('be\n')
-        type_('rfigfixture');wait(lambda:'◷ rfigfixture be' in screen(),'latest history first')
-        keys('Tab');wait(lambda:screen().splitlines()[0]=='rfigfixture be','history insertion')
+        type_('rfigfixture');wait(lambda:'rfigfixture be' in screen(),'latest history first')
+        keys('Tab');wait(lambda:screen().splitlines()[0].startswith('rfigfixture be'),'history insertion')
         execute('be\n')
         # Skip history and its first ordinary candidate, then insert alpha.
-        type_('rfigfixture');wait(lambda:'beta' in screen() and 'alpha' in screen(),'ordinary menu')
-        keys('M-3','Tab');wait(lambda:screen().splitlines()[0].strip()=='rfigfixture alpha','ordinary candidate insertion')
+        type_('rfigfixture');wait(lambda:'1/' in screen(),'ordinary candidates')
+        keys('M-3','Tab');wait(lambda:screen().splitlines()[0].startswith('rfigfixture alpha'),'ordinary candidate insertion')
         execute('alpha\n')
         # History is offered even without a usable completion definition.
-        type_('plainfixture h');wait(lambda:'◷ plainfixture hello' in screen(),'history-only menu')
-        wait(lambda:screen().startswith('plainfixture h\n'),'history-only input remains unchanged')
+        type_('plainfixture h');wait(lambda:'plainfixture hello' in screen(),'history-only inline suggestion')
         keys('Left');keys('C-e')
         if SHELL=='zsh':
             # Wait for native completion in Ctrl+E to finish before sending SIGINT.
             keys('C-x');wait(lambda:(home/'ready').exists(), 'end-of-line widget completion')
             assert int((home/'ready').read_text()) == len('plainfixture h')
-        assert screen().splitlines()[0]=='plainfixture h',screen()
+        assert screen().splitlines()[0].startswith('plainfixture h'),screen()
         keys('C-c');wait(lambda:not screen().strip(),'cancel history')
         # Enter on cd must run cd, not the suggested directory.
-        type_('cd');wait(lambda:'◷ cd ' in screen(),'cd history')
+        type_('cd');wait(lambda:screen().splitlines()[0].startswith('cd '),'cd history')
         keys('Enter');wait(lambda:Path(call('display-message','-p','-t','test','#{pane_current_path}').strip()).resolve()==home.resolve(),'cd executed typed input')
         type_(f'cd {b}');keys('Enter');wait(lambda:Path(call('display-message','-p','-t','test','#{pane_current_path}').strip()).resolve()==b.resolve(),'directory change')
-        type_('rfigfixture');wait(lambda:'◷ rfigfixture alpha' in screen(),'directory-scoped history')
-        assert '◷ rfigfixture beta' not in screen(),screen()
+        type_('rfigfixture');wait(lambda:'rfigfixture alpha' in screen(),'directory-scoped history')
+        assert 'rfigfixture beta' not in screen(),screen()
         keys('C-c')
     finally:
         assert not cleanup_tmux(tm,[home]),'test processes survived cleanup'

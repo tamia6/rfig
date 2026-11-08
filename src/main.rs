@@ -71,6 +71,7 @@ Commands:
   init                  Refresh the local command catalog
   analyze <command>     Refresh completion data for one command
   completion <shell>    Print completion definitions (zsh, bash, fish)
+  terminal-keys         Configure Command-key mappings for macOS Terminal.app
 
 Options:
   -h, --help            Show this help
@@ -79,12 +80,13 @@ Examples:
   rfig setup
   rfig analyze kubectl
   rfig completion zsh
+  rfig terminal-keys
 ";
 
 const ZSH_COMPLETION: &str = r#"#compdef rfig
 _rfig() {
   if (( CURRENT == 2 )); then
-    compadd -- setup init analyze completion
+    compadd -- setup init analyze completion terminal-keys
   elif (( CURRENT == 3 )) && [[ $words[2] == analyze ]]; then
     local file="$HOME/.config/rfig/commands.txt"
     [[ -r $file ]] || return
@@ -279,6 +281,13 @@ fn install_integration(script: &Path, shell: &str, contents: &str) -> io::Result
     result
 }
 
+fn terminal_key_hint() {
+    #[cfg(target_os = "macos")]
+    if env::var("TERM_PROGRAM").as_deref() == Ok("Apple_Terminal") {
+        println!("For Command+arrow selection, run: rfig terminal-keys");
+    }
+}
+
 fn setup(requested: Option<&str>) -> io::Result<()> {
     let default_shell = env::var("SHELL").unwrap_or_default();
     let shell = requested.unwrap_or_else(|| default_shell.rsplit('/').next().unwrap_or(""));
@@ -392,6 +401,7 @@ fn setup(requested: Option<&str>) -> io::Result<()> {
         )?;
         eprintln!("rfig: background help enrichment unavailable: {error}");
         println!("rfig integration is ready; open a new {shell} terminal. Existing completion definitions and history remain available.");
+        terminal_key_hint();
         return Ok(());
     }
     let mut worker = Command::new(env::current_exe()?);
@@ -411,7 +421,150 @@ fn setup(requested: Option<&str>) -> io::Result<()> {
     }
     worker.spawn()?;
     println!("rfig is ready. Completion enrichment is running in the background; open a new {shell} terminal.");
+    terminal_key_hint();
     Ok(())
+}
+
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+const TERMINAL_KEY_MAP: [(&str, &str, &str); 9] = [
+    ("@F700", "__RFIG_CMD_UP__", "\x1b[1;9A"),
+    ("@F701", "__RFIG_CMD_DOWN__", "\x1b[1;9B"),
+    ("@F702", "__RFIG_CMD_LEFT__", "\x1b[1;9D"),
+    ("@F703", "__RFIG_CMD_RIGHT__", "\x1b[1;9C"),
+    ("@1", "__RFIG_CMD_1__", "\x1b1"),
+    ("@2", "__RFIG_CMD_2__", "\x1b2"),
+    ("@3", "__RFIG_CMD_3__", "\x1b3"),
+    ("@4", "__RFIG_CMD_4__", "\x1b4"),
+    ("@5", "__RFIG_CMD_5__", "\x1b5"),
+];
+
+#[cfg(target_os = "macos")]
+fn terminal_app_keys() -> io::Result<()> {
+    let home = PathBuf::from(
+        env::var_os("HOME")
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "HOME is not set"))?,
+    );
+    let config = home.join(".config/rfig");
+    fs::create_dir_all(&config)?;
+    let temporary = env::temp_dir().join(format!("rfig-terminal-{}.plist", std::process::id()));
+    let backup = config.join("terminal-app-backup.plist");
+
+    let exported = Command::new("defaults")
+        .args(["export", "com.apple.Terminal"])
+        .arg(&temporary)
+        .status()?;
+    if !exported.success() {
+        return Err(io::Error::other(
+            "could not export Terminal.app preferences",
+        ));
+    }
+    fs::copy(&temporary, &backup)?;
+
+    let result = (|| {
+        let output = Command::new("defaults")
+            .args(["read", "com.apple.Terminal", "Startup Window Settings"])
+            .output()?;
+        if !output.status.success() {
+            return Err(io::Error::other(
+                "Terminal.app has no current startup profile",
+            ));
+        }
+        let profile = String::from_utf8_lossy(&output.stdout)
+            .trim()
+            .trim_matches('"')
+            .to_owned();
+        if profile.is_empty()
+            || !profile
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || " _.-".contains(c))
+        {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "unsupported Terminal.app profile name",
+            ));
+        }
+        let profile_path = profile.replace(' ', "\\ ");
+        let root = format!(":Window\\ Settings:{profile_path}:keyMapBoundKeys");
+        let print = Command::new("/usr/libexec/PlistBuddy")
+            .args(["-c", &format!("Print {root}"), temporary.to_str().unwrap()])
+            .output()?;
+        if !print.status.success() {
+            let add = Command::new("/usr/libexec/PlistBuddy")
+                .args([
+                    "-c",
+                    &format!("Add {root} dict"),
+                    temporary.to_str().unwrap(),
+                ])
+                .status()?;
+            if !add.success() {
+                return Err(io::Error::other(
+                    "could not create Terminal.app key bindings",
+                ));
+            }
+        }
+        for (key, placeholder, _) in TERMINAL_KEY_MAP {
+            let path = format!("{root}:{key}");
+            let _ = Command::new("/usr/libexec/PlistBuddy")
+                .args(["-c", &format!("Delete {path}"), temporary.to_str().unwrap()])
+                .output();
+            let added = Command::new("/usr/libexec/PlistBuddy")
+                .args([
+                    "-c",
+                    &format!("Add {path} string {placeholder}"),
+                    temporary.to_str().unwrap(),
+                ])
+                .status()?;
+            if !added.success() {
+                return Err(io::Error::other(format!(
+                    "could not write Terminal.app key binding {key}"
+                )));
+            }
+        }
+        let mut text = fs::read_to_string(&temporary)?;
+        for (_, placeholder, sequence) in TERMINAL_KEY_MAP {
+            text = text.replace(placeholder, sequence);
+        }
+        fs::write(&temporary, text)?;
+        let lint = Command::new("plutil")
+            .args(["-lint", temporary.to_str().unwrap()])
+            .output()?;
+        if !lint.status.success() {
+            return Err(io::Error::other(
+                "generated Terminal.app preferences are invalid",
+            ));
+        }
+        let imported = Command::new("defaults")
+            .args(["import", "com.apple.Terminal"])
+            .arg(&temporary)
+            .status()?;
+        if !imported.success() {
+            return Err(io::Error::other(
+                "could not import Terminal.app preferences",
+            ));
+        }
+        Ok(())
+    })();
+    let _ = fs::remove_file(&temporary);
+    if result.is_err() {
+        let _ = Command::new("defaults")
+            .args(["import", "com.apple.Terminal"])
+            .arg(&backup)
+            .status();
+    }
+    result?;
+    println!(
+        "Terminal.app Command-key mappings installed. Open a new Terminal window; backup: {}",
+        backup.display()
+    );
+    Ok(())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn terminal_app_keys() -> io::Result<()> {
+    Err(io::Error::new(
+        io::ErrorKind::Unsupported,
+        "Terminal.app key mapping is available on macOS only",
+    ))
 }
 
 fn parse_help_options(help: &str) -> HashMap<String, &'static str> {
@@ -1705,6 +1858,14 @@ fn run() -> io::Result<i32> {
             }
             return Ok(0);
         }
+        Some("terminal-keys") => {
+            if matches!(args.next().as_deref(), Some("-h" | "--help")) {
+                print!("{HELP}");
+                return Ok(0);
+            }
+            terminal_app_keys()?;
+            return Ok(0);
+        }
         Some("setup") => {
             let options: Vec<_> = args.collect();
             if options.iter().any(|s| s == "-h" || s == "--help") {
@@ -1895,6 +2056,19 @@ mod tests {
         assert!(system_service_path(Path::new("/usr/sbin/bluetoothd")));
         assert!(system_service_path(Path::new("/System/Library/example")));
         assert!(!system_service_path(Path::new("/opt/homebrew/bin/gh")));
+    }
+
+    #[test]
+    fn terminal_commands_send_unique_sequences() {
+        assert_eq!(TERMINAL_KEY_MAP.len(), 9);
+        let sequences: HashSet<_> = TERMINAL_KEY_MAP
+            .iter()
+            .map(|(_, _, sequence)| *sequence)
+            .collect();
+        assert_eq!(sequences.len(), TERMINAL_KEY_MAP.len());
+        assert!(TERMINAL_KEY_MAP.iter().all(|(_, placeholder, _)| {
+            placeholder.starts_with("__RFIG_") && !placeholder.is_empty()
+        }));
     }
 
     #[test]
