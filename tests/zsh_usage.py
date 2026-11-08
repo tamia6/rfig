@@ -76,21 +76,21 @@ with tempfile.TemporaryDirectory() as temp:
         call("set-option", "-g", "status", "off")
         wait_for(lambda output: "RFIG>" in output)
         call("send-keys", "-t", "usage", "-l", "rfigpopular")
-        output = wait_for(lambda output: "→ ① alpha" in output and "② beta" in output and "③ gamma" in output)
-        assert "● delta" in output and "● epsilon" in output, output
+        output = wait_for(lambda output: "› 1 ● alpha" in output and "2 ● beta" in output and "3 ● gamma" in output)
+        assert "4 ● delta" in output and "5 ● epsilon" in output, output
         call("send-keys", "-t", "usage", "C-u")
         call("send-keys", "-t", "usage", "-l", "rfigmixed")
-        output = wait_for(lambda output: "→ ① --verbose" in output and "② build" in output)
-        assert "◇ --help" in output and "③ --help" not in output, output
+        output = wait_for(lambda output: "› 1 ◇ --verbose" in output and "2 ● build" in output)
+        assert "◇ --help" in output and "3 ◇ --help" not in output, output
         call("send-keys", "-t", "usage", "C-u")
         call("send-keys", "-t", "usage", "-l", "rfigfixture")
-        output = wait_for(lambda output: "→ ① beta" in output)
+        output = wait_for(lambda output: "› 1 ● beta" in output)
         rows = output.splitlines()
-        assert next(row for row in rows if "→ ①" in row).strip().endswith("beta"), rows
-        assert "● alpha" in output and "② alpha" not in output, rows
-        call("send-keys", "-t", "usage", "Down")
-        wait_for(lambda output: "→ ● alpha" in output and "➜" not in output)
-        call("send-keys", "-t", "usage", "Right")
+        assert next(row for row in rows if "› 1" in row).strip().endswith("beta"), rows
+        assert "2 ● alpha" in output, rows
+        call("send-keys", "-t", "usage", "M-2")
+        wait_for(lambda output: "› 2 ● alpha" in output and "➜" not in output)
+        call("send-keys", "-t", "usage", "Tab")
         wait_for(lambda output: "RFIG> rfigfixture alpha" in output)
         call("send-keys", "-t", "usage", "Enter")
         deadline = time.monotonic() + 5
@@ -103,16 +103,16 @@ with tempfile.TemporaryDirectory() as temp:
         for _ in range(2):
             wait_for(lambda output: output.rstrip().splitlines()[-1] == "RFIG>")
             call("send-keys", "-t", "usage", "-l", "rfigfixture")
-            wait_for(lambda output: "① beta" in output)
-            call("send-keys", "-t", "usage", "Down", "Down")
-            wait_for(lambda output: "→ ② alpha" in output and "➜" not in output)
-            call("send-keys", "-t", "usage", "Right", "Enter")
+            wait_for(lambda output: "beta" in output)
+            call("send-keys", "-t", "usage", "M-3")
+            wait_for(lambda output: "› 3 ● alpha" in output and "➜" not in output)
+            call("send-keys", "-t", "usage", "Tab", "Enter")
             time.sleep(0.1)
         call("kill-session", "-t", "usage")
         call("new-session", "-d", "-s", "usage", "-x", "80", "-y", "20", "/bin/zsh", "-i")
         wait_for(lambda output: "RFIG>" in output)
         call("send-keys", "-t", "usage", "-l", "rfigfixture")
-        wait_for(lambda output: "① alpha" in output and "② beta" in output)
+        wait_for(lambda output: "alpha" in output and "beta" in output)
         call("send-keys", "-t", "usage", "C-c")
         call("send-keys", "-t", "usage", "-l", "rfigfixture beta")
         call("send-keys", "-t", "usage", "Enter")

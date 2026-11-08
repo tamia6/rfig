@@ -139,7 +139,7 @@ source {ROOT}/rfig.zsh
         for n,(prefix,expected) in enumerate([('spa','space value'),('semi','semi;colon'),('dollar','dollar$(touch PWN)'),('中文','中文 分支')],1):
             self.type('rfigprobe '+prefix)
             self.wait(lambda:self.label_visible(expected),'literal candidate '+expected)
-            self.keys('Right'); time.sleep(.08); self.keys('Enter')
+            self.keys('Tab'); time.sleep(.08); self.keys('Enter')
             self.wait(lambda:len(self.executed())==n,'literal candidate execution')
             self.assertEqual(self.executed()[-1],[expected])
             self.wait(lambda:self.current()=='','prompt after literal')
@@ -182,8 +182,8 @@ source {ROOT}/rfig.zsh
         (target / 'nested').mkdir(parents=True)
         for prefix in (str(parent) + '/', './path-root/', '~/path-root/'):
             self.type('cd ' + prefix + 'ch')
-            self.wait(lambda:'→' in self.current(), 'directory candidate')
-            self.keys('Right')
+            self.wait(lambda:'›' in self.current(), 'directory candidate')
+            self.keys('Tab')
             self.wait(lambda:'child' in self.current() and 'dir/' in self.current(), 'directory slash')
             self.keys('Enter')
             self.wait(lambda:Path(self.call('display-message','-p','-t','test','#{pane_current_path}').strip()).resolve() == target.resolve() and self.current() == '', 'selected directory execution')

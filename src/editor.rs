@@ -16,7 +16,7 @@ use std::{
         mpsc, Arc,
     },
     thread,
-    time::{Duration, Instant},
+    time::Duration,
 };
 use unicode_width::UnicodeWidthStr;
 
@@ -148,7 +148,6 @@ impl Screen {
         point: usize,
         items: &[Item],
         selected: usize,
-        pulse: bool,
     ) -> io::Result<()> {
         self.clear()?;
         let (cols, rows) = terminal::size()?;
@@ -181,60 +180,29 @@ impl Screen {
                 break;
             }
             let active = offset == selected;
-            let (icon, color) = match item.kind.as_str() {
-                "history" => ("◷", Color::DarkGrey),
-                "command" => ("⌘", Color::Cyan),
-                "subcommand" => ("↳", Color::Magenta),
-                "option" => ("◇", Color::Blue),
-                "flag" => ("⚑", Color::Yellow),
-                _ => ("●", Color::Green),
+            let icon = match item.kind.as_str() {
+                "history" => "◷",
+                "command" => "⌘",
+                "subcommand" => "↳",
+                "option" => "◇",
+                "flag" => "⚑",
+                _ => "●",
             };
-            let icon = match item.popular {
-                1 => "①",
-                2 => "②",
-                3 => "③",
-                _ => icon,
-            };
-            let pointer = if active {
-                if pulse {
-                    " ➜ "
-                } else {
-                    "→ "
-                }
-            } else {
-                "  "
-            };
-            let gap = if pulse && active {
-                "   "
-            } else if pulse && offset.abs_diff(selected) == 1 {
-                "  "
-            } else {
-                " "
-            };
+            let pointer = if active { "› " } else { "  " };
+            let shortcut = offset - first + 1;
+            let prefix = format!("{pointer}{shortcut} {icon} ");
+            let width = (self.cols as usize)
+                .saturating_sub(UnicodeWidthStr::width(prefix.as_str()) + 1)
+                .min(41);
             queue!(
                 self.tty,
                 MoveTo(0, y),
-                SetForegroundColor(Color::Cyan),
-                Print(pointer),
-                SetForegroundColor(color),
-                Print(icon),
-                ResetColor,
-                Print(gap)
+                SetForegroundColor(Color::DarkGrey),
+                Print(prefix)
             )?;
             if active {
-                queue!(
-                    self.tty,
-                    SetForegroundColor(Color::Cyan),
-                    SetAttribute(Attribute::Bold)
-                )?;
-            } else if pulse && offset.abs_diff(selected) == 1 {
                 queue!(self.tty, SetAttribute(Attribute::Bold))?;
             }
-            let width = (self.cols as usize)
-                .saturating_sub(
-                    UnicodeWidthStr::width(pointer) + UnicodeWidthStr::width(icon) + gap.len() + 1,
-                )
-                .min(41);
             queue!(
                 self.tty,
                 Print(crate::padded(&item.label, width)),
@@ -245,12 +213,17 @@ impl Screen {
         if let Some(item) = items.get(selected) {
             let y = menu_y + items.len().min(5) as u16;
             if y < self.rows {
+                let mut footer = item.description.clone();
+                if !footer.is_empty() {
+                    footer.push_str("  ·  ");
+                }
+                footer.push_str("Alt+↑↓ select · Alt+1–5 jump · Tab accept");
                 queue!(
                     self.tty,
                     MoveTo(0, y),
                     SetForegroundColor(Color::DarkGrey),
                     Print(crate::padded(
-                        &item.description,
+                        &footer,
                         (self.cols as usize).saturating_sub(1)
                     )),
                     ResetColor
@@ -297,6 +270,23 @@ fn next(line: &str, point: usize) -> usize {
         .chars()
         .next()
         .map_or(point, |c| point + c.len_utf8())
+}
+
+fn insert_item(item: &Item, ctx: &engine::Context, line: &mut String, point: &mut usize) -> bool {
+    if item.kind == "history" {
+        *line = item.label.clone();
+        *point = line.len();
+        return false;
+    }
+    let insert = format!(
+        "{}{}{}",
+        if ctx.injected { " " } else { "" },
+        engine::quote(&item.label, &line[ctx.start..*point]),
+        if item.label.ends_with('/') { "" } else { " " }
+    );
+    line.replace_range(ctx.start..*point, &insert);
+    *point = ctx.start + insert.len();
+    true
 }
 
 pub fn run(
@@ -421,9 +411,9 @@ pub fn run(
     let mut ctx = engine::context(&line);
     let mut items = Vec::new();
     let mut selected = 0;
+    let mut focused_label: Option<String> = None;
     let mut pending = String::new();
     let mut chosen: Option<(String, Vec<String>)> = None;
-    let mut pulse_until = Instant::now();
     let mut dirty = true;
     let mut history_index = memory.history.len();
     let mut draft = line.clone();
@@ -437,6 +427,7 @@ pub fn run(
         if query != pending {
             pending = query.into();
             items.clear();
+            focused_label = None;
             if point == line.len() {
                 memory.add_history(&line, &mut items);
             }
@@ -460,18 +451,18 @@ pub fn run(
                 }
                 ctx = new_context;
                 items = hits;
-                selected = 0;
+                selected = focused_label
+                    .as_ref()
+                    .and_then(|label| items.iter().position(|item| item.label == *label))
+                    .unwrap_or(0);
                 dirty = true;
             }
         }
         if dirty {
-            screen.draw(&line, point, &items, selected, Instant::now() < pulse_until)?;
+            screen.draw(&line, point, &items, selected)?;
             dirty = false;
         }
         if !event::poll(Duration::from_millis(15))? {
-            if pulse_until.elapsed() < Duration::from_millis(30) {
-                dirty = true;
-            }
             continue;
         }
         let event = event::read()?;
@@ -502,6 +493,7 @@ pub fn run(
             Event::Key(key) => {
                 let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
                 let alt = key.modifiers.contains(KeyModifiers::ALT);
+                let super_key = key.modifiers.contains(KeyModifiers::SUPER);
                 match key.code {
                     KeyCode::Enter => {
                         point = line.len();
@@ -510,8 +502,49 @@ pub fn run(
                         }
                         break "execute";
                     }
-                    KeyCode::Tab => break "complete",
-                    KeyCode::Esc => break "escape",
+                    KeyCode::Tab => {
+                        if let Some(item) = items.get(selected) {
+                            let previous = items.iter().map(|i| i.label.clone()).collect();
+                            if insert_item(item, &ctx, &mut line, &mut point) {
+                                memory.record("C", &ctx.words.join(" "), &item.label);
+                                chosen = Some((line.clone(), previous));
+                            }
+                            focused_label = None;
+                            items.clear();
+                        } else {
+                            break "complete";
+                        }
+                    }
+                    KeyCode::Esc => {
+                        // Some terminals deliver Option/Alt as a separate Escape
+                        // followed by the base key instead of a modified key event.
+                        let shortcut = event::poll(Duration::from_millis(35))?
+                            .then(event::read)
+                            .transpose()?
+                            .and_then(|event| match event {
+                                Event::Key(next) if next.kind == event::KeyEventKind::Press => {
+                                    Some(next.code)
+                                }
+                                _ => None,
+                            });
+                        match shortcut {
+                            Some(KeyCode::Left | KeyCode::Up) if !items.is_empty() => {
+                                selected = selected.saturating_sub(1);
+                                focused_label = items.get(selected).map(|item| item.label.clone());
+                            }
+                            Some(KeyCode::Right | KeyCode::Down) if !items.is_empty() => {
+                                selected = (selected + 1).min(items.len() - 1);
+                                focused_label = items.get(selected).map(|item| item.label.clone());
+                            }
+                            Some(KeyCode::Char(digit @ '1'..='5')) if !items.is_empty() => {
+                                let first = selected.saturating_sub(4);
+                                let shortcut = digit.to_digit(10).unwrap_or(1) as usize;
+                                selected = (first + shortcut - 1).min(items.len() - 1);
+                                focused_label = items.get(selected).map(|item| item.label.clone());
+                            }
+                            _ => break "escape",
+                        }
+                    }
                     KeyCode::Char('c') if ctrl => {
                         line.clear();
                         point = 0;
@@ -526,60 +559,45 @@ pub fn run(
                     KeyCode::Home | KeyCode::Char('a') if key.code == KeyCode::Home || ctrl => {
                         point = 0
                     }
-                    KeyCode::Left | KeyCode::Char('b') if key.code == KeyCode::Left || ctrl => {
+                    KeyCode::Left | KeyCode::Right | KeyCode::Up | KeyCode::Down
+                        if alt || super_key =>
+                    {
+                        if items.is_empty() {
+                            continue;
+                        }
+                        selected = match key.code {
+                            KeyCode::Left | KeyCode::Up => selected.saturating_sub(1),
+                            _ => (selected + 1).min(items.len() - 1),
+                        };
+                        focused_label = items.get(selected).map(|item| item.label.clone());
+                    }
+                    KeyCode::Left | KeyCode::Char('b')
+                        if (key.code == KeyCode::Left && !alt && !super_key) || ctrl =>
+                    {
                         point = previous(&line, point)
                     }
-                    KeyCode::Right | KeyCode::Char('f') if key.code == KeyCode::Right || ctrl => {
+                    KeyCode::Right | KeyCode::Char('f')
+                        if (key.code == KeyCode::Right && !alt && !super_key) || ctrl =>
+                    {
                         if point < line.len() {
                             point = next(&line, point);
-                        } else if let Some(item) = items.get(selected) {
-                            let previous = items.iter().map(|i| i.label.clone()).collect();
-                            let prefix = ctx.words.join(" ");
-                            if item.kind == "history" {
-                                line = item.label.clone();
-                                point = line.len();
-                                items.clear();
-                                continue;
-                            }
-                            memory.record("C", &prefix, &item.label);
-                            let insert = format!(
-                                "{}{}{}",
-                                if ctx.injected { " " } else { "" },
-                                engine::quote(&item.label, &line[ctx.start..point]),
-                                if item.label.ends_with('/') { "" } else { " " }
-                            );
-                            line.replace_range(ctx.start..point, &insert);
-                            point = ctx.start + insert.len();
-                            chosen = Some((line.clone(), previous));
-                            // A new context may expose another level; stale rows disappear immediately.
-
-                            items.clear();
                         }
                     }
                     KeyCode::Up | KeyCode::Down => {
-                        if !items.is_empty() {
-                            if key.code == KeyCode::Up {
-                                selected = selected.saturating_sub(1);
-                            } else {
-                                selected = (selected + 1).min(items.len() - 1);
-                            }
-                            pulse_until = Instant::now() + Duration::from_millis(60);
-                        } else {
-                            if history_index == memory.history.len() {
-                                draft = line.clone();
-                            }
-                            if key.code == KeyCode::Up {
-                                history_index = history_index.saturating_sub(1);
-                            } else {
-                                history_index = (history_index + 1).min(memory.history.len());
-                            }
-                            line = memory
-                                .history
-                                .get(history_index)
-                                .cloned()
-                                .unwrap_or_else(|| draft.clone());
-                            point = line.len();
+                        if history_index == memory.history.len() {
+                            draft = line.clone();
                         }
+                        if key.code == KeyCode::Up {
+                            history_index = history_index.saturating_sub(1);
+                        } else {
+                            history_index = (history_index + 1).min(memory.history.len());
+                        }
+                        line = memory
+                            .history
+                            .get(history_index)
+                            .cloned()
+                            .unwrap_or_else(|| draft.clone());
+                        point = line.len();
                     }
                     KeyCode::Backspace => {
                         if point > 0 {
@@ -610,7 +628,15 @@ pub fn run(
                         }
                         line.replace_range(point..end, "");
                     }
-                    KeyCode::Char(c) if !ctrl && !alt => {
+                    KeyCode::Char(digit) if (alt || super_key) && ('1'..='5').contains(&digit) => {
+                        if !items.is_empty() {
+                            let first = selected.saturating_sub(4);
+                            let shortcut = digit.to_digit(10).unwrap_or(1) as usize;
+                            selected = (first + shortcut - 1).min(items.len() - 1);
+                            focused_label = items.get(selected).map(|item| item.label.clone());
+                        }
+                    }
+                    KeyCode::Char(c) if !ctrl && !alt && !super_key => {
                         line.insert(point, c);
                         point += c.len_utf8();
                     }
@@ -624,6 +650,11 @@ pub fn run(
     drop(send);
     drop(updates);
     drop(worker);
+    if action == "execute" {
+        // The completion worker may have queued a taller menu after the last
+        // draw. Clear every row below the prompt before the host executes.
+        screen.drawn = screen.rows.saturating_sub(screen.y);
+    }
     screen.clear()?;
     // Restore the line the host actually drew; its native redisplay owns the accepted text.
     queue!(screen.tty, MoveTo(screen.x, screen.y))?;

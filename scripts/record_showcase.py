@@ -89,7 +89,7 @@ def render(ansi: str, cursor: tuple[int, int], title: str) -> Image.Image:
             draw.text(
                 (38 + col * 13, 82 + row * 27),
                 cell.data,
-                font=SYMBOLS if cell.data in "⌘↳●◇⚑→➜①②③" else FONT,
+                font=SYMBOLS if cell.data in "⌘↳●◇⚑›" else FONT,
                 fill=ansi_color(cell.fg),
                 stroke_width=0.25 if cell.bold else 0,
             )
@@ -208,11 +208,11 @@ with tempfile.TemporaryDirectory(prefix="rfig-showcase-") as temp:
         capture("01 / git · type git", 850)
         key(" checkout", literal=True)
         capture("01 / git · choose checkout", 1100)
-        key("Right")
+        key("Tab")
         capture("01 / git · dynamic branches", 1100)
         key("f", literal=True)
         capture("01 / git · filter the current repository", 1100)
-        key("Right")
+        key("Tab")
         key("Enter")
         time.sleep(0.25)
         capture("01 / git · command executed", 900)
@@ -220,7 +220,7 @@ with tempfile.TemporaryDirectory(prefix="rfig-showcase-") as temp:
 
         key("brew services", literal=True)
         capture("02 / brew · subcommand menu", 900)
-        key("Right")
+        key("Tab")
         capture("02 / brew · service actions", 1100)
         key("l", literal=True)
         capture("02 / brew · usage-ranked option", 1000)
@@ -228,14 +228,13 @@ with tempfile.TemporaryDirectory(prefix="rfig-showcase-") as temp:
 
         key("npm run", literal=True)
         capture("03 / npm · history is the first menu row", 900)
-        key("Down")
-        key("Right")
+        key("Tab")
         capture("03 / npm · dynamic package.json candidates", 1200)
-        key("Down")
-        key("Down")
-        capture("03 / npm · ↓ switches the selection", 850)
-        key("Right")
-        capture("03 / npm · → inserts the selected script", 850)
+        key("M-Down")
+        key("M-Down")
+        capture("03 / npm · Alt+↓ moves the selection", 850)
+        key("Tab")
+        capture("03 / npm · Tab inserts the selected script", 850)
         key("Enter")
         time.sleep(0.25)
         capture("03 / npm · selected script executed", 1000)

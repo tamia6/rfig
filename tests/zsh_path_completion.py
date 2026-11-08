@@ -58,7 +58,7 @@ with tempfile.TemporaryDirectory(prefix='rfig-path-') as temp:
             label = hits[0].split('\t')[0]
             # Labels stay short; inserted words retain the original path context.
             assert '/' not in label.rstrip('/'), (typed, label)
-            call('send-keys', '-t', 'test', 'Right')
+            call('send-keys', '-t', 'test', 'Tab')
             after, _ = snapshot()
             raw = label.rstrip('/')
             quoted = raw.replace(' ', '\\ ')
@@ -75,7 +75,7 @@ with tempfile.TemporaryDirectory(prefix='rfig-path-') as temp:
             call('send-keys', '-t', 'test', 'C-u')
             call('send-keys', '-t', 'test', '-l', typed)
             assert snapshot()[1], typed
-            call('send-keys', '-t', 'test', 'Right')
+            call('send-keys', '-t', 'test', 'Tab')
             assert snapshot()[0] == expected, (typed, snapshot()[0], expected)
     finally:
         assert not cleanup_tmux(tmux, [home]), 'test processes survived cleanup'

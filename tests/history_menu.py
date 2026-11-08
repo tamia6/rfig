@@ -54,18 +54,20 @@ with tempfile.TemporaryDirectory(prefix='rfig-history-menu-') as temp:
         type_('rfigfi');wait(lambda:'◷ rfigfixture beta' in screen() and '⌘ rfigfixture' in screen(),'history first with typed-prefix completions')
         assert screen().splitlines()[0]=='rfigfi',screen()
         assert 'gamma' not in screen(),screen()
-        keys('C-u');type_('rfigfixture');wait(lambda:'① beta' in screen(),'ranked regular candidate')
-        rows=screen().splitlines();assert '→ ◷ rfigfixture beta' in rows[1],rows
+        keys('C-u');type_('rfigfixture');wait(lambda:'beta' in screen(),'ranked regular candidate')
+        rows=screen().splitlines();assert '› 1 ◷ rfigfixture beta' in rows[1],rows
         keys('C-e');execute('\n')
         # Explicit history selection inserts the whole command, without executing.
         type_('rfigfixture be');wait(lambda:'◷ rfigfixture beta' in screen(),'history suggestion')
+        keys('Right');time.sleep(.08)
+        assert screen().splitlines()[0]=='rfigfixture be',screen()
         execute('be\n')
         type_('rfigfixture');wait(lambda:'◷ rfigfixture be' in screen(),'latest history first')
-        keys('Right');wait(lambda:screen().splitlines()[0]=='rfigfixture be','history insertion')
+        keys('Tab');wait(lambda:screen().splitlines()[0]=='rfigfixture be','history insertion')
         execute('be\n')
         # Skip history and its first ordinary candidate, then insert alpha.
-        type_('rfigfixture');wait(lambda:'① beta' in screen() and 'alpha' in screen(),'ordinary menu')
-        keys('Down','Down','Right');wait(lambda:screen().splitlines()[0].strip()=='rfigfixture alpha','ordinary candidate insertion')
+        type_('rfigfixture');wait(lambda:'beta' in screen() and 'alpha' in screen(),'ordinary menu')
+        keys('M-3','Tab');wait(lambda:screen().splitlines()[0].strip()=='rfigfixture alpha','ordinary candidate insertion')
         execute('alpha\n')
         # History is offered even without a usable completion definition.
         type_('plainfixture h');wait(lambda:'◷ plainfixture hello' in screen(),'history-only menu')

@@ -2,17 +2,17 @@
 
 **English** · [简体中文](README.zh-CN.md) · [Website](https://tamia6.github.io/rfig/)
 
-**An open-source terminal autocomplete tool with command menus and history-based suggestions.**
+**An open-source terminal autocomplete tool with a quiet suggestion menu and history-based suggestions.**
 
-Built in Rust, rfig brings IDE-style command-line autocomplete to zsh, Bash, and Fish on macOS and Linux. Candidates appear as you type; navigate with the arrow keys, insert one with the right arrow, and continue completing the next argument. Your shell executes the command.
+Built in Rust, rfig brings IDE-style command-line autocomplete to zsh, Bash, and Fish on macOS and Linux. Candidates appear as muted suggestions while you type; choose a row with Option/Alt plus an arrow or number, then press Tab to insert it. Your shell still owns ordinary cursor movement, history, and command execution.
 
 rfig is an independent, Fig-inspired project and is not affiliated with Fig. It uses completion definitions and scripts available in your environment, with sandboxed help analysis as a conditional fallback; it does not promise completion for every command.
 
-Built-in **history-based suggestions** appear as the first menu row, marked `◷`. They match your current directory and typed prefix, so no separate history suggestion plugin is required. Ordinary completions use only what you actually type. There is no inline gray text; Enter always executes your actual input.
+Built-in **history-based suggestions** appear as the first menu row, marked `◷`. They match your current directory and typed prefix, so no separate history suggestion plugin is required. Ordinary completions use only what you actually type. Suggestions stay muted gray, and Enter always executes your actual input.
 
 ![rfig demonstrating progressive Git completion, dynamic branches, Brew services, and npm scripts in zsh](assets/rfig-showcase.gif)
 
-The demo shows progressive Git completion from `g` to `gi` to `git`, then `checkout` and a real branch from the current repository. It also demonstrates dynamic Brew service candidates, npm scripts, arrow-key navigation, insertion, execution, and menu dismissal.
+The demo shows progressive Git completion from `g` to `gi` to `git`, then `checkout` and a real branch from the current repository. It also demonstrates dynamic Brew service candidates, npm scripts, keyboard selection, insertion, execution, and menu dismissal.
 
 [Installation](#installation) · [Usage](#usage) · [Shell support](#shell-support) · [Completion sources](#completion-sources-and-background-enrichment) · [Testing](#testing)
 
@@ -26,9 +26,9 @@ The demo shows progressive Git completion from `g` to `gi` to `git`, then `check
 | --- | --- |
 | Menus as you type | Updates after typing or deleting, without pressing `Tab` or an artificial debounce delay |
 | Dynamic, nested completion | Queries available definitions for subcommands, branches, paths, and more; depth and content depend on the source |
-| History-based autosuggestions | Shows at most one directory-scoped history match first, marked ◷; accept explicitly with Right |
-| Usage-based ranking | Selections and executed commands affect ranking; up to three candidates with usage records are marked `① ② ③` |
-| Category icons and theme colors | Category icons, an arrow pointer, and selected text use the terminal's ANSI palette |
+| History-based autosuggestions | Shows at most one directory-scoped history match first, marked ◷; accept explicitly with Tab |
+| Usage-based ranking | Selections and executed commands affect ordering without adding visual badges |
+| Quiet suggestion menu | Category icons and candidates use muted ANSI gray; the selected row is bold rather than brightly colored |
 | Multiple completion sources | Native definitions, installed scripts, command-provided generators, the Cobra protocol, and cached help data |
 | Background enrichment after setup | Quickly scans `$PATH`, then analyzes eligible user commands sequentially on macOS/Linux when a sandbox is available |
 | Shell coverage | zsh ✅, Bash 4.4+ ✅, Fish 3.6+ ✅; other shells are not yet supported |
@@ -94,35 +94,37 @@ Start typing to see candidates. Available completion definitions determine which
 
 | Key | Behavior |
 | --- | --- |
-| `↑` / `↓` | Select a candidate when a menu is visible; otherwise browse history |
-| `→` | At the end of the line, insert the selected item; a history row fills the whole command without executing it; within the line, move right |
+| `Option/Alt+↑/↓` or `Option/Alt+←/→` | Move through visible candidates without taking over native history navigation |
+| `Option/Alt+1` … `Option/Alt+5` | Focus the corresponding visible candidate |
+| `Tab` | Insert the focused candidate; with no candidate menu, use the shell's native completion |
+| `↑` / `↓` | Use the shell's native history navigation |
+| `→` / `←` | Use the shell's native cursor movement |
 | `Ctrl+E` | Move to the end of the line without accepting a suggestion |
 | `Enter` | Execute only the actual input; never implicitly accept history or the highlighted menu item |
-| `Tab` | Use the shell's native completion without executing the command |
 | `Ctrl+C` | Cancel the current input |
 
-The menu displays up to five rows; use the arrow keys to browse the rest. For ordinary option candidates, a `-` prefix shows only single-hyphen options; `--` shows only double-hyphen options. This rule applies to all commands.
+The menu displays up to five numbered rows. Moving beyond the fifth row scrolls the visible shortcuts. On macOS, Terminal and many other terminal apps reserve Command+arrow for their own window or text actions and never send it to the shell. rfig therefore uses Option/Alt as the portable selector and also accepts forwarded Super/Command sequences when a terminal is configured to send them. For ordinary option candidates, a `-` prefix shows only single-hyphen options; `--` shows only double-hyphen options. This rule applies to all commands.
 
 ### History and usage-based ranking
 
-- **History suggestions:** rfig maintains its own directory-scoped history. Typing `gi` may show `◷ git checkout master` first; ordinary candidates still complete only `gi`. Select history with Right, then Enter to execute. With no history match, ordinary candidates start the menu. History does not use the `① ② ③` usage markers.
+- **History suggestions:** rfig maintains its own directory-scoped history. Typing `gi` may show `◷ git checkout master` first; ordinary candidates still complete only `gi`. Focus history with Option/Alt navigation or `Option/Alt+1`, press Tab to insert it, then Enter to execute. With no history match, ordinary candidates start the menu.
 - **Fresh installations:** history starts empty. Old shell history without working-directory information is not imported automatically.
-- **Ranking:** scores are accumulated per command context. Selecting a candidate adds 3; recording an execution adds 1. With equal scores, non-option candidates come first. Up to three candidates with usage records receive circled numbers; the rest keep their category icons.
+- **Ranking:** scores are accumulated per command context. Selecting a candidate adds 3; recording an execution adds 1. With equal scores, non-option candidates come first. Ranking changes order without covering labels with extra badges.
 - **Local storage:** history and ranking records stay on your computer. Bash/Fish omit commands beginning with a space; zsh follows that rule when `HIST_IGNORE_SPACE` is enabled.
 
 When using rfig's autosuggestions, remove the `zsh-autosuggestions` source line from `.zshrc` or your plugin manager configuration, then open a new session. Fish integration disables Fish's native autosuggestions and uses rfig's directory-scoped history instead.
 
 ### Icons and colors
 
-| Category | Icon | ANSI color |
-| --- | --- | --- |
-| Command | `⌘` | Cyan |
-| Subcommand | `↳` | Magenta |
-| Argument | `●` | Green |
-| Option that takes a value | `◇` | Blue |
-| Boolean flag | `⚑` | Yellow |
+| Category | Icon |
+| --- | --- |
+| Command | `⌘` |
+| Subcommand | `↳` |
+| Argument | `●` |
+| Option that takes a value | `◇` |
+| Boolean flag | `⚑` |
 
-Colors follow the terminal's ANSI palette; rfig does not parse individual terminal theme files. Circled numbers keep the category color, and the selected item uses `→` and cyan text. Moving between candidates adds brief shifts, glyph changes, and bold text—a character animation rather than actual font scaling.
+Colors follow the terminal's ANSI palette; rfig does not parse individual terminal theme files. Candidate icons, labels, shortcuts, and descriptions use muted gray. The focused row uses a `›` pointer and bold text, with no color flashes or shifting animation.
 
 Categories use available metadata. Without option analysis, `--` entries are provisionally treated as options and single `-` entries as flags, so classification may be approximate.
 
@@ -131,7 +133,7 @@ Categories use available metadata. Without option analysis, `--` entries are pro
 | Capability | zsh | Bash 4.4+ | Fish 3.6+ |
 | --- | --- | --- | --- |
 | Menus, nested candidates, autosuggestions separate from typed input | ✅ | ✅ | ✅ |
-| Directory-scoped history, usage ranking, category colors, circled numbers | ✅ | ✅ | ✅ |
+| Directory-scoped history, usage ranking, quiet candidate colors, numeric shortcuts | ✅ | ✅ | ✅ |
 | Setup integration and completion for rfig itself | ✅ | ✅ | ✅ |
 | Multiline paste without automatic execution | ✅ | ✅ Returns to native editor | ✅ Returns to native editor |
 
