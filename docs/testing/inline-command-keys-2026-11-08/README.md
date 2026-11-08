@@ -5,8 +5,9 @@ Branch: `ux-subtle-tab-accept`
 ## Interaction
 
 - A single completion or directory-scoped history result renders as an ANSI
-  gray suffix after the cursor. The candidate dropdown was removed.
-- A compact `2/7` indicator shows the selected position in the ranked set.
+  gray suffix after the cursor.
+- A compact `2/7` indicator and one-line numbered strip expose up to five
+  surrounding candidates.
 - Command+arrow and Command+1…5 change the recommendation on configured
   macOS terminals.
 - Option/Alt shortcuts remain available as a fallback.
@@ -26,6 +27,8 @@ profile, validates the resulting plist, and restores the backup on failure.
   `tests/zsh_path_completion.py`, and history-menu tests passed.
 - Bash and Fish interactive, strict, prompt-geometry, nested-help, and
   completion-output suites passed.
+- Bash waits briefly for an in-flight worker when Tab is pressed, preventing a
+  race where native completion could insert an unquoted space-containing value.
 - `tests/self_completion.py` passed with the new `terminal-keys` command.
 - Both README/site demo recordings were regenerated.
 - `rfig terminal-keys` was applied and re-applied successfully to the local
@@ -46,6 +49,8 @@ work. Evidence is in `zsh59-strict.log`.
 - `zsh_integration.log`: inline gray selection, Tab acceptance, and theme.
 - `bash-system-strict.log`, `fish-strict.log`: cross-shell interactive suites.
 - `fish-prompt-geometry.log`: narrow prompt and execution cleanup.
+- `bash-system-prompt-geometry.log`: narrow dynamic prompt with Tab waiting for
+  the in-flight completion.
 
 macOS Terminal.app Command-key behavior was validated by forwarding the exact
 mapped Super sequences into all three shell adapters. The GUI app itself is

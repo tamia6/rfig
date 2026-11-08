@@ -21,7 +21,7 @@ Traceback (most recent call last):
     self.fail(message+'\n'+self.screen())
 AssertionError: typing blocked by slow provider
 RFIG> rfigslow
-
+›1 rfigslow
 
 
 
@@ -41,6 +41,6 @@ RFIG> rfigslow
 
 
 ----------------------------------------------------------------------
-Ran 10 tests in 5.238s
+Ran 10 tests in 4.975s
 
 FAILED (failures=1, skipped=1)

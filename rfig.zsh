@@ -216,9 +216,28 @@ _rfig_render() {
   fi
   suggestion=${prospective[$(( CURSOR + 1 )),-1]}
   (( $#_rfig_hits > 1 )) && suggestion+="  ${_rfig_selected}/${#_rfig_hits}"
-  [[ -n $suggestion ]] || return
   POSTDISPLAY=$suggestion
-  region_highlight+=( "$(( ${#BUFFER} )) $(( ${#BUFFER} + ${#suggestion} )) fg=8 memo=rfig" )
+  if [[ -n $suggestion ]]; then
+    region_highlight+=( "$(( ${#BUFFER} )) $(( ${#BUFFER} + ${#suggestion} )) fg=8 memo=rfig" )
+  fi
+  local first=$(( _rfig_selected > 5 ? _rfig_selected - 4 : 1 ))
+  local index row start strip=''
+  for (( index = first; index <= $#_rfig_hits && index < first + 5; index++ )); do
+    local candidate=${_rfig_hits[index]%%$'\t'*}
+    [[ -n $candidate ]] || continue
+    if (( index == _rfig_selected )); then
+      strip+="›$index $candidate  "
+    else
+      strip+=" $index $candidate  "
+    fi
+  done
+  if [[ -n $strip ]]; then
+    local width=$(( COLUMNS > 2 ? COLUMNS - 2 : 0 ))
+    printf -v row '%-*.*s' $width $width "$strip"
+    POSTDISPLAY+=$'\n'$row
+    start=$(( ${#BUFFER} + ${#POSTDISPLAY} - ${#row} ))
+    region_highlight+=( "$start $((start + ${#row})) fg=8 memo=rfig" )
+  fi
 }
 
 _rfig_complete() {

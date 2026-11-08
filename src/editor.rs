@@ -16,7 +16,7 @@ use std::{
         mpsc, Arc,
     },
     thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
 use unicode_width::UnicodeWidthStr;
 
@@ -166,7 +166,8 @@ impl Screen {
         let rendered = format!("{line}{suggestion}");
         let line_rows =
             (self.x as usize + UnicodeWidthStr::width(rendered.as_str())) / self.cols as usize + 1;
-        let height = line_rows.min(self.rows as usize) as u16;
+        let menu_rows = usize::from(!items.is_empty());
+        let height = (line_rows + menu_rows).min(self.rows as usize) as u16;
         let scroll = (self.y + height).saturating_sub(self.rows);
         if scroll > 0 {
             queue!(
@@ -184,6 +185,30 @@ impl Screen {
                 Print(suggestion),
                 ResetColor
             )?;
+        }
+        if !items.is_empty() {
+            let first = selected.saturating_sub(4);
+            let mut strip = String::new();
+            for (offset, item) in items.iter().enumerate().skip(first).take(5) {
+                if !strip.is_empty() {
+                    strip.push_str("  ");
+                }
+                let pointer = if offset == selected { "›" } else { " " };
+                strip.push_str(&format!("{pointer}{} {}", offset + 1, item.label));
+            }
+            let y = self.y.saturating_add(line_rows as u16);
+            if y < self.rows {
+                queue!(
+                    self.tty,
+                    MoveTo(0, y),
+                    SetForegroundColor(Color::DarkGrey),
+                    Print(crate::padded(
+                        &strip,
+                        (self.cols as usize).saturating_sub(1)
+                    )),
+                    ResetColor
+                )?;
+            }
         }
         self.drawn = height;
         let pos = self.x as usize + UnicodeWidthStr::width(&line[..point]);
@@ -470,6 +495,34 @@ pub fn run(
                         break "execute";
                     }
                     KeyCode::Tab => {
+                        if items.is_empty() && !pending.is_empty() {
+                            // Tab is an explicit acceptance request. Give the in-flight
+                            // completion a brief chance to finish before falling back to
+                            // the host shell, which could insert an unquoted candidate.
+                            let deadline = Instant::now() + Duration::from_millis(400);
+                            while items.is_empty() && Instant::now() < deadline {
+                                let Ok((query, new_context, mut hits)) =
+                                    updates.recv_timeout(Duration::from_millis(20))
+                                else {
+                                    continue;
+                                };
+                                if query != line[..point] {
+                                    continue;
+                                }
+                                memory.rank(&new_context, &mut hits);
+                                if point == line.len() {
+                                    memory.add_history(&line, &mut hits);
+                                }
+                                ctx = new_context;
+                                items = hits;
+                                selected = focused_label
+                                    .as_ref()
+                                    .and_then(|label| {
+                                        items.iter().position(|item| item.label == *label)
+                                    })
+                                    .unwrap_or(0);
+                            }
+                        }
                         if let Some(item) = items.get(selected) {
                             let previous = items.iter().map(|i| i.label.clone()).collect();
                             if insert_item(item, &ctx, &mut line, &mut point) {

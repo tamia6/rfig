@@ -4,6 +4,11 @@ import unittest
 from strict_shell import StrictShell, SHELL
 
 class PromptGeometry(StrictShell):
+    def accept_recommendation(self):
+        self.keys('Tab')
+        time.sleep(.12)
+        self.keys('Enter')
+
     def test_dynamic_prompt_scroll_resize(self):
         marker='PROMPT-HEADER-'+'x'*55
         if SHELL=='bash':
@@ -28,8 +33,8 @@ class PromptGeometry(StrictShell):
             self.call('resize-window','-t','test','-x',str(width),'-y','10')
             time.sleep(.2)
             self.type('c'); self.keys('BSpace')
-            self.wait(lambda:self.label_visible('space value'),'menu after resize')
-        self.keys('Tab','Enter')
+            self.wait(lambda:'›1 ' in self.current(),'numbered candidates after resize')
+        self.accept_recommendation()
         self.wait(lambda:len(self.executed())==1,'selected command execution')
         self.assertEqual(self.executed()[0],['space value'])
         self.wait(lambda:self.current()=='','prompt after execution')
@@ -42,7 +47,7 @@ class PromptGeometry(StrictShell):
             previous=self.call('capture-pane','-p','-t','test','-S','-').count('PROMPT-HEADER-')
             self.type('rfigprobe spa'); self.wait(lambda:self.label_visible('space value'),'menu after output')
             self.assertEqual(self.call('capture-pane','-p','-t','test','-S','-').count('PROMPT-HEADER-'),previous,'editing accumulated old prompt headers')
-            self.keys('Tab','Enter')
+            self.accept_recommendation()
             self.wait(lambda:len(self.executed())==n+2,'repeat command')
             self.wait(lambda:self.current()=='','clean prompt')
             self.assertNotIn('›',self.screen())
@@ -63,7 +68,7 @@ class PromptGeometry(StrictShell):
         self.call('resize-window','-t','test','-x','58','-y','10')
         time.sleep(.2)
         self.type('rfigprobe spa'); self.wait(lambda:self.label_visible('space value'),'right block menu')
-        self.keys('Tab','Enter')
+        self.accept_recommendation()
         self.wait(lambda:len(self.executed())==1 and self.current().replace('STATUS','').strip()=='','right block execution')
         self.assertEqual(self.executed()[0],['space value'])
         self.assertNotIn('›',self.screen())
@@ -73,7 +78,7 @@ class PromptGeometry(StrictShell):
         self.type("shopt -u promptvars; PS1='RFIG> '; touch \"$HOME/promptvars-off\""); self.keys('Enter')
         self.wait(lambda:(self.home/'promptvars-off').exists() and self.current()=='','disabled promptvars prompt')
         self.type('rfigprobe spa'); self.wait(lambda:self.label_visible('space value'),'disabled promptvars menu')
-        self.keys('Tab','Enter')
+        self.accept_recommendation()
         self.wait(lambda:len(self.executed())==1 and self.current()=='','disabled promptvars execution')
 
     def test_wrapped_input_resize(self):
