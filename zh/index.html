@@ -31,21 +31,22 @@
         <p class="badge"><span class="signal"></span> zsh · Bash · Fish</p>
         <h1>让终端<br><em>跟上你的思路。</em></h1>
         <p class="eyebrow">开源终端自动补全 · 受 Fig 启发的独立项目</p>
-        <p class="hero-desc">输入时查看候选，用右箭头插入下一步。菜单与按目录匹配的历史命令自动建议同时显示，无需另外安装 zsh-autosuggestions 类命令自动建议插件。</p>
+        <p class="hero-desc">输入时显示一条安静的灰色内联推荐，并在下方用彩色菜单分列显示最多五条编号候选。用 Command 加方向键或数字切换，再按 Tab 插入。按目录匹配的历史建议共用同一推荐。</p>
         <div class="actions"><a class="primary" href="#install">开始使用 <span>↗</span></a><a class="secondary" href="#demo">看看实际效果 ↓</a></div>
         <p class="source-note">v0.3.1 支持 zsh、Bash 4.4+、Fish 3.6+。<a href="#support">查看支持范围与系统要求 ↗</a></p>
         <div class="hero-facts"><span><b>01</b> 输入即显示</span><span><b>02</b> 动态多级补全</span><span><b>03</b> 尊重本机环境</span></div>
       </div>
-      <div class="hero-art" aria-label="rfig 补全菜单示意">
+      <div class="hero-art" aria-label="rfig 灰色内联补全示意">
         <div class="orbit-field" aria-hidden="true"><div class="orbit orbit-a"></div><div class="orbit orbit-b"></div></div>
         <div class="terminal">
           <div class="terminal-bar"><span class="lights"><i></i><i></i><i></i></span><span>rfig — zsh</span><span>⌘</span></div>
           <div class="terminal-body">
-            <div><span class="prompt">❯</span> git checkout<span class="cursor"></span></div>
-            <div class="terminal-row active"><span>→</span><span class="branch-icon">①</span><strong>feature/ui-refresh</strong></div>
-            <div class="terminal-row"><span></span><span class="branch-icon">●</span><span>main</span></div>
-            <div class="terminal-row"><span></span><span class="branch-icon">●</span><span>release/0.1</span></div>
-            <div class="terminal-hint">↑ ↓ 选择　·　→ 插入　·　Enter 执行</div>
+            <div><span class="prompt">❯</span> git checkout<span class="cursor"></span><span class="inline-suggestion">feature/ui-refresh</span>
+            <div class="terminal-count">1/3</div></div>
+            <div class="terminal-row active"><span>›1</span><span>●</span><span>feature/ui-refresh</span></div>
+            <div class="terminal-row"><span>2</span><span>●</span><span>main</span></div>
+            <div class="terminal-row"><span>3</span><span>●</span><span>release/0.1</span></div>
+            <div class="terminal-hint">⌘↑↓ 切换　·　⌘1–5 定位　·　Tab 插入</div>
           </div>
         </div>
         <div class="float-tag"><b>↳</b> 多一级，也一样顺手</div>
@@ -54,20 +55,20 @@
     <section class="demo container" id="demo">
       <div class="section-head"><div><p class="eyebrow">LIVE IN YOUR TERMINAL</p><h2>补全，应该就在光标旁边。</h2></div><p>无需切换窗口，也无需记住所有子命令。选中候选后继续输入，下一层自然出现。</p></div>
       <div class="demo-frame"><div class="demo-bar"><span class="lights"><i></i><i></i><i></i></span><span>真实终端演示</span><span>rfig / zsh</span></div><img src="../rfig-showcase.gif" width="1120" height="430" alt="rfig 在 zsh 中展示 Git 从 g、gi、git 到 checkout 和动态分支的逐级补全，以及 Brew 服务和 npm 脚本" loading="lazy"></div>
-      <p class="under-note">↗ 输入 g、gi、git，继续进入 checkout 并选择实时分支；动图同时展示 Brew、npm 动态候选、方向键导航、插入、执行和取消菜单。</p>
+      <p class="under-note">↗ 输入 g、gi、git，继续进入 checkout，再用灰色内联推荐选择实时分支；动图同时展示 Brew、npm 动态候选、键盘选择、插入、执行和取消推荐。</p>
     </section>
     <section class="features container" id="features">
       <div class="section-head"><div><p class="eyebrow">BUILT FOR FLOW</p><h2>少一点打断，<br>多一点专注。</h2></div><p>把熟悉的终端留给你，把繁琐的记忆工作交给 rfig。</p></div>
       <div class="feature-grid">
         <article class="feature-card big">
           <span class="card-index">01 / 直接出现</span>
-          <div class="mini-demo" aria-hidden="true"><span class="prompt">❯</span> brew services <span class="mini-cursor"></span><div class="mini-list"><div>→ <b>↳</b> <strong>start</strong></div><div>　<b>↳</b> stop</div><div>　<b>↳</b> list</div></div></div>
-          <h3>历史置顶，补全紧随。</h3><p>当前目录匹配的历史建议最多一条放在菜单首行，以 ◷ 标识；普通候选只根据实际输入生成。方向键浏览，右箭头插入，选中历史行时填入完整命令但不执行。不再显示行内灰字；Enter 只执行实际输入，Ctrl+E 只移到行尾。</p>
+          <div class="mini-demo" aria-hidden="true"><span class="prompt">❯</span> brew services <span class="mini-cursor"></span><span class="inline-suggestion">start   1/3</span><div class="mini-list"><div>›1 start　 2 stop　 3 list</div></div></div>
+          <h3>一条灰色推荐，加编号候选。</h3><p>普通补全或当前目录历史匹配会作为灰色后缀出现在光标之后，下方彩色菜单逐行列出最多五条编号候选，候选与说明分列对齐。用 Command 加方向键或数字切换，按 Tab 填入但不执行。Enter 只执行实际输入。</p>
         </article>
         <article class="feature-card"><span class="card-index">02 / 跟着环境走</span><div class="feature-symbol">{<span>git</span>}</div><h3>动态，不靠死表。</h3><p>优先使用当前 Shell 的补全定义，再结合可用脚本、协议和帮助缓存。分支、路径等候选随环境变化，多级能力取决于补全来源。</p></article>
-        <article class="feature-card"><span class="card-index">03 / 越用越顺手</span><div class="rank-example">① 常用候选　 ② 第二选择　 ↳ 其他命令</div><h3>习惯决定排序。</h3><p>按命令上下文累计选择与执行记录。常用候选靠前，最多前三项标记圈号，其他候选仍可浏览；数据保存在本机。</p></article>
+        <article class="feature-card"><span class="card-index">03 / 越用越顺手</span><div class="rank-example">beta   1/3</div><h3>习惯决定排序。</h3><p>按命令上下文累计选择与执行记录，常用候选会更早成为内联推荐；紧凑的位置计数让其他推荐仍可切换。数据保存在本机。</p></article>
       </div>
-      <p class="under-note">输入 <code>gi</code> 时，即使历史首行给出完整的 <code>git checkout master</code>，普通候选也只按 <code>gi</code> 提示。颜色使用终端的 ANSI 调色板，选中项由箭头与文字颜色标识。</p>
+      <p class="under-note">输入 <code>gi</code> 时，<code>git checkout master</code> 可作为灰色内联推荐出现。Terminal.app 用户执行一次 <code>rfig terminal-keys</code> 后即可使用 Command+方向键和 Command+数字。</p>
     </section>
     <section class="support container" id="support" aria-labelledby="support-title">
       <div class="section-head"><div><p class="eyebrow">KNOW WHAT WORKS</p><h2 id="support-title">选你熟悉的 Shell。</h2></div><p>v0.3.1 支持以下 Shell，可按需分别启用。</p></div>
@@ -76,9 +77,9 @@
           <caption>当前源码的 Shell 支持范围。</caption>
           <thead><tr><th scope="col">功能</th><th scope="col">zsh</th><th scope="col">Bash 4.4+</th><th scope="col">Fish 3.6+</th></tr></thead>
           <tbody>
-            <tr><th scope="row">自动菜单与多级候选</th><td>✅ 已支持</td><td>✅ 已支持</td><td>✅ 已支持</td></tr>
+            <tr><th scope="row">灰色内联推荐与编号候选</th><td>✅ 已支持</td><td>✅ 已支持</td><td>✅ 已支持</td></tr>
             <tr><th scope="row">按目录匹配的自动建议</th><td>✅ 已支持</td><td>✅ 已支持</td><td>✅ 已支持</td></tr>
-            <tr><th scope="row">常用排序、类别配色</th><td>✅ 已支持</td><td>✅ 已支持</td><td>✅ 已支持</td></tr>
+            <tr><th scope="row">常用排序、Command/Alt 与数字快捷键</th><td>✅ 已支持</td><td>✅ 已支持</td><td>✅ 已支持</td></tr>
           </tbody>
         </table>
       </div>
@@ -87,9 +88,10 @@
         <article><h3>按需启用多个 Shell</h3><p>使用 <code>rfig setup --shell zsh</code> 配置 zsh；将 Shell 名称换为 <code>bash</code> 或 <code>fish</code> 即可分别启用。配置完成后打开新会话，rfig 不会修改默认 Shell。</p></article>
       </div>
     </section>
-    <section class="how container" id="how"><div><p class="eyebrow">HOW IT WORKS</p><h2>从安装到顺手，<br>只差一次设置。</h2><p>安装时扫描当前 PATH 中的可执行命令与常见补全目录。macOS/Linux 在可用沙箱中串行分析缺少规则的部分用户命令；动态候选仍按需查询。</p></div><div class="steps"><div><span>01</span><strong>安装 rfig</strong><p>选择 Homebrew、预编译包或源码安装。</p></div><div><span>02</span><strong>运行 setup</strong><p>按 $SHELL 或 --shell 指定的类型写入集成；可用沙箱中后台继续优化，可重复设置。</p></div><div><span>03</span><strong>打开新终端</strong><p>有可用补全来源时，候选出现在输入下方；历史从使用时开始按目录记录。</p></div></div></section>
+    <section class="how container" id="how"><div><p class="eyebrow">HOW IT WORKS</p><h2>从安装到顺手，<br>只差一次设置。</h2><p>安装时扫描当前 PATH 中的可执行命令与常见补全目录。macOS/Linux 在可用沙箱中串行分析缺少规则的部分用户命令；动态候选仍按需查询。</p></div><div class="steps"><div><span>01</span><strong>安装 rfig</strong><p>选择 Homebrew、预编译包或源码安装。</p></div><div><span>02</span><strong>运行 setup</strong><p>按 $SHELL 或 --shell 写入集成；macOS Terminal.app 再运行 rfig terminal-keys 启用 Command+方向键。</p></div><div><span>03</span><strong>打开新终端</strong><p>光标后出现灰色推荐，下方显示编号候选；历史按目录记录。</p></div></div></section>
     <section class="install" id="install"><div class="container install-inner"><div><p class="eyebrow">GET STARTED</p><h2>现在，打开你的终端。</h2><p>macOS 与 Linux 均可从源码安装。Linux 安装包按 x86_64 / ARM64 区分，要求 glibc 2.36+。Homebrew 和下载包以发布版本为准。macOS 自带 Bash 3.2 不支持。</p></div><div class="install-card"><div class="tabs" role="tablist" aria-label="安装方式"><button type="button" role="tab" aria-selected="true" class="selected" data-method="brew">Homebrew</button><button type="button" role="tab" aria-selected="false" data-method="binary">下载二进制</button><button type="button" role="tab" aria-selected="false" data-method="source">从源码</button></div><div class="code-box"><small>在终端运行</small><pre><code id="install-code">brew install tamia6/tap/rfig
-"$(brew --prefix rfig)/bin/rfig" setup</code></pre><button id="copy" type="button">复制命令</button></div><p id="install-caption">安装 Tap 发布版本，setup 默认按 $SHELL 配置；随后打开对应 Shell 的新会话。</p></div></div></section>
+"$(brew --prefix rfig)/bin/rfig" setup
+"$(brew --prefix rfig)/bin/rfig" terminal-keys</code></pre><button id="copy" type="button">复制命令</button></div><p id="install-caption">安装 Tap 发布版本、启用 Shell，并为 macOS Terminal.app 添加 Command 键映射。</p></div></div></section>
     <section class="faq container" aria-labelledby="faq-title">
       <div class="section-head"><div><p class="eyebrow">A FEW DETAILS</p><h2 id="faq-title">开始之前，你可能想知道。</h2></div></div>
       <details><summary>还需要安装 zsh-autosuggestions 吗？</summary><p>不需要。rfig 内置历史命令自动建议，可替代它的历史命令自动建议功能。请从 .zshrc 或插件管理器中移除旧插件的加载配置，再开启新会话。Fish 集成也会关闭原生命令自动建议，使用 rfig 的目录历史。</p></details>
@@ -97,7 +99,7 @@
       <details><summary>rfig 支持所有命令吗？</summary><p>不保证。候选范围取决于本机可用的补全定义、脚本、生成器和帮助缓存。有些命令可能没有候选，或只能获得基于帮助文本的基础候选。</p></details>
       <details><summary>rfig 会使用 AI 吗？</summary><p>不会。补全、历史建议和使用排序均在本机运行，无需 AI 服务或云端账号。</p></details>
       <details><summary>会导入旧历史、扫描整台电脑吗？</summary><p>不会自动导入缺少目录信息的旧 Shell 历史。命令扫描以当前 PATH 与常见补全目录为范围，不会遍历整块磁盘。历史、选择记录与缓存保存在 ~/.config/rfig/。</p></details>
-      <details><summary>Enter 会接受选中的历史建议吗？</summary><p>不会。Enter 只执行实际输入。光标在行尾时，用右箭头插入选中的历史行或普通候选，再按 Enter 执行。Ctrl+E 只移到行尾。</p></details>
+      <details><summary>Enter 会接受灰色推荐吗？</summary><p>不会。Enter 只执行实际输入。用 Command 加方向键或数字选择，按 Tab 插入，再按 Enter 执行。Terminal.app 用户执行一次 rfig terminal-keys；不转发 Command 的终端仍可使用 Option/Alt。</p></details>
       <details><summary>帮助分析支持多层子命令吗？</summary><p>支持。rfig analyze 按层使用 --help / -h 遍历声明的子命令，直到叶子节点，不限制固定层数；zsh、Bash、Fish 共用每条命令路径的缓存。探测在沙箱内串行执行并保留已有资源限制；重复父级帮助时停止该分支，失败节点保留旧缓存并报告。输入时不额外扫描帮助，动态资源名称仍需补全提供器。已知命令分组中的文件兜底或空结果会由帮助缓存补齐，叶子命令的原生动态参数仍保留。</p></details>
       <details><summary>为什么有些命令没有候选？</summary><p>命令可能没有可用补全定义，或后台分析尚未完成、被跳过或失败。可查看 ~/.config/rfig/enrich.status；done 只表示处理结束，不代表每个命令都成功。可用 rfig analyze &lt;命令名&gt; 单独刷新。Linux 若缺少 Landlock 或被容器限制，会明确提示无法探测，不会退回无隔离执行。</p></details>
       <details><summary>Homebrew 升级后，Shell 集成如何更新？</summary><p>用更新后的 Homebrew 版本为每个 Shell 执行一次 setup，zsh、Bash、Fish 的集成脚本会链接到软件包的稳定 opt 路径。以后执行 brew upgrade rfig，打开新会话即可，无需再次 setup。旧的脚本副本需要这次迁移。建议只保留一种安装方式：旧的 ~/.local/bin/rfig 可能覆盖 Homebrew，请备份后移除该重复程序，历史和使用记录无需删除。</p></details>
@@ -107,7 +109,7 @@
   <footer class="footer container"><div><a class="logo" href="#top"><span class="logo-mark">›_</span>rfig<span class="logo-dot">.</span></a><p>把下一步，留在光标旁。</p></div><div class="footer-links"><a href="https://github.com/tamia6/rfig" target="_blank" rel="noopener noreferrer">GitHub ↗</a><a href="https://github.com/tamia6/rfig/releases/latest" target="_blank" rel="noopener noreferrer">最新版本 ↗</a><a href="https://github.com/tamia6/rfig/blob/main/README.zh-CN.md" target="_blank" rel="noopener noreferrer">文档 ↗</a></div><small>Built for the terminal. Made for the flow.</small></footer>
   <script>
     const methods = {
-      brew: ['brew install tamia6/tap/rfig\n"$(brew --prefix rfig)/bin/rfig" setup', '安装 Tap 发布版本，setup 默认按 $SHELL 配置；随后打开对应 Shell 的新会话。'],
+      brew: ['brew install tamia6/tap/rfig\n"$(brew --prefix rfig)/bin/rfig" setup\n"$(brew --prefix rfig)/bin/rfig" terminal-keys', '安装 Tap 发布版本、按 $SHELL 配置，并为 macOS Terminal.app 添加 Command 键映射。'],
       binary: ['sh install.sh', '从页尾 GitHub Releases 选择与系统和 CPU 匹配的包，在任意目录解压，进入含 install.sh 的目录执行。无需 Rust。'],
       source: ['sh install.sh --shell zsh\n# 也可将 zsh 替换为 bash 或 fish', '在当前源码目录运行，需要 Rust 和 Cargo；自动编译、安装并配置所选 Shell。']
     };
