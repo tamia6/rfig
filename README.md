@@ -4,7 +4,7 @@
 
 **An open-source terminal autocomplete tool with inline gray suggestions and history-based recommendations.**
 
-Built in Rust, rfig brings IDE-style command-line autocomplete to zsh, Bash, and Fish on macOS and Linux. One recommended completion appears inline in muted gray after the cursor, followed by a compact strip of up to five numbered alternatives. Command plus an arrow or number changes the recommendation, and Tab inserts it. Your shell still owns ordinary cursor movement, history, and command execution.
+Built in Rust, rfig brings IDE-style command-line autocomplete to zsh, Bash, and Fish on macOS and Linux. One recommended completion appears inline in muted gray after the cursor, followed by a colored menu with up to five numbered rows and aligned candidate and description columns. Command plus an arrow or number changes the recommendation, and Tab inserts it. Your shell still owns ordinary cursor movement, history, and command execution.
 
 rfig is an independent, Fig-inspired project and is not affiliated with Fig. It uses completion definitions and scripts available in your environment, with sandboxed help analysis as a conditional fallback; it does not promise completion for every command.
 
@@ -28,7 +28,7 @@ The demo shows progressive Git completion from `g` to `gi` to `git`, then `check
 | Dynamic, nested completion | Queries available definitions for subcommands, branches, paths, and more; depth and content depend on the source |
 | History-based autosuggestions | Uses directory-scoped history as a gray inline recommendation; accept explicitly with Tab |
 | Usage-based ranking | Selections and executed commands affect ordering without adding visual badges |
-| Quiet inline display | The recommendation and compact numbered strip use muted ANSI gray with no bright category colors |
+| Quiet inline display | The inline recommendation stays gray; menu rows use category colors and bold selection |
 | Multiple completion sources | Native definitions, installed scripts, command-provided generators, the Cobra protocol, and cached help data |
 | Background enrichment after setup | Quickly scans `$PATH`, then analyzes eligible user commands sequentially on macOS/Linux when a sandbox is available |
 | Shell coverage | zsh ✅, Bash 4.4+ ✅, Fish 3.6+ ✅; other shells are not yet supported |
@@ -92,7 +92,7 @@ Use `command -v rfig` to check the active installation. If a previous source/bin
 
 ## Usage
 
-Start typing to see one gray recommendation inline and a compact numbered strip of up to five alternatives. Available completion definitions determine which subcommands and dynamic arguments can be recommended; no gray text is shown without a usable source. For example, a Git completion definition can query branches in the current repository.
+Start typing to see one gray recommendation inline and a colored menu of up to five numbered alternatives. Available completion definitions determine which subcommands and dynamic arguments can be recommended; no gray text is shown without a usable source. For example, a Git completion definition can query branches in the current repository.
 
 | Key | Behavior |
 | --- | --- |
@@ -106,7 +106,7 @@ Start typing to see one gray recommendation inline and a compact numbered strip 
 | `Enter` | Execute only the actual input; never implicitly accept the gray recommendation |
 | `Ctrl+C` | Cancel the current input |
 
-The inline suffix shows the selected recommendation and its position such as `2/7`; the numbered strip exposes the surrounding candidates. macOS Terminal.app consumes Command+arrow by default, so run `rfig terminal-keys`; Ghostty, WezTerm, Kitty, iTerm2, and other emulators may need equivalent Super forwarding. Option/Alt always remains available as a fallback. For ordinary option candidates, a `-` prefix recommends single-hyphen options and `--` recommends double-hyphen options.
+The inline suffix contains only the suggested text. The candidate menu shows the current position and total, such as `2/7`, above its numbered rows. macOS Terminal.app consumes Command+arrow by default, so run `rfig terminal-keys`; Ghostty, WezTerm, Kitty, iTerm2, and other emulators may need equivalent Super forwarding. Option/Alt always remains available as a fallback. For ordinary option candidates, a `-` prefix recommends single-hyphen options and `--` recommends double-hyphen options.
 
 ### History and usage-based ranking
 
@@ -119,7 +119,7 @@ When using rfig's autosuggestions, remove the `zsh-autosuggestions` source line 
 
 ### Inline display
 
-The recommendation is rendered with ANSI gray after the cursor. A compact ranked position such as `2/7` appears beside it, followed by a gray numbered strip. The selected number uses `›`; there are no category colors or pointer animation. Commands that produce no completion source show no gray text.
+The recommendation is rendered with ANSI gray after the cursor. The ranked position such as `2/7` appears only in the candidate menu, followed by colored rows with aligned candidate and description columns. The selected number uses `›` and bold text; category icons and colors identify commands, arguments, options, flags, and history. Commands that produce no completion source show no gray text.
 
 ## Shell support
 

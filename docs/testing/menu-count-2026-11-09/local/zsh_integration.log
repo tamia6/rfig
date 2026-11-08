@@ -1,0 +1,20 @@
+rfig is ready. Completion enrichment is running in the background; open a new zsh terminal.
+rfig is ready. Completion enrichment is running in the background; open a new zsh terminal.
+rfiggenfixture: 1 candidates analyzed
+rfiggroupfixture: 1 candidates analyzed
+rfigshellfixture: 1 candidates analyzed
+rfigprotocolfixture: 2 candidates analyzed
+rfig is ready. Completion enrichment is running in the background; open a new zsh terminal.
+rfigoptionhelp: 2 candidates analyzed
+rfig: rfig setup: parent help repeated; stopping this branch
+rfig: rfig init: parent help repeated; stopping this branch
+rfig: rfig analyze: parent help repeated; stopping this branch
+rfig: rfig completion: parent help repeated; stopping this branch
+rfig: rfig terminal-keys: parent help repeated; stopping this branch
+rfig: 7 candidates analyzed
+Traceback (most recent call last):
+  File "/Users/cscs/Documents/Codex/2026-11-07/rfig/tests/zsh_integration.py", line 329, in <module>
+    live = wait_for(fd, b" 1/")
+  File "/Users/cscs/Documents/Codex/2026-11-07/rfig/tests/zsh_integration.py", line 36, in wait_for
+    raise AssertionError(f"waiting for {needle!r}; output ended with {output[-300:]!r}")
+AssertionError: waiting for b' 1/'; output ended with b'35m \x1b[35m \x1b[35m \x1b[35m \x1b[35m \x1b[35m \x1b[35m \x1b[35m \x1b[35m \x1b[35m \x1b[35m \x1b[35m \x1b[35m \x1b[35m \x1b[35m \x1b[35m \x1b[35m \x1b[39m\x1b[1B\r\x1b[34m 3 \xe2\x97\x87 --as                                 \x1b[39m\x1b[K\x1b[1B\r\x1b[34m 4 \xe2\x97\x87 --cache-dir                          \x1b[39m\x1b[K\x1b[1B\r\x1b[34m 5 \xe2\x97\x87 --env=                               \x1b[39m\x1b[K\x1b[6A\x1b[25D'

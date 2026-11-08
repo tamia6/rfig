@@ -1,0 +1,9 @@
+'cd /' -> 'cd /bin/'
+'ls /' -> 'ls /bin/'
+Traceback (most recent call last):
+  File "/work/tests/zsh_path_completion.py", line 56, in <module>
+    before, hits = snapshot()
+                   ^^^^^^^^^^
+  File "/work/tests/zsh_path_completion.py", line 37, in snapshot
+    raise AssertionError('snapshot timeout')
+AssertionError: snapshot timeout

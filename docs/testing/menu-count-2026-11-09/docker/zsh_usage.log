@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "/work/tests/zsh_usage.py", line 109, in <module>
+    wait_for(lambda output: "rfigfixture alpha   3/" in output)
+  File "/work/tests/zsh_usage.py", line 72, in wait_for
+    raise AssertionError(f"timed out; screen: {output!r}")
+AssertionError: timed out; screen: 'RFIG> rfigfixture alpha\nRFIG> rfigfixture alpha\n 3/3\n 1 ◷ rfigfixture alpha                    History\n 2 ● beta\n›3 ● alpha\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n'

@@ -1,0 +1,30 @@
+Traceback (most recent call last):
+  File "/Users/cscs/Documents/Codex/2026-11-07/rfig/tests/multi_shell_interaction.py", line 83, in <module>
+    keys('M-3','Tab'); wait_for(lambda:'north' in screen(),'nested completion missing'); keys('Tab','C-e','Enter')
+                       ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/cscs/Documents/Codex/2026-11-07/rfig/tests/multi_shell_interaction.py", line 65, in wait_for
+    raise AssertionError(message+'\n'+screen())
+AssertionError: nested completion missing
+RFIG> rfigfixture
+RFIG> rfigfixture beta
+ 1/1
+›1 ↳ beta
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

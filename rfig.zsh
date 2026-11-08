@@ -215,29 +215,47 @@ _rfig_render() {
     prospective="$prefix$insert$space"
   fi
   suggestion=${prospective[$(( CURSOR + 1 )),-1]}
-  (( $#_rfig_hits > 1 )) && suggestion+="  ${_rfig_selected}/${#_rfig_hits}"
   POSTDISPLAY=$suggestion
   if [[ -n $suggestion ]]; then
     region_highlight+=( "$(( ${#BUFFER} )) $(( ${#BUFFER} + ${#suggestion} )) fg=8 memo=rfig" )
   fi
+  local count_start=$(( ${#BUFFER} + ${#POSTDISPLAY} + 1 ))
+  local count_text=" ${_rfig_selected}/${#_rfig_hits}"
+  POSTDISPLAY+=$'\n'$count_text
+  region_highlight+=( "$count_start $((count_start + ${#count_text})) fg=8 memo=rfig" )
   local first=$(( _rfig_selected > 5 ? _rfig_selected - 4 : 1 ))
-  local index row start strip=''
+  local index row start label description icon color visible width label_width
+  width=$(( COLUMNS > 1 ? COLUMNS - 1 : 0 ))
+  label_width=$(( width > 52 ? 36 : width / 2 ))
   for (( index = first; index <= $#_rfig_hits && index < first + 5; index++ )); do
-    local candidate=${_rfig_hits[index]%%$'\t'*}
-    [[ -n $candidate ]] || continue
+    record=${_rfig_hits[index]}
+    label=${record%%$'\t'*}
+    rest=${record#*$'\t'}
+    rest=${rest#*$'\t'}
+    description=${rest%%$'\t'*}
+    kind=${record##*$'\t'}
+    case $kind in
+      history) icon='◷'; color=8 ;;
+      command) icon='⌘'; color=cyan ;;
+      subcommand) icon='↳'; color=magenta ;;
+      argument) icon='●'; color=green ;;
+      option) icon='◇'; color=blue ;;
+      flag) icon='⚑'; color=yellow ;;
+      *) icon='●'; color=green ;;
+    esac
+    visible=$(( index - first + 1 ))
+    local pointer=' '
+    (( index == _rfig_selected )) && pointer='›'
+    printf -v row '%s%d %s %-*.*s %s' "$pointer" "$visible" "$icon" $label_width $label_width "$label" "$description"
+    row=${row[1,width]}
+    POSTDISPLAY+=$'\n'
+    start=$(( ${#BUFFER} + ${#POSTDISPLAY} ))
+    POSTDISPLAY+=$row
+    region_highlight+=( "$start $((start + ${#row})) fg=$color memo=rfig" )
     if (( index == _rfig_selected )); then
-      strip+="›$index $candidate  "
-    else
-      strip+=" $index $candidate  "
+      region_highlight+=( "$start $((start + ${#row})) bold memo=rfig" )
     fi
   done
-  if [[ -n $strip ]]; then
-    local width=$(( COLUMNS > 2 ? COLUMNS - 2 : 0 ))
-    printf -v row '%-*.*s' $width $width "$strip"
-    POSTDISPLAY+=$'\n'$row
-    start=$(( ${#BUFFER} + ${#POSTDISPLAY} - ${#row} ))
-    region_highlight+=( "$start $((start + ${#row})) fg=8 memo=rfig" )
-  fi
 }
 
 _rfig_complete() {

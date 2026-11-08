@@ -1,0 +1,18 @@
+RFIG> source /tmp/rfig-strict-6gz35f8b/noisy-completion
+RFIG> source /tmp/rfig-strict-6gz35f8b/noisy-completion
+RFIG>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

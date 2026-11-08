@@ -36,6 +36,22 @@ def wait_for(fd, needle, timeout=5):
     raise AssertionError(f"waiting for {needle!r}; output ended with {output[-300:]!r}")
 
 
+
+def wait_for_redraw(fd, timeout=5):
+    # ZLE emits screen differences: an unchanged menu counter need not be sent.
+    output = b""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if select.select([fd], [], [], 0.2)[0]:
+            chunk = os.read(fd, 65536)
+            output += chunk
+            if b"\x1b[6n" in chunk:
+                os.write(fd, CURSOR_REPLY)
+        elif output:
+            return output
+    raise AssertionError(f"no completed redraw: {output[-300:]!r}")
+
+
 def wait_for_file(fd, path, timeout=5):
     transcript = b""
     deadline = time.monotonic() + timeout
@@ -266,7 +282,7 @@ with tempfile.TemporaryDirectory() as temp:
         for name, expected in (("rfiglatefixture", "late-two"), ("rfiggenfixture", "generated-two"), ("rfiggroupfixture", "grouped-two"), ("rfigshellfixture", "shell-two"), ("rfigprotocolfixture", "protocol-two"), ("rfigfishfixture", "fish-two"), ("rfigbashfixture", "bash-two")):
             (home / "hits").unlink(missing_ok=True)
             os.write(fd, name.encode())
-            rendered = wait_for(fd, b" 1/")
+            rendered = wait_for_redraw(fd)
             assert b"record=''" not in rendered, f"completion leaked a local variable for {name}"
             os.write(fd, b"\x18")
             wait_for_file(fd, home / "hits")
@@ -298,7 +314,7 @@ with tempfile.TemporaryDirectory() as temp:
         ):
             (home / "hits").unlink(missing_ok=True)
             os.write(fd, command.encode())
-            rendered = wait_for(fd, b" 1/")
+            rendered = wait_for_redraw(fd)
             assert b"record=''" not in rendered, f"completion leaked a local variable for {command}"
             os.write(fd, b"\x18")
             wait_for_file(fd, home / "hits")
@@ -326,7 +342,7 @@ with tempfile.TemporaryDirectory() as temp:
         wait_for_file(fd, home / "hits")
         assert any(line.startswith("rfigfixture\t") and line.endswith("\tcommand") for line in (home / "hits").read_text().splitlines())
         os.write(fd, b"xture")
-        live = wait_for(fd, b" 1/")
+        live = wait_for_redraw(fd)
         assert b"\x1b[7m" not in live, "selection must not use inverse video"
         (home / "hits").unlink(missing_ok=True)
         os.write(fd, b"\x18")
@@ -356,7 +372,7 @@ with tempfile.TemporaryDirectory() as temp:
         assert (home / "fixture-args").read_text() == "zeta\n"
 
         os.write(fd, b"rfigfixture")
-        wait_for(fd, b" 1/")
+        wait_for_redraw(fd)
         os.write(fd, b"\x1b3")  # Focus the third visible row: alpha.
         time.sleep(0.1)
         os.write(fd, b"\t")
@@ -385,7 +401,7 @@ with tempfile.TemporaryDirectory() as temp:
         wait_for(fd, b"RFIG> ")
         (home / "hits").unlink(missing_ok=True)
         os.write(fd, b"git checkout ")
-        wait_for(fd, b" 1/")
+        wait_for_redraw(fd)
         os.write(fd, b"\x18")
         wait_for_file(fd, home / "hits")
         checkout_hits = (home / "hits").read_text().splitlines()
@@ -395,7 +411,7 @@ with tempfile.TemporaryDirectory() as temp:
 
         (home / "hits").unlink(missing_ok=True)
         os.write(fd, b"git checkout -- ")
-        wait_for(fd, b" 1/")
+        wait_for_redraw(fd)
         os.write(fd, b"\x18")
         wait_for_file(fd, home / "hits")
         assert any(line.startswith("tracked.txt\t") for line in (home / "hits").read_text().splitlines())
@@ -419,7 +435,7 @@ with tempfile.TemporaryDirectory() as temp:
         wait_for(fd, b"RFIG> ")
         (home / "hits").unlink(missing_ok=True)
         os.write(fd, b"git checkout ")
-        wait_for(fd, b" 1/")
+        wait_for_redraw(fd)
         os.write(fd, b"\x18")
         wait_for_file(fd, home / "hits")
         checkout_hits = (home / "hits").read_text().splitlines()
@@ -429,7 +445,7 @@ with tempfile.TemporaryDirectory() as temp:
 
         (home / "hits").unlink(missing_ok=True)
         os.write(fd, b"rfigbranchfixture ")
-        wait_for(fd, " 1/".encode())
+        wait_for_redraw(fd)
         os.write(fd, b"\x18")
         wait_for_file(fd, home / "hits")
         branch_hits = (home / "hits").read_text().splitlines()
@@ -446,23 +462,29 @@ with tempfile.TemporaryDirectory() as temp:
                 deadline = time.monotonic() + 5
                 while time.monotonic() < deadline:
                     screen = subprocess.check_output(tmux + ["capture-pane", "-t", "check", "-p"], env=session_env, text=True)
-                    if "rfigdisplay alpha   1/" in screen:
+                    if "rfigdisplay alpha" in screen and " 1/" in screen:
                         break
                     time.sleep(0.05)
-                assert "rfigdisplay alpha   1/" in screen, "the selected candidate must render inline"
+                assert "rfigdisplay alpha" in screen and " 1/" in screen, f"the selected candidate must render inline: {screen!r}"
+                inline = next(line for line in screen.splitlines() if "RFIG> rfigdisplay" in line)
+                assert not re.search(r"\d+/\d+", inline), inline
                 styled = subprocess.check_output(tmux + ["capture-pane", "-t", "check", "-p", "-e"], env=session_env)
                 selected = next(line for line in styled.splitlines() if b"alpha" in line)
                 assert b"\x1b[7m" not in selected, "the selected row must not use inverse video"
                 assert b"\x1b[32m" not in selected and b"\x1b[36m" not in selected, "candidate colors must stay muted"
                 assert b"\x1b[90m" in selected or b"38;5;8m" in selected, "inline suggestion must use gray"
+                menu = [line for line in styled.splitlines() if b"alpha" in line or b"beta" in line]
+                assert len(menu) >= 3, "candidates must occupy separate rows below the inline preview"
+                assert any(b"1 " in line and b"alpha" in line and (b"32m" in line or b"[1;32m" in line) for line in menu), menu
+                assert any(b"2 " in line and b"beta" in line for line in menu), menu
                 subprocess.run(tmux + ["send-keys", "-t", "check", "M-Down"], env=session_env, check=True)
                 deadline = time.monotonic() + 5
                 while time.monotonic() < deadline:
                     screen = subprocess.check_output(tmux + ["capture-pane", "-t", "check", "-p"], env=session_env, text=True)
-                    if "rfigdisplay beta   2/" in screen and "➜" not in screen:
+                    if "rfigdisplay beta" in screen and " 2/" in screen and "➜" not in screen:
                         break
                     time.sleep(0.02)
-                assert "rfigdisplay beta   2/" in screen and "➜" not in screen, "selection must move without animation"
+                assert "rfigdisplay beta" in screen and " 2/" in screen and "➜" not in screen, "selection must move without animation"
                 styled = subprocess.check_output(tmux + ["capture-pane", "-t", "check", "-p", "-e"], env=session_env)
                 selected = next(line for line in styled.splitlines() if b"beta" in line)
                 assert b"\x1b[36m" not in selected, "the selected label must stay gray"
@@ -470,10 +492,10 @@ with tempfile.TemporaryDirectory() as temp:
                 deadline = time.monotonic() + 5
                 while time.monotonic() < deadline:
                     screen = subprocess.check_output(tmux + ["capture-pane", "-t", "check", "-p"], env=session_env, text=True)
-                    if "rfigdisplay alpha   1/" in screen and "➜" not in screen:
+                    if "rfigdisplay alpha" in screen and " 1/" in screen and "➜" not in screen:
                         break
                     time.sleep(0.02)
-                assert "rfigdisplay alpha   1/" in screen and "➜" not in screen, "selection must return without animation"
+                assert "rfigdisplay alpha" in screen and " 1/" in screen and "➜" not in screen, "selection must return without animation"
                 subprocess.run(tmux + ["send-keys", "-t", "check", "Tab"], env=session_env, check=True)
                 deadline = time.monotonic() + 5
                 while time.monotonic() < deadline:

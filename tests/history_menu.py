@@ -65,7 +65,7 @@ with tempfile.TemporaryDirectory(prefix='rfig-history-menu-') as temp:
         keys('Tab');wait(lambda:screen().splitlines()[0].startswith('rfigfixture be'),'history insertion')
         execute('be\n')
         # Skip history and its first ordinary candidate, then insert alpha.
-        type_('rfigfixture');wait(lambda:'1/' in screen(),'ordinary candidates')
+        type_('rfigfixture');wait(lambda:'alpha' in screen(),'ordinary candidates ready before numbered selection')
         keys('M-3','Tab');wait(lambda:screen().splitlines()[0].startswith('rfigfixture alpha'),'ordinary candidate insertion')
         execute('alpha\n')
         # History is offered even without a usable completion definition.

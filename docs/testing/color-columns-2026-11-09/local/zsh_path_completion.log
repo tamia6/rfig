@@ -1,0 +1,10 @@
+'cd /' -> 'cd /Applications/'
+'ls /' -> 'ls /Applications/'
+'cd /var/folders/gx/p1lf3sld5fv_4q32v5qssf8w0000gn/T/rfig-path-belskqwy/parent/' -> 'cd /var/folders/gx/p1lf3sld5fv_4q32v5qssf8w0000gn/T/rfig-path-belskqwy/parent/child\\ dir/'
+'cd ./parent/' -> 'cd ./parent/child\\ dir/'
+'cd ~/parent/' -> 'cd ~/parent/child\\ dir/'
+'cd ./parent/ch' -> 'cd ./parent/child\\ dir/'
+'cd /var/folders/gx/p1lf3sld5fv_4q32v5qssf8w0000gn/T/rfig-path-belskqwy/parent/child\\ dir/' -> 'cd /var/folders/gx/p1lf3sld5fv_4q32v5qssf8w0000gn/T/rfig-path-belskqwy/parent/child\\ dir/next/'
+'ls ./parent/fi' -> 'ls ./parent/file\\ name.txt '
+'pathfixture --path=./parent/ch' -> 'pathfixture --path=./parent/child\\ dir/'
+zsh path completion: OK

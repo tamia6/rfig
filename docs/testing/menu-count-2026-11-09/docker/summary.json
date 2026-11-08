@@ -1,0 +1,57 @@
+[
+  {
+    "name": "unit",
+    "exit_code": 0,
+    "seconds": 0.04
+  },
+  {
+    "name": "process-cleanup",
+    "exit_code": 0,
+    "seconds": 0.17
+  },
+  {
+    "name": "setup",
+    "exit_code": 0,
+    "seconds": 0.73
+  },
+  {
+    "name": "homebrew-upgrade",
+    "exit_code": 0,
+    "seconds": 1.2
+  },
+  {
+    "name": "archive-installer",
+    "exit_code": 0,
+    "seconds": 0.03
+  },
+  {
+    "name": "real-binary-installer",
+    "exit_code": 0,
+    "seconds": 4.15
+  },
+  {
+    "name": "linux-probe-safety",
+    "exit_code": 0,
+    "seconds": 0.18
+  },
+  {
+    "name": "setup_safety",
+    "exit_code": 0,
+    "seconds": 4.92
+  },
+  {
+    "name": "self_completion",
+    "exit_code": 0,
+    "seconds": 0.37
+  },
+  {
+    "name": "zsh_integration",
+    "exit_code": 1,
+    "seconds": 17.82
+  },
+  {
+    "name": "zsh_usage",
+    "exit_code": 1,
+    "seconds": 5.53
+  }
+]

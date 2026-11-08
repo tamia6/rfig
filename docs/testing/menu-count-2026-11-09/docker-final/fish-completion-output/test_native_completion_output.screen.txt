@@ -1,0 +1,18 @@
+RFIG> source /tmp/rfig-strict-fuzczoio/noisy-completion
+RFIG> /tmp/rfig-strict-fuzczoio/bin/noisy-provider
+RFIG_DIAGNOSTIC native warning
+alpha
+beta
+RFIG>
+
+
+
+
+
+
+
+
+
+
+
+

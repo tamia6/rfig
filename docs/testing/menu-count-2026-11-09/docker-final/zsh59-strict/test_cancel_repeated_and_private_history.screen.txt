@@ -1,0 +1,18 @@
+RFIG> rfigprobe space\ value
+ 1/1
+›1 ● space value
+RFIG> rfigprobe space\ value
+ 1/1
+›1 ● space value
+RFIG> rfigprobe space\ value
+ 1/1
+›1 ● space value
+RFIG> rfigprobe space\ value
+ 1/1
+›1 ● space value
+RFIG> rfigprobe private
+RFIG>
+
+
+
+

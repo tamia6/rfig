@@ -1,0 +1,77 @@
+[
+  {
+    "name": "unit",
+    "exit_code": 0,
+    "seconds": 0.04
+  },
+  {
+    "name": "process-cleanup",
+    "exit_code": 0,
+    "seconds": 0.17
+  },
+  {
+    "name": "setup",
+    "exit_code": 0,
+    "seconds": 0.71
+  },
+  {
+    "name": "homebrew-upgrade",
+    "exit_code": 0,
+    "seconds": 1.19
+  },
+  {
+    "name": "archive-installer",
+    "exit_code": 0,
+    "seconds": 0.03
+  },
+  {
+    "name": "real-binary-installer",
+    "exit_code": 0,
+    "seconds": 4.05
+  },
+  {
+    "name": "linux-probe-safety",
+    "exit_code": 0,
+    "seconds": 0.18
+  },
+  {
+    "name": "setup_safety",
+    "exit_code": 0,
+    "seconds": 4.94
+  },
+  {
+    "name": "self_completion",
+    "exit_code": 0,
+    "seconds": 0.34
+  },
+  {
+    "name": "zsh_integration",
+    "exit_code": 1,
+    "seconds": 24.35
+  },
+  {
+    "name": "zsh_usage",
+    "exit_code": 1,
+    "seconds": 5.2
+  },
+  {
+    "name": "zsh_array_slices",
+    "exit_code": 0,
+    "seconds": 1.24
+  },
+  {
+    "name": "zsh_history_suggestions",
+    "exit_code": 0,
+    "seconds": 1.39
+  },
+  {
+    "name": "zsh_large_completion",
+    "exit_code": 0,
+    "seconds": 2.26
+  },
+  {
+    "name": "zsh_path_completion",
+    "exit_code": 1,
+    "seconds": 12.44
+  }
+]

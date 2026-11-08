@@ -79,7 +79,7 @@ source {ROOT}/rfig.bash
         wait_for(lambda:'gamma' not in screen(),'overlay remains after execution')
         assert 'RFIG> RFIG>' not in screen(), 'prompt was duplicated'
         (home/'executed').unlink()
-        type_('rfigfixture ');wait_for(lambda:'rfigfixture beta' in screen() and '1/' in screen(),'inline suggestion and history not refreshed')
+        type_('rfigfixture ');wait_for(lambda:'rfigfixture beta' in screen() and 'alpha' in screen(),'inline suggestion and ordinary candidates ready')
         keys('M-3','Tab'); wait_for(lambda:'north' in screen(),'nested completion missing'); keys('Tab','C-e','Enter')
         wait_for(lambda:(home/'executed').exists(),'selected candidate not executed')
         assert (home/'executed').read_text()=='alpha\nnorth\n', (home/'executed').read_text()

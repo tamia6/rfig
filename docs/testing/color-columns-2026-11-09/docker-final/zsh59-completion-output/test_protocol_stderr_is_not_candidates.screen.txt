@@ -1,0 +1,18 @@
+RFIG> source /tmp/rfig-strict-9_jekwx7/noisy-completion
+RFIG> rfigprotocolnoise alpha
+RFIG>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -156,17 +156,15 @@ impl Screen {
         self.rows = rows.max(1);
         self.x = self.x.min(self.cols - 1);
         self.y = self.y.min(self.rows - 1);
-        let mut suggestion = items
+        let suggestion = items
             .get(selected)
             .and_then(|item| preview_suffix(item, &ctx, line, point))
             .unwrap_or_default();
-        if !suggestion.is_empty() && items.len() > 1 {
-            suggestion.push_str(&format!("  {}/{}", selected + 1, items.len()));
-        }
         let rendered = format!("{line}{suggestion}");
         let line_rows =
             (self.x as usize + UnicodeWidthStr::width(rendered.as_str())) / self.cols as usize + 1;
-        let menu_rows = usize::from(!items.is_empty());
+        let first = selected.saturating_sub(4);
+        let menu_rows = items.len().saturating_sub(first).min(5) + usize::from(!items.is_empty());
         let height = (line_rows + menu_rows).min(self.rows as usize) as u16;
         let scroll = (self.y + height).saturating_sub(self.rows);
         if scroll > 0 {
@@ -187,26 +185,55 @@ impl Screen {
             )?;
         }
         if !items.is_empty() {
-            let first = selected.saturating_sub(4);
-            let mut strip = String::new();
-            for (offset, item) in items.iter().enumerate().skip(first).take(5) {
-                if !strip.is_empty() {
-                    strip.push_str("  ");
-                }
-                let pointer = if offset == selected { "›" } else { " " };
-                strip.push_str(&format!("{pointer}{} {}", offset + 1, item.label));
-            }
-            let y = self.y.saturating_add(line_rows as u16);
-            if y < self.rows {
+            let header_y = self.y.saturating_add(line_rows as u16);
+            if header_y < self.rows {
                 queue!(
                     self.tty,
-                    MoveTo(0, y),
+                    MoveTo(0, header_y),
                     SetForegroundColor(Color::DarkGrey),
                     Print(crate::padded(
-                        &strip,
+                        &format!(" {}/{}", selected + 1, items.len()),
                         (self.cols as usize).saturating_sub(1)
                     )),
                     ResetColor
+                )?;
+            }
+            let width = (self.cols as usize).saturating_sub(1);
+            let label_width = if width > 52 { 36 } else { width / 2 };
+            for (visible, (offset, item)) in
+                items.iter().enumerate().skip(first).take(5).enumerate()
+            {
+                let y = self.y.saturating_add((line_rows + 1 + visible) as u16);
+                if y >= self.rows {
+                    break;
+                }
+                let (icon, color) = match item.kind.as_str() {
+                    "history" => ("◷", Color::DarkGrey),
+                    "command" => ("⌘", Color::Cyan),
+                    "subcommand" => ("↳", Color::Magenta),
+                    "option" => ("◇", Color::Blue),
+                    "flag" => ("⚑", Color::Yellow),
+                    _ => ("●", Color::Green),
+                };
+                let pointer = if offset == selected { "›" } else { " " };
+                let row = format!(
+                    "{pointer}{} {icon} {} {}",
+                    visible + 1,
+                    crate::padded(&item.label, label_width),
+                    item.description
+                );
+                queue!(
+                    self.tty,
+                    MoveTo(0, y),
+                    SetForegroundColor(color),
+                    SetAttribute(if offset == selected {
+                        Attribute::Bold
+                    } else {
+                        Attribute::NormalIntensity
+                    }),
+                    Print(crate::padded(&row, width)),
+                    ResetColor,
+                    SetAttribute(Attribute::Reset)
                 )?;
             }
         }
