@@ -1,10 +1,10 @@
-# rfig — Rust Terminal Autocomplete for zsh, Bash, and Fish
+# rfig — Rust Terminal Autocomplete for zsh, Bash, Fish, and PowerShell
 
 **English** · [简体中文](README.zh-CN.md) · [Website](https://tamia6.github.io/rfig/)
 
 **An open-source terminal autocomplete tool with inline gray suggestions and history-based recommendations.**
 
-Built in Rust, rfig brings IDE-style command-line autocomplete to zsh, Bash, and Fish on macOS and Linux. One recommended completion appears inline in muted gray after the cursor, followed by a colored menu with up to five numbered rows and aligned candidate and description columns. Command plus an arrow or number changes the recommendation, and Tab inserts it. Your shell still owns ordinary cursor movement, history, and command execution.
+Built in Rust, rfig brings IDE-style command-line autocomplete to zsh, Bash, and Fish on macOS and Linux. One recommended completion appears inline in muted gray after the cursor, followed by a colored menu with up to five numbered rows and aligned candidate and description columns. Command plus an arrow or number changes the recommendation, and Tab inserts it. The shared editor handles keys and suggestions; your current shell executes accepted commands.
 
 rfig is an independent, Fig-inspired project and is not affiliated with Fig. It uses completion definitions and scripts available in your environment, with sandboxed help analysis as a conditional fallback; it does not promise completion for every command.
 
@@ -16,7 +16,7 @@ The demo shows progressive Git completion from `g` to `gi` to `git`, then `check
 
 [Installation](#installation) · [Usage](#usage) · [Shell support](#shell-support) · [Completion sources](#completion-sources-and-background-enrichment) · [Testing](#testing)
 
-> rfig v0.3.1 supports macOS and Linux with zsh, Bash 4.4+, and Fish 3.6+. Install with Homebrew, a prebuilt binary, or the source code.
+> The source supports zsh, Bash 4.4+, and Fish 3.6+ on macOS/Linux, and PowerShell 7.2+ in Windows Terminal.
 
 **At a glance:** terminal autocomplete and nested CLI completion · directory-scoped history · gray inline recommendation with numbered alternatives · local usage-based ranking · no AI service or cloud account required.
 
@@ -31,7 +31,7 @@ The demo shows progressive Git completion from `g` to `gi` to `git`, then `check
 | Quiet inline display | The inline recommendation stays gray; menu rows use category colors and bold selection |
 | Multiple completion sources | Native definitions, installed scripts, command-provided generators, the Cobra protocol, and cached help data |
 | Background enrichment after setup | Quickly scans `$PATH`, then analyzes eligible user commands sequentially on macOS/Linux when a sandbox is available |
-| Shell coverage | zsh ✅, Bash 4.4+ ✅, Fish 3.6+ ✅; other shells are not yet supported |
+| Shell coverage | zsh, Bash 4.4+, Fish 3.6+, and PowerShell 7.2+ |
 
 ## Installation
 
@@ -48,6 +48,16 @@ sh install.sh --shell fish
 ```
 
 The installer builds rfig into `~/.local/bin/rfig`, then runs `rfig setup`. It does not change your default shell. macOS ships with Bash 3.2, which is not supported; install Bash 4.4+ before enabling Bash integration.
+
+### Windows Terminal and PowerShell
+
+Open a **PowerShell 7.2+ (`pwsh`)** profile in Windows Terminal. From a source checkout with Rust and Cargo installed, run:
+
+```powershell
+.\install.ps1
+```
+
+The same script installs `rfig.exe` from an extracted Windows x64 archive when one is available. It copies the executable to `$HOME/.local/bin` and configures the current PowerShell profile. Open a new tab and use **Alt+arrow** or **Alt+1…5** to choose a suggestion and **Tab** to insert it. The PowerShell adapter uses current-session argument completers and replaces PSReadLine editing while loaded.
 
 ### Homebrew Tap
 
@@ -113,7 +123,7 @@ The inline suffix contains only the suggested text. The candidate menu shows the
 - **History suggestions:** rfig maintains its own directory-scoped history. Typing `gi` can show `git checkout master` as the gray inline recommendation. Command or Option/Alt navigation changes between history and ordinary completion recommendations; Tab inserts the selected one.
 - **Fresh installations:** history starts empty. Old shell history without working-directory information is not imported automatically.
 - **Ranking:** scores are accumulated per command context. Selecting a candidate adds 3; recording an execution adds 1. With equal scores, non-option candidates come first. Ranking changes order without covering labels with extra badges.
-- **Local storage:** history and ranking records stay on your computer. Bash/Fish omit commands beginning with a space; zsh follows that rule when `HIST_IGNORE_SPACE` is enabled.
+- **Local storage:** history and ranking records stay on your computer. Commands beginning with a space are omitted by the shared editor.
 
 When using rfig's autosuggestions, remove the `zsh-autosuggestions` source line from `.zshrc` or your plugin manager configuration, then open a new session. Fish integration disables Fish's native autosuggestions and uses rfig's directory-scoped history instead.
 
@@ -123,18 +133,18 @@ The recommendation is rendered with ANSI gray after the cursor. The ranked posit
 
 ## Shell support
 
-| Capability | zsh | Bash 4.4+ | Fish 3.6+ |
-| --- | --- | --- | --- |
-| Inline gray recommendations, numbered alternatives, and nested candidates | ✅ | ✅ | ✅ |
-| Directory-scoped history, usage ranking, Command/Alt shortcuts | ✅ | ✅ | ✅ |
-| Setup integration and completion for rfig itself | ✅ | ✅ | ✅ |
-| Multiline paste without automatic execution | ✅ | ✅ Returns to native editor | ✅ Returns to native editor |
+| Capability | zsh | Bash 4.4+ | Fish 3.6+ | PowerShell 7.2+ |
+| --- | --- | --- | --- | --- |
+| Inline gray recommendations, numbered alternatives, and nested candidates | ✅ | ✅ | ✅ | ✅ |
+| Directory-scoped history, usage ranking, Alt shortcuts | ✅ | ✅ | ✅ | ✅ |
+| Setup integration and completion for rfig itself | ✅ | ✅ | ✅ | ✅ |
+| Multiline paste without automatic execution | ✅ | ✅ Returns to native editor | ✅ Returns to native editor | ✅ |
 
-zsh uses ZLE; Bash/Fish share a Rust editing layer. `cd`, functions, and variable changes still run in the current shell. Bash/Fish support default Emacs editing and Vi insert mode. `Esc` returns to the native editor; `Ctrl+R` uses native history search. Stale completion results are discarded.
+All four adapters use the Rust editor and crossterm for menu navigation. zsh still uses ZLE to obtain native completions and to execute accepted commands. `cd`, functions, and variable changes execute in the current shell. On Unix, `Esc` returns to the native editor and `Ctrl+R` uses native history search; PowerShell uses rfig's directory history.
 
 **Linux requirements:** x86_64 and ARM64 are supported, with the shell versions listed above. Help analysis uses built-in Landlock + seccomp and needs no additional sandbox tool. It requires Landlock ABI 3+ (typically Linux 6.2+) and permission to use the relevant system calls. Older kernels or restricted containers refuse help probing; inline recommendations, history, and existing completion definitions remain available. Check the kernel with `uname -r` and actual probing with `rfig analyze <command>`. A distribution name alone does not determine kernel capabilities.
 
-macOS uses the system `sandbox-exec`. Linux binaries target glibc 2.36; older userspaces may try building from source. `rfig terminal-keys` is macOS Terminal.app only. Windows and other shells are not yet supported.
+macOS uses the system `sandbox-exec`. Linux binaries target glibc 2.36; older userspaces may try building from source. `rfig terminal-keys` is macOS Terminal.app only. Windows uses PowerShell completions and does not run sandboxed background help analysis.
 
 ## Completion sources and background enrichment
 
@@ -146,6 +156,7 @@ rfig does not maintain a fixed completion database for every command. Each adapt
 | --- | --- |
 | zsh | Registered definitions first; otherwise `$fpath` scripts, generated zsh scripts, external sources, and cached help data |
 | Bash/Fish | Current-shell definitions and autoloaded scripts, generated scripts for that shell, external sources, and cached help data |
+| PowerShell | Built-in completions and argument completers registered in the current session |
 | External sources | Recognized Cobra `__complete` protocols and locally installed Fish/Bash scripts |
 | Help cache | Cached subcommands and options for each analyzed command path when no other source is available; dynamic arguments still need a completion provider |
 

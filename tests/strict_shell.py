@@ -234,11 +234,13 @@ source {ROOT}/rfig.zsh
         self.wait(lambda:self.screen()=='<session exited>','Ctrl+D did not exit on empty line')
 
     def test_editor_sigterm_cleanup(self):
-        if SHELL=='zsh':self.skipTest('zsh uses ZLE rather than a separate editor process')
-        self.type('rfigslow ');self.wait(lambda:self.slow_pids(),'provider start')
+        if SHELL=='zsh':
+            self.type('rfigprobe spa');self.wait(lambda:self.label_visible('space value'),'native completion before SIGTERM')
+        else:
+            self.type('rfigslow ');self.wait(lambda:self.slow_pids(),'provider start')
         pids=self.editor_pids();self.assertEqual(len(pids),1)
         os.kill(pids[0],signal.SIGTERM)
-        self.wait(lambda:not any(self.alive(p) for p in self.slow_pids()),'SIGTERM left completion processes running',seconds=.75)
+        self.wait(lambda:not self.editor_pids() and not any(self.alive(p) for p in self.slow_pids()),'SIGTERM left editor or completion processes running',seconds=.75)
         self.keys('C-u');self.type('rfigprobe recovered');self.keys('Enter')
         self.wait(lambda:self.executed()==[['recovered']],'terminal did not recover after SIGTERM')
 

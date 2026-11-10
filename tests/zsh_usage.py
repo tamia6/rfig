@@ -54,7 +54,7 @@ with tempfile.TemporaryDirectory() as temp:
     )
     socket = f"rfig-usage-{os.getpid()}"
     tmux = ["tmux", "-L", socket, "-f", "/dev/null"]
-    env = dict(os.environ, HOME=temp, ZDOTDIR=temp, TERM="xterm-256color")
+    env = dict(os.environ, HOME=temp, ZDOTDIR=temp, TERM="xterm-256color", PATH=f"{ROOT / 'target/debug'}:{os.environ['PATH']}")
 
     def call(*args):
         return subprocess.check_output(tmux + list(args), env=env, text=True)

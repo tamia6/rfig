@@ -5,7 +5,7 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq tmux fish zsh bash-completion python3 procps curl ca-certificates make gcc libc6-dev libncurses-dev > /tmp/packages.log
 mkdir -p /work
-cp -R /source/src /source/shell /source/tests /source/Cargo.toml /source/Cargo.lock /source/rfig.zsh /source/rfig.bash /source/rfig.fish /source/install.sh /work/
+cp -R /source/src /source/shell /source/tests /source/Cargo.toml /source/Cargo.lock /source/rfig.zsh /source/rfig.bash /source/rfig.fish /source/rfig.ps1 /source/install.ps1 /source/install.sh /work/
 cd /work
 cargo build --locked -j 2
 cargo test --locked -j 2

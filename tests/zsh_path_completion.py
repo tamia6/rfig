@@ -22,7 +22,7 @@ with tempfile.TemporaryDirectory(prefix='rfig-path-') as temp:
         '_ignored() { compset -P "*="; compadd -- alpha; }; compdef _ignored ignoredfixture\n'
         '_pathfixture() { _arguments "--path=[path]:path:_files"; }; compdef _pathfixture pathfixture\n'
     )
-    env = dict(os.environ, HOME=temp, ZDOTDIR=temp, TERM='xterm-256color')
+    env = dict(os.environ, HOME=temp, ZDOTDIR=temp, TERM='xterm-256color', PATH=f"{ROOT / 'target/debug'}:{os.environ['PATH']}")
     tmux = ['tmux', '-L', f'rfig-path-{os.getpid()}', '-f', '/dev/null']
     def call(*args):
         return subprocess.check_output(tmux + list(args), env=env, text=True, stderr=subprocess.DEVNULL, timeout=5)

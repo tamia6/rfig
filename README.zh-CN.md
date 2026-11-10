@@ -1,10 +1,10 @@
-# rfig — Rust 终端自动补全（zsh、Bash、Fish）
+# rfig — Rust 终端自动补全（zsh、Bash、Fish、PowerShell）
 
 [English](README.md) · **简体中文** · [官网](https://tamia6.github.io/rfig/zh/)
 
 **开源终端自动补全工具：灰色内联推荐与历史建议就在命令行中。**
 
-rfig 使用 Rust 开发，为 macOS 与 Linux 上的 zsh、Bash 和 Fish 提供 IDE 风格的命令行补全。输入后显示一条低对比度灰色的内联推荐，并在下方用彩色菜单逐行列出最多五条编号候选，候选与说明分列对齐；用 Command 加方向键或数字切换，再按 Tab 插入。普通光标移动、历史浏览和命令执行仍交给原 Shell。
+rfig 使用 Rust 开发，为 macOS/Linux 上的 zsh、Bash、Fish 和 Windows 上的 PowerShell 提供 IDE 风格的命令行补全。输入后显示一条低对比度灰色的内联推荐，并在下方用彩色菜单逐行列出最多五条编号候选，候选与说明分列对齐；用 Command 加方向键或数字切换，再按 Tab 插入。按键和候选菜单由共享编辑器处理，接受的命令仍由当前 Shell 执行。
 
 rfig 是受 Fig 启发的独立项目，与 Fig 无隶属关系。它使用本机可用的补全定义和脚本，并在满足隔离条件时分析命令帮助作为后备来源；不承诺覆盖所有命令。
 
@@ -16,7 +16,7 @@ rfig 是受 Fig 启发的独立项目，与 Fig 无隶属关系。它使用本�
 
 [安装](#安装) · [使用](#使用) · [Shell 支持](#shell-支持) · [补全来源](#补全来源与后台优化) · [测试验证](#测试验证)
 
-> rfig v0.3.1 支持 macOS 和 Linux，以及 zsh、Bash 4.4+、Fish 3.6+。Homebrew 与二进制安装方式见下文。
+> 当前源码支持 macOS/Linux 上的 zsh、Bash 4.4+、Fish 3.6+，以及 Windows Terminal 中的 PowerShell 7.2+。
 
 **快速了解：**终端自动补全与多级 CLI 补全 · 按目录匹配的内联历史建议 · 本地使用习惯排序 · 无需 AI 服务或云端账号。
 
@@ -31,7 +31,7 @@ rfig 是受 Fig 启发的独立项目，与 Fig 无隶属关系。它使用本�
 | 安静的灰色推荐 | 内联推荐使用 ANSI 灰色，候选菜单按类别着色，当前行加粗 |
 | 多种补全来源 | 原生定义、已安装脚本、命令生成器、Cobra 协议与帮助缓存 |
 | 安装后后台优化 | 快速扫描 `$PATH`，macOS/Linux 后台串行分析缺少补全的部分用户命令（需可用沙箱） |
-| 全 Shell 支持进度 | zsh ✅、Bash 4.4+ ✅、Fish 3.6+ ✅；其他 Shell 待实现，差异见下表 |
+| 全 Shell 支持进度 | zsh、Bash 4.4+、Fish 3.6+、PowerShell 7.2+ |
 
 ## 安装
 
@@ -48,6 +48,16 @@ sh install.sh --shell fish
 ```
 
 安装脚本编译到 `~/.local/bin/rfig`，随后执行 `rfig setup`。rfig 不会修改默认 Shell。macOS 自带 Bash 3.2 不支持，使用 Bash 集成前需要安装 Bash 4.4+。
+
+### Windows Terminal 和 PowerShell
+
+在 Windows Terminal 中打开 **PowerShell 7.2+（`pwsh`）**。安装 Rust 和 Cargo 后，在源码目录运行：
+
+```powershell
+.\install.ps1
+```
+
+有 Windows x64 安装包时，解压后也可运行同一脚本。它会把 `rfig.exe` 安装到 `$HOME/.local/bin`，并配置当前 PowerShell 的 `$PROFILE`。新开标签页后，用 **Alt＋方向键** 或 **Alt＋1…5** 选择，按 **Tab** 插入候选。PowerShell 适配保留当前会话的参数补全定义，加载期间由 rfig 接管 PSReadLine 的行编辑。
 
 ### Homebrew Tap
 
@@ -113,7 +123,7 @@ macOS 上执行一次 `rfig terminal-keys`，再打开新的 Terminal.app 窗口
 - **历史命令建议**：rfig 按当前目录和实际输入前缀查找最近匹配项。例如输入 `gi`，匹配的历史命令会成为灰色内联推荐。用 Command 或 Option/Alt 加方向键在历史与普通补全之间切换，按 Tab 填入，再按回车执行。
 - **新安装**：历史从空记录开始，不自动导入缺少工作目录信息的旧 Shell 历史。
 - **排序**：按命令上下文累计使用分数，选择候选加 3，记录执行加 1；同分时非选项候选优先。排序只改变顺序，不在标签上叠加额外圈号。
-- **本地保存**：历史和排序记录写入本机文件，不依赖云端。Bash/Fish 不记录以空格开头的命令；zsh 在启用 `HIST_IGNORE_SPACE` 时遵循该规则。
+- **本地保存**：历史和排序记录写入本机文件，不依赖云端。共享编辑器不记录以空格开头的命令。
 
 使用 rfig 的历史命令自动建议功能后，可从 `.zshrc` 或插件管理器列表移除 `zsh-autosuggestions` 的加载配置，再开启新会话。Fish 集成会关闭 Fish 自带的命令自动建议，改用 rfig 按目录记录的历史。
 
@@ -125,18 +135,18 @@ macOS 上执行一次 `rfig terminal-keys`，再打开新的 Terminal.app 窗口
 
 以下为当前源码支持的交互能力。
 
-| 能力 | zsh | Bash 4.4+ | Fish 3.6+ |
-| --- | --- | --- | --- |
-| 灰色内联推荐、编号候选、多级补全与实际输入分离 | ✅ | ✅ | ✅ |
-| 按目录历史、使用排序、Command/Alt 快捷键 | ✅ | ✅ | ✅ |
-| setup 集成与 rfig 自身补全 | ✅ | ✅ | ✅ |
-| 多行粘贴不自动执行 | ✅ | ✅ 交回原生编辑器 | ✅ 交回原生编辑器 |
+| 能力 | zsh | Bash 4.4+ | Fish 3.6+ | PowerShell 7.2+ |
+| --- | --- | --- | --- | --- |
+| 灰色内联推荐、编号候选、多级补全 | ✅ | ✅ | ✅ | ✅ |
+| 目录历史、使用习惯排序、Alt 快捷键 | ✅ | ✅ | ✅ | ✅ |
+| 安装集成和 rfig 自身命令补全 | ✅ | ✅ | ✅ | ✅ |
+| 多行粘贴不自动执行 | ✅ | ✅ 交回原生编辑器 | ✅ 交回原生编辑器 | ✅ |
 
-zsh 使用 ZLE，Bash/Fish 使用共享 Rust 编辑层。`cd`、函数和变量修改仍由当前 Shell 处理。Bash/Fish 支持默认 Emacs 编辑及 Vi 插入模式，`Esc` 交回原生编辑器，`Ctrl+R` 使用原生历史搜索；过期候选结果会丢弃。
+四个适配层共用 Rust 和 crossterm 处理按键及菜单。zsh 仍通过 ZLE 获取原生候选。`cd`、函数和变量修改由当前 Shell 执行。Unix 下 `Esc` 交回原生编辑器，`Ctrl+R` 使用原生历史搜索；PowerShell 使用 rfig 的目录历史。
 
 **Linux 要求**：支持 x86_64 和 ARM64，Shell 版本要求同上。帮助分析使用内置 Landlock + seccomp，无需安装额外沙箱工具；需要启用 Landlock ABI 3+（通常为 Linux 6.2+），且运行环境允许相关系统调用。较老内核或受限容器会拒绝帮助探测，灰色内联推荐、历史和现有补全定义仍可使用。可用 `uname -r` 查看内核，再用 `rfig analyze <命令名>` 检查实际探测结果。不要仅凭发行版名称判断内核能力。
 
-macOS 继续使用系统 `sandbox-exec`。Linux 二进制以 glibc 2.36 为构建基线；更老的用户空间可尝试源码构建。`rfig terminal-keys` 仅用于 macOS Terminal.app。Windows、其他 Shell 尚未支持。
+macOS 继续使用系统 `sandbox-exec`。Linux 二进制以 glibc 2.36 为构建基线；更老的用户空间可尝试源码构建。`rfig terminal-keys` 仅用于 macOS Terminal.app。Windows 使用 PowerShell 的原生补全，不执行沙箱帮助探测。
 
 ## 补全来源与后台优化
 
@@ -148,6 +158,7 @@ rfig 不维护一份覆盖所有命令的固定补全库，各适配层按可用
 | --- | --- |
 | zsh | 当前会话已注册定义优先；未注册时查找 `$fpath` 脚本、生成的 zsh 脚本，再尝试外部来源和帮助缓存 |
 | Bash/Fish | 当前 Shell 的定义与自动加载脚本、相应 Shell 的生成脚本，再尝试外部来源和帮助缓存 |
+| PowerShell | 内置补全与当前会话注册的参数补全器 |
 | 外部来源 | 已识别的 Cobra `__complete` 协议，以及本机 Fish/Bash 补全脚本 |
 | 帮助缓存 | 无可用补全来源时使用各命令路径下的子命令和选项缓存；动态参数仍需补全提供器 |
 

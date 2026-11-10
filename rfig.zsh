@@ -544,3 +544,105 @@ for _rfig_keymap in emacs viins; do
   bindkey -M "$_rfig_keymap" '^I' _rfig_tab
 done
 unset _rfig_keymap _rfig_number _rfig_key
+
+# Rust owns keyboard input; ZLE remains the native completion provider.
+# Noninteractive provider/unit-test shells keep access to the completion helpers above.
+if [[ -o interactive && -z ${RFIG_PROVIDER-} ]] && (( $+commands[rfig] )); then
+  zmodload zsh/zselect
+  _rfig_count_bytes() {
+    setopt localoptions nomultibyte
+    _rfig_byte_value=${#1}
+  }
+  _rfig_prefix_bytes() {
+    setopt localoptions nomultibyte
+    _rfig_byte_value=${1[1,$2]}
+  }
+  _rfig_rust_edit() {
+    setopt localoptions nomonitor
+    if [[ $OSTYPE == linux* ]]; then
+      # Linux ZLE can redraw over the Rust menu on SIGWINCH.
+      setopt localtraps
+      trap '' WINCH
+    fi
+    local snapshot action point updated child request id query prefix record rest label insert description kind
+    local original_buffer=$BUFFER original_cursor=$CURSOR updated_key='' _rfig_byte_value
+    POSTDISPLAY=''
+    region_highlight=(${region_highlight:#*memo=rfig})
+    zle -R
+    snapshot=$(umask 077; mktemp -d "${TMPDIR:-/tmp}/rfig.XXXXXXXX") || return
+    prefix=${original_buffer[1,original_cursor]}
+    _rfig_count_bytes "$prefix"
+    local byte_point=$_rfig_byte_value
+    {
+      local initial_key=''
+      [[ $WIDGET == _rfig_rust_edit ]] && initial_key=$KEYS
+      RFIG_INITIAL_KEY=$initial_key RFIG_PROVIDER=1 command rfig edit zsh "$snapshot" "$original_buffer" "$byte_point" "$byte_point" &
+      child=$!
+      while kill -0 "$child" 2>/dev/null; do
+        if [[ -f $snapshot/request ]]; then
+          request=$(<"$snapshot/request")
+          command rm -f -- "$snapshot/request"
+          id=${request%%$'\n'*}
+          query=${request#*$'\n'}
+          BUFFER=$query CURSOR=${#query}
+          _rfig_complete
+          prefix=${BUFFER[1,_rfig_start]}
+          _rfig_count_bytes "$prefix"
+          point=$_rfig_byte_value
+          {
+            print -r -- "$point"$'\t'"$_rfig_injected"
+            for record in "${_rfig_hits[@]}"; do
+              label=${record%%$'\t'*}; rest=${record#*$'\t'}
+              insert=${rest%%$'\t'*}; rest=${rest#*$'\t'}
+              description=${rest%%$'\t'*}; kind=${rest##*$'\t'}
+              print -r -- "$label"$'\t'"$insert"$'\t'"$description"$'\t'"$kind"
+            done
+          } > "$snapshot/response.$id.tmp"
+          command mv -- "$snapshot/response.$id.tmp" "$snapshot/response.$id"
+        else
+          zselect -t 1 2>/dev/null
+        fi
+      done
+      wait "$child" 2>/dev/null
+      if [[ -f $snapshot/result ]]; then
+        { IFS= read -r action; IFS= read -r point; IFS= read -r -d '' updated || true; } < "$snapshot/result"
+        BUFFER=$updated
+        _rfig_prefix_bytes "$updated" "$point"
+        CURSOR=${#_rfig_byte_value}
+        if [[ $action == native ]]; then
+          IFS= read -r -d '' updated_key < "$snapshot/key" || true
+          [[ -f $snapshot/selection ]] && _rfig_selected=$(<"$snapshot/selection")
+        fi
+      else
+        BUFFER=$original_buffer CURSOR=$original_cursor
+      fi
+    } always {
+      if kill -0 "$child" 2>/dev/null; then kill -TERM "$child" 2>/dev/null; wait "$child" 2>/dev/null; fi
+      command rm -rf -- "$snapshot"
+      POSTDISPLAY=''
+    }
+    case $action in
+      execute) zle .accept-line ;;
+      complete) zle .expand-or-complete ;;
+      search) zle .history-incremental-search-backward ;;
+      escape) [[ $KEYMAP == viins ]] && zle .vi-cmd-mode ;;
+      eof) zle -U $'\x04' ;;
+      native) _rfig_preview; _rfig_render; zle -R; zle -U "$updated_key" ;;
+      *) zle -R ;;
+    esac
+  }
+  _rfig_rust_insert() {
+    zle .self-insert
+    _rfig_rust_edit
+  }
+  zle -N self-insert _rfig_rust_insert
+  zle -N _rfig_rust_edit
+  # Handoff bindings also cover an empty prompt. All in-session keys use crossterm.
+  for _rfig_keymap in emacs viins; do
+    bindkey -M "$_rfig_keymap" '^I' _rfig_rust_edit
+    for _rfig_key in '^[[1;3A' '^[[1;3B' '^[[1;3C' '^[[1;3D' '^[^[[A' '^[^[[B' '^[^[[C' '^[^[[D'; do
+      bindkey -M "$_rfig_keymap" "$_rfig_key" _rfig_rust_edit
+    done
+  done
+  unset _rfig_keymap _rfig_key
+fi

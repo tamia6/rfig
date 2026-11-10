@@ -456,6 +456,7 @@ with tempfile.TemporaryDirectory() as temp:
         if shutil.which("tmux"):
             tmux = ["tmux", "-L", f"rfig-test-{os.getpid()}", "-f", "/dev/null"]
             session_env = dict(os.environ, HOME=temp, ZDOTDIR=temp, PATH=child_path, TERM="xterm-256color")
+            session_env.pop("NO_COLOR", None)
             try:
                 subprocess.run(tmux + ["new-session", "-d", "-s", "check", "-x", "100", "-y", "24", "/bin/zsh", "-i"], env=session_env, check=True)
                 subprocess.run(tmux + ["send-keys", "-t", "check", "-l", "rfigdisplay"], env=session_env, check=True)
@@ -475,7 +476,7 @@ with tempfile.TemporaryDirectory() as temp:
                 assert b"\x1b[90m" in selected or b"38;5;8m" in selected, "inline suggestion must use gray"
                 menu = [line for line in styled.splitlines() if b"alpha" in line or b"beta" in line]
                 assert len(menu) >= 3, "candidates must occupy separate rows below the inline preview"
-                assert any(b"1 " in line and b"alpha" in line and (b"32m" in line or b"[1;32m" in line) for line in menu), menu
+                assert any(b"1 " in line and b"alpha" in line and (b"32m" in line or b"38;5;2m" in line) for line in menu), menu
                 assert any(b"2 " in line and b"beta" in line for line in menu), menu
                 subprocess.run(tmux + ["send-keys", "-t", "check", "M-Down"], env=session_env, check=True)
                 deadline = time.monotonic() + 5

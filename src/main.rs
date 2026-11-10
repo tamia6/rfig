@@ -1,14 +1,19 @@
 mod editor;
 mod engine;
+mod input;
+mod platform;
 mod sandbox;
-use libc::{flock, kill, setrlimit, setsid};
+#[cfg(unix)]
+use libc::{flock, setrlimit, setsid};
+#[cfg(unix)]
+use std::os::{
+    fd::AsRawFd,
+    unix::{fs::symlink, process::CommandExt},
+};
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     env, fs,
     io::{self, BufWriter, Read, Write},
-    os::fd::AsRawFd,
-    os::unix::fs::{symlink, PermissionsExt},
-    os::unix::process::CommandExt,
     path::{Path, PathBuf},
     process::{Command, Stdio},
     sync::Arc,
@@ -18,7 +23,7 @@ use std::{
 
 use crossterm::{
     cursor::{self, Hide, MoveTo, Show},
-    event::{self, Event, KeyCode, KeyEventKind},
+    event::{Event, KeyCode, KeyEventKind},
     queue,
     style::{Attribute, Color, Print, ResetColor, SetAttribute, SetForegroundColor},
     terminal::{disable_raw_mode, enable_raw_mode},
@@ -27,16 +32,17 @@ use unicode_width::UnicodeWidthChar;
 
 static COMPLETION_CANCELLED: std::sync::atomic::AtomicBool =
     std::sync::atomic::AtomicBool::new(false);
+#[cfg(unix)]
 static COMPLETION_CHILD: std::sync::atomic::AtomicI32 = std::sync::atomic::AtomicI32::new(0);
 fn cancel_completion() {
     use std::sync::atomic::Ordering;
     COMPLETION_CANCELLED.store(true, Ordering::SeqCst);
+    #[cfg(unix)]
     let pid = COMPLETION_CHILD.load(Ordering::SeqCst);
-    if pid > 0 {
-        unsafe {
-            kill(-pid, 9);
-        }
-    }
+    #[cfg(unix)]
+    platform::kill_group(pid);
+    #[cfg(windows)]
+    platform::cancel_job();
 }
 
 const GIT: &[(&str, &str)] = &[
@@ -64,13 +70,13 @@ const GIT: &[(&str, &str)] = &[
 
 const HELP: &str = "Usage: rfig <command> [arguments]
 
-Inline command completion and history suggestions for zsh, Bash and Fish. Suggestions appear as you type.
+Inline command completion and history suggestions for zsh, Bash, Fish and PowerShell. Suggestions appear as you type.
 
 Commands:
   setup [--shell SHELL]  Scan commands, install shell integration, and enrich in the background
   init                  Refresh the local command catalog
   analyze <command>     Refresh completion data for one command
-  completion <shell>    Print completion definitions (zsh, bash, fish)
+  completion <shell>    Print completion definitions (zsh, bash, fish, powershell)
   terminal-keys         Configure Command-key mappings for macOS Terminal.app
 
 Options:
@@ -94,9 +100,9 @@ _rfig() {
     available=(${(f)"$(<"$file")"})
     compadd -- "${available[@]}"
   elif (( CURRENT == 3 )) && [[ $words[2] == completion ]]; then
-    compadd -- zsh bash fish
+    compadd -- zsh bash fish powershell
   elif [[ $words[2] == setup ]]; then
-    if (( CURRENT == 3 )); then compadd -- --shell; else compadd -- zsh bash fish; fi
+    if (( CURRENT == 3 )); then compadd -- --shell; else compadd -- zsh bash fish powershell; fi
   fi
 }
 compdef _rfig rfig
@@ -142,9 +148,9 @@ fn initialize_catalog() -> io::Result<()> {
                 continue;
             }
             if fs::metadata(entry.path())
-                .is_ok_and(|meta| meta.is_file() && meta.permissions().mode() & 0o111 != 0)
+                .is_ok_and(|meta| platform::is_executable(&entry.path(), meta))
             {
-                names.push(name);
+                names.push(platform::command_name(&name));
             }
         }
     }
@@ -262,7 +268,10 @@ fn install_integration(script: &Path, shell: &str, contents: &str) -> io::Result
     let mut created = false;
     let result = (|| {
         if let Some(packaged) = homebrew_integration(shell) {
+            #[cfg(unix)]
             symlink(packaged, &staged)?;
+            #[cfg(windows)]
+            fs::copy(packaged, &staged)?;
             created = true;
         } else {
             let mut file = fs::OpenOptions::new()
@@ -289,8 +298,17 @@ fn terminal_key_hint() {
 }
 
 fn setup(requested: Option<&str>) -> io::Result<()> {
-    let default_shell = env::var("SHELL").unwrap_or_default();
+    let default_shell = env::var("SHELL").unwrap_or_else(|_| {
+        if cfg!(windows) {
+            "powershell".into()
+        } else {
+            String::new()
+        }
+    });
     let shell = requested.unwrap_or_else(|| default_shell.rsplit('/').next().unwrap_or(""));
+    if matches!(shell, "powershell" | "pwsh") {
+        return platform::setup_powershell();
+    }
     let contents = match shell {
         "zsh" => include_str!("../rfig.zsh"),
         "bash" => include_str!("../rfig.bash"),
@@ -298,7 +316,7 @@ fn setup(requested: Option<&str>) -> io::Result<()> {
         _ => {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
-                "choose a supported shell: rfig setup --shell zsh|bash|fish",
+                "choose a supported shell: rfig setup --shell zsh|bash|fish|powershell",
             ))
         }
     };
@@ -410,6 +428,7 @@ fn setup(requested: Option<&str>) -> io::Result<()> {
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
+    #[cfg(unix)]
     unsafe {
         worker.pre_exec(|| {
             if setsid() < 0 {
@@ -816,6 +835,7 @@ fn help_output_status(
         } else {
             Stdio::null()
         });
+    #[cfg(unix)]
     unsafe {
         command.pre_exec(|| {
             let file = libc::rlimit {
@@ -839,15 +859,15 @@ fn help_output_status(
     if background_safe {
         sandbox::protect(&mut command)?;
     }
-    let mut child = command.spawn()?;
+    let mut child = platform::spawn_completion(&mut command)?;
+    #[cfg(unix)]
     COMPLETION_CHILD.store(child.id() as i32, std::sync::atomic::Ordering::SeqCst);
     let deadline = Instant::now() + Duration::from_millis(500);
     let success = loop {
         if COMPLETION_CANCELLED.load(std::sync::atomic::Ordering::SeqCst) {
-            unsafe {
-                kill(-(child.id() as i32), 9);
-            }
+            platform::kill_completion(&mut child);
             let _ = child.wait();
+            #[cfg(unix)]
             COMPLETION_CHILD.store(0, std::sync::atomic::Ordering::SeqCst);
             return Err(io::Error::new(
                 io::ErrorKind::Interrupted,
@@ -855,17 +875,15 @@ fn help_output_status(
             ));
         }
         if let Some(status) = child.try_wait()? {
-            unsafe {
-                kill(-(child.id() as i32), 9);
-            }
+            platform::kill_completion(&mut child);
+            #[cfg(unix)]
             COMPLETION_CHILD.store(0, std::sync::atomic::Ordering::SeqCst);
             break status.success();
         }
         if Instant::now() >= deadline {
-            unsafe {
-                kill(-(child.id() as i32), 9);
-            }
+            platform::kill_completion(&mut child);
             let _ = child.wait();
+            #[cfg(unix)]
             COMPLETION_CHILD.store(0, std::sync::atomic::Ordering::SeqCst);
             return Err(io::Error::new(io::ErrorKind::TimedOut, "help timed out"));
         }
@@ -1204,7 +1222,7 @@ fn analyze_command(name: &str, directory: &Path) -> io::Result<usize> {
         if !got_help {
             return Err(first_help
                 .err()
-                .unwrap_or_else(|| io::Error::new(io::ErrorKind::Other, "help unavailable")));
+                .unwrap_or_else(|| io::Error::other("help unavailable")));
         }
         let config = directory.parent().unwrap();
         for stale in [
@@ -1288,11 +1306,15 @@ fn enrich_background() -> io::Result<()> {
     let lock = fs::OpenOptions::new()
         .create(true)
         .write(true)
+        .truncate(false)
         .open(config.join("enrich.lock"))?;
     // One worker per installation, even when setup is run from multiple terminals.
+    #[cfg(unix)]
     if unsafe { flock(lock.as_raw_fd(), 2 | 4) } != 0 {
         return Ok(());
     }
+    #[cfg(windows)]
+    let _lock = platform::lock_file(lock)?;
     if let Err(error) = sandbox::check() {
         fs::write(
             config.join("enrich.status"),
@@ -1320,10 +1342,7 @@ fn enrich_background() -> io::Result<()> {
         }
         let executable = env::split_paths(&env::var_os("PATH").unwrap_or_default())
             .map(|directory| directory.join(name))
-            .find(|path| {
-                fs::metadata(path)
-                    .is_ok_and(|meta| meta.is_file() && meta.permissions().mode() & 0o111 != 0)
-            });
+            .find(|path| fs::metadata(path).is_ok_and(|meta| platform::is_executable(path, meta)));
         let Some(path) = executable.and_then(|path| fs::canonicalize(path).ok()) else {
             skipped += 1;
             continue;
@@ -1662,7 +1681,7 @@ fn padded(text: &str, width: usize) -> String {
 }
 
 struct Popup {
-    tty: BufWriter<fs::File>,
+    tty: BufWriter<platform::TerminalOutput>,
     x: u16,
     y: u16,
     prompt_x: u16,
@@ -1758,7 +1777,7 @@ fn pick(candidates: Vec<Candidate>, anchor_x: u16) -> io::Result<(Option<Candida
     let x = anchor_x.min(columns - width);
     let rows = (candidates.len().min(6) as u16 + 1).min(terminal_rows - 1);
     let scroll = (cursor_y + rows + 1).saturating_sub(terminal_rows);
-    let mut tty = BufWriter::new(fs::OpenOptions::new().write(true).open("/dev/tty")?);
+    let mut tty = BufWriter::new(platform::terminal_output()?);
     if scroll > 0 {
         queue!(
             tty,
@@ -1791,7 +1810,7 @@ fn pick(candidates: Vec<Candidate>, anchor_x: u16) -> io::Result<(Option<Candida
                 selected = 0;
             }
             popup.draw(&visible, selected)?;
-            if let Event::Key(key) = event::read()? {
+            if let Event::Key(key) = input::read()? {
                 if key.kind != KeyEventKind::Press {
                     continue;
                 }
@@ -1851,8 +1870,11 @@ fn run() -> io::Result<i32> {
                 Some("zsh") => print!("{ZSH_COMPLETION}"),
                 Some("bash") => print!("{}", include_str!("../shell/rfig-completion.bash")),
                 Some("fish") => print!("{}", include_str!("../shell/rfig-completion.fish")),
+                Some("powershell" | "pwsh") => {
+                    print!("{}", include_str!("../shell/rfig-completion.ps1"))
+                }
                 _ => {
-                    eprintln!("usage: rfig completion zsh|bash|fish");
+                    eprintln!("usage: rfig completion zsh|bash|fish|powershell");
                     return Ok(2);
                 }
             }
@@ -1876,7 +1898,7 @@ fn run() -> io::Result<i32> {
                 [] => None,
                 [flag, shell] if flag == "--shell" => Some(shell.as_str()),
                 _ => {
-                    eprintln!("usage: rfig setup [--shell zsh|bash|fish]");
+                    eprintln!("usage: rfig setup [--shell zsh|bash|fish|powershell]");
                     return Ok(2);
                 }
             };
@@ -2038,6 +2060,7 @@ fn run() -> io::Result<i32> {
 }
 
 fn main() {
+    platform::initialize_environment();
     match run() {
         Ok(code) => std::process::exit(code),
         Err(err) => {

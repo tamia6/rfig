@@ -31,7 +31,7 @@ _snapshot() {{
 zle -N _snapshot
 bindkey '^X' _snapshot
 ''')
-    env = dict(os.environ, HOME=temp, ZDOTDIR=temp, TERM='xterm-256color')
+    env = dict(os.environ, HOME=temp, ZDOTDIR=temp, TERM='xterm-256color', PATH=f"{ROOT / 'target/debug'}:{os.environ['PATH']}")
     tmux = ['tmux', '-L', f'rfig-ports-{os.getpid()}', '-f', '/dev/null']
 
     def call(*args):

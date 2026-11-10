@@ -74,8 +74,38 @@ jobs:
           name: linux-${{ matrix.arch }}
           path: dist/*.tar.gz
 
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test Windows
+        shell: pwsh
+        env:
+          RUSTFLAGS: -C target-feature=+crt-static
+        run: |
+          cargo test --locked
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          cargo build --release --locked
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python -m pip install pywinpty
+          $env:RFIG_TEST_BINARY = "$PWD/target/release/rfig.exe"
+          python tests/powershell_interaction.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Package Windows
+        shell: pwsh
+        run: |
+          $bundle = "dist/rfig-$env:GITHUB_REF_NAME"
+          New-Item -ItemType Directory -Force $bundle | Out-Null
+          Copy-Item target/release/rfig.exe, install.ps1, rfig.ps1, LICENSE $bundle
+          Copy-Item shell/rfig-completion.ps1 $bundle
+          Compress-Archive -Path "$bundle/*" -DestinationPath "dist/rfig-$env:GITHUB_REF_NAME-windows-x86_64.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-x86_64
+          path: dist/*.zip
+
   publish:
-    needs: [macos, linux]
+    needs: [macos, linux, windows]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -88,4 +118,4 @@ jobs:
       - name: Publish complete release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/*.tar.gz --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
+        run: gh release create "$GITHUB_REF_NAME" dist/*.tar.gz dist/*.zip --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
