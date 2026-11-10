@@ -86,6 +86,22 @@ printf '%s\\0' "$#_rfig_history_lines" "${_rfig_history_lines[@]}"
             f"{self.home.resolve()}{SEP}{line}" for line in lines
         ])
 
+    def test_native_arrows_tab_accept_and_option_shortcuts(self):
+        actual = self.run_zsh('''printf '%s\\0' \
+  "$(bindkey -M emacs '^[[A')" \
+  "$(bindkey -M emacs '^[[B')" \
+  "$(bindkey -M emacs '^I')" \
+  "$(bindkey -M emacs '^[[1;3A')" \
+  "$(bindkey -M emacs '^[1')"
+''')
+        self.assertEqual(actual, [
+            '"^[[A" up-line-or-history',
+            '"^[[B" down-line-or-history',
+            '"^I" _rfig_tab',
+            '"^[[1;3A" _rfig_up',
+            '"^[1" _rfig_select_1',
+        ])
+
 
 if __name__ == "__main__":
     unittest.main()

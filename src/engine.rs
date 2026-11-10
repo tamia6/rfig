@@ -1,9 +1,8 @@
-//! Shared completion, history and ranking for the Bash and Fish adapters.
+//! Shared completion, history and ranking for shell adapters.
 use std::{
     collections::{HashMap, HashSet},
     env, fs,
     io::{self, Write},
-    os::unix::fs::OpenOptionsExt,
     path::{Path, PathBuf},
 };
 
@@ -13,6 +12,7 @@ pub struct Item {
     pub description: String,
     pub kind: String,
     pub popular: usize,
+    pub insertion: Option<String>,
 }
 #[derive(Clone, Debug)]
 pub struct Context {
@@ -20,6 +20,7 @@ pub struct Context {
     pub start: usize,
     pub prefix: String,
     pub injected: bool,
+    pub shell: String,
 }
 
 // Tokenization is deliberately non-executing: never evaluate user input to find words.
@@ -72,6 +73,7 @@ pub fn context(line: &str) -> Context {
         start,
         prefix: word,
         injected: false,
+        shell: String::new(),
     }
 }
 
@@ -87,11 +89,23 @@ pub fn quote(text: &str, typed: &str) -> String {
     }
     out
 }
+pub fn quote_for_shell(text: &str, typed: &str, shell: &str) -> String {
+    if shell == "powershell" {
+        if text
+            .chars()
+            .all(|c| c.is_alphanumeric() || "_./\\-:=+@%".contains(c))
+        {
+            return text.into();
+        }
+        return format!("'{}'", text.replace('\'', "''"));
+    }
+    quote(text, typed)
+}
 fn valid(text: &str) -> bool {
     !text.chars().any(char::is_control)
 }
 pub fn config() -> PathBuf {
-    PathBuf::from(env::var_os("HOME").unwrap_or_default()).join(".config/rfig")
+    crate::platform::home().join(".config/rfig")
 }
 
 pub fn help_file(root: &Path, words: &[String]) -> Option<PathBuf> {
@@ -129,6 +143,7 @@ pub fn cached_items(root: &Path, words: &[String]) -> Vec<Item> {
                     description: String::new(),
                     kind: kind.into(),
                     popular: 0,
+                    insertion: None,
                 })
             })
             .collect()
@@ -235,13 +250,7 @@ impl Memory {
     }
     fn append(&self, file: &str, record: &str) -> io::Result<()> {
         fs::create_dir_all(&self.root)?;
-        let mut f = fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .mode(0o600)
-            .open(self.root.join(file))?;
-        use std::os::unix::fs::PermissionsExt;
-        f.set_permissions(fs::Permissions::from_mode(0o600))?;
+        let mut f = crate::platform::private_append(&self.root.join(file))?;
         writeln!(f, "{record}")
     }
     pub fn suggest(&self, line: &str) -> String {
@@ -266,6 +275,7 @@ impl Memory {
                     description: "History".into(),
                     kind: "history".into(),
                     popular: 0,
+                    insertion: None,
                 },
             );
         }
@@ -318,9 +328,11 @@ impl Memory {
             valid(&i.label)
                 && !i.label.is_empty()
                 && valid(&i.description)
-                && i.label.starts_with(&ctx.prefix)
+                && (i.insertion.is_some() || i.label.starts_with(&ctx.prefix))
                 && seen.insert(i.label.clone())
-                && if ctx.prefix.starts_with("--") {
+                && if i.insertion.is_some() {
+                    true
+                } else if ctx.prefix.starts_with("--") {
                     i.label.starts_with("--")
                 } else if ctx.prefix.starts_with('-') {
                     i.label.starts_with('-') && !i.label.starts_with("--")
@@ -357,12 +369,13 @@ pub fn names(snapshot: &Path) -> Vec<String> {
     );
     for dir in env::split_paths(&env::var_os("PATH").unwrap_or_default()) {
         if let Ok(entries) = fs::read_dir(dir) {
-            use std::os::unix::fs::PermissionsExt;
             for e in entries.flatten() {
                 if e.metadata()
-                    .is_ok_and(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
+                    .is_ok_and(|m| crate::platform::is_executable(&e.path(), m))
                 {
-                    result.push(e.file_name().to_string_lossy().into_owned());
+                    result.push(crate::platform::command_name(
+                        &e.file_name().to_string_lossy(),
+                    ));
                 }
             }
         }
@@ -372,13 +385,77 @@ pub fn names(snapshot: &Path) -> Vec<String> {
     result
 }
 
+fn host_completion(shell: &str, snapshot: &Path, line: &str) -> (Context, Vec<Item>) {
+    use std::{
+        sync::atomic::{AtomicU64, Ordering},
+        time::{Duration, Instant},
+    };
+    static NEXT: AtomicU64 = AtomicU64::new(0);
+    let id = NEXT.fetch_add(1, Ordering::Relaxed);
+    let mut context = context(line);
+    context.shell = shell.into();
+    let request = snapshot.join("request.tmp");
+    if fs::write(&request, format!("{id}\n{line}"))
+        .and_then(|_| fs::rename(&request, snapshot.join("request")))
+        .is_err()
+    {
+        return (context, Vec::new());
+    }
+    let response = snapshot.join(format!("response.{id}"));
+    let deadline = Instant::now() + Duration::from_secs(3);
+    while !response.is_file() {
+        if super::COMPLETION_CANCELLED.load(Ordering::SeqCst) || Instant::now() >= deadline {
+            return (context, Vec::new());
+        }
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    let text = fs::read_to_string(&response).unwrap_or_default();
+    let _ = fs::remove_file(response);
+    let mut rows = text.lines();
+    if let Some((start, injected)) = rows.next().and_then(|line| line.split_once('\t')) {
+        if let Ok(start) = start.parse::<usize>() {
+            if line.is_char_boundary(start) {
+                context.start = start;
+            }
+        }
+        context.injected = injected == "true" || injected == "1";
+        if context.injected && context.words.is_empty() {
+            context.words.push(std::mem::take(&mut context.prefix));
+        }
+    }
+    let items = rows
+        .filter_map(|row| {
+            let mut fields = row.splitn(4, '\t');
+            let label = fields.next()?;
+            let insertion = fields.next()?;
+            let description = fields.next()?;
+            let kind = fields.next()?;
+            if label.is_empty() || !valid(label) || !valid(insertion) {
+                return None;
+            }
+            Some(Item {
+                label: label.into(),
+                insertion: Some(insertion.into()),
+                description: description.into(),
+                kind: kind.into(),
+                popular: 0,
+            })
+        })
+        .collect();
+    (context, items)
+}
+
 pub fn complete(
     shell: &str,
     snapshot: &Path,
     line: &str,
     names: &[String],
 ) -> (Context, Vec<Item>) {
+    if matches!(shell, "zsh" | "powershell") {
+        return host_completion(shell, snapshot, line);
+    }
     let mut ctx = context(line);
+    ctx.shell = shell.into();
     let mut input = line.to_owned();
     if ctx.words.is_empty() && names.contains(&ctx.prefix) {
         ctx.words.push(std::mem::take(&mut ctx.prefix));
@@ -397,6 +474,7 @@ pub fn complete(
                     description: String::new(),
                     kind: "command".into(),
                     popular: 0,
+                    insertion: None,
                 }),
         );
         return (ctx, items);
@@ -469,6 +547,7 @@ pub fn complete(
                 description: desc.to_owned(),
                 kind,
                 popular: 0,
+                insertion: None,
             });
         }
     } else {
@@ -481,12 +560,67 @@ pub fn complete(
 mod tests {
     use super::*;
     #[test]
+    fn host_provider_preserves_replacement_ranges_and_quoted_insertions() {
+        use std::{
+            sync::atomic::{AtomicU64, Ordering},
+            time::Duration,
+        };
+        static ID: AtomicU64 = AtomicU64::new(0);
+        let dir = std::env::temp_dir().join(format!(
+            "rfig-host-test-{}-{}",
+            std::process::id(),
+            ID.fetch_add(1, Ordering::Relaxed)
+        ));
+        fs::create_dir(&dir).unwrap();
+        let provider_dir = dir.clone();
+        let provider = std::thread::spawn(move || {
+            let request = provider_dir.join("request");
+            for _ in 0..500 {
+                if request.exists() {
+                    break;
+                }
+                std::thread::sleep(Duration::from_millis(5));
+            }
+            let request = fs::read_to_string(request).unwrap();
+            let (id, text) = request.split_once('\n').unwrap();
+            assert_eq!(text, "tool --path=./pa");
+            fs::write(
+                provider_dir.join(format!("response.{id}")),
+                "5\tfalse\nparent dir\t--path=./parent\\ dir/\tDirectory\targument\n",
+            )
+            .unwrap();
+        });
+        let (ctx, mut items) = host_completion("zsh", &dir, "tool --path=./pa");
+        provider.join().unwrap();
+        Memory::load(dir.clone(), "test".into()).rank(&ctx, &mut items);
+        assert_eq!(ctx.start, 5);
+        assert_eq!(
+            items[0].insertion.as_deref(),
+            Some("--path=./parent\\ dir/")
+        );
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn powershell_literals_use_powershell_quoting() {
+        assert_eq!(
+            quote_for_shell("two words'file", "", "powershell"),
+            "'two words''file'"
+        );
+        assert_eq!(
+            quote_for_shell("C:\\work\\file", "", "powershell"),
+            "C:\\work\\file"
+        );
+    }
+
+    #[test]
     fn known_groups_replace_file_fallback_but_leaf_dynamic_values_survive() {
         let group = vec![Item {
             label: "child".into(),
             kind: "subcommand".into(),
             description: String::new(),
             popular: 0,
+            insertion: None,
         }];
         assert!(prefer_cached(&group, ".\tDirectory\n"));
         assert!(!prefer_cached(&group, "dynamic-value\n"));
@@ -495,6 +629,7 @@ mod tests {
             kind: "flag".into(),
             description: String::new(),
             popular: 0,
+            insertion: None,
         }];
         assert!(!prefer_cached(&leaf, ".\tDirectory\n"));
         assert!(prefer_cached(&leaf, "\n"));
@@ -524,6 +659,7 @@ mod tests {
             description: String::new(),
             kind: "subcommand".into(),
             popular: 1,
+            insertion: None,
         }];
         memory.add_history("tool", &mut items);
         assert_eq!(items[0].label, "tool alpha");
@@ -545,6 +681,7 @@ mod tests {
                 description: String::new(),
                 kind: "argument".into(),
                 popular: 0,
+                insertion: None,
             })
             .collect();
         for name in ["run", "info", "show", "list"] {

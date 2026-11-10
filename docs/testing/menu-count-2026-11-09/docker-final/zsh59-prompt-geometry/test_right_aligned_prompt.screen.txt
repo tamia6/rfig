@@ -1,0 +1,10 @@
+RFIG> source /tmp/rfig-strict-o9m60bg3/right-prompt
+LEFT                                        STATUS
+RFIG> rfigprobe space\ value
+LEFT                                        STATUS
+RFIG>
+
+
+
+
+

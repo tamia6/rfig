@@ -31,7 +31,7 @@ fi
         for name in ('rfigreference','tiny'):
             self.type(name+' pro')
             self.wait(lambda:'provider' in self.current(),'full reference menu for '+name)
-            self.keys('Right')
+            self.keys('Tab')
             self.wait(lambda:name+' provider' in self.current(),'accept full reference candidate')
             self.keys('C-c')
             self.wait(lambda:self.current()=='','cancel')

@@ -12,7 +12,7 @@ help_text = subprocess.check_output([str(BINARY), "--help"], text=True)
 assert subprocess.check_output([str(BINARY), "-h"], text=True) == help_text
 assert help_text.startswith("Usage: rfig ")
 assert "Commands:" in help_text and "Options:" in help_text and "Examples:" in help_text
-for command in ("setup", "init", "analyze", "completion"):
+for command in ("setup", "init", "analyze", "completion", "terminal-keys"):
     assert command in help_text, command
 for internal in ("enrich-background", "external", "position", "pick"):
     assert internal not in help_text, internal
@@ -39,7 +39,7 @@ with tempfile.TemporaryDirectory() as temp:
     zsh = 'autoload -Uz compinit; compinit -D; source "$1"; compadd() { print -rl -- "$@" }; words=(rfig ""); CURRENT=2; _rfig; print -r -- SENTINEL; words=(rfig analyze ""); CURRENT=3; _rfig'
     output = subprocess.check_output(["/bin/zsh", "-fc", zsh, "rfig-test", str(completion)], env=env, text=True)
     first, second = output.split("SENTINEL\n", 1)
-    assert all(name in first.splitlines() for name in ("setup", "init", "analyze", "completion")), first
+    assert all(name in first.splitlines() for name in ("setup", "init", "analyze", "completion", "terminal-keys")), first
     assert "git" in second.splitlines() and "mock-tool" in second.splitlines(), second
     assert "external" not in first and "pick" not in first
 print("rfig public help and dynamic self-completion: OK")

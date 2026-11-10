@@ -1,0 +1,18 @@
+RFIG> cd /tmp/rfig-strict-_lidwoue/path-root/child\ dir/
+RFIG> cd /tmp/rfig-strict-_lidwoue
+RFIG> cd ./path-root/child\ dir/
+RFIG> cd /tmp/rfig-strict-_lidwoue
+RFIG> cd ~/path-root/child\ dir/
+RFIG> cd /tmp/rfig-strict-_lidwoue
+RFIG>
+
+
+
+
+
+
+
+
+
+
+

@@ -7,12 +7,15 @@ from completion_output import CompletionOutput
 
 
 class NestedHelp(CompletionOutput):
-    def wait_menu(self, line, labels, excluded=()):
+    def wait_suggestion(self, line, labels, excluded=()):
         def ready():
             rows = self.current().splitlines()
-            menu = '\n'.join(rows[1:])
-            return rows and rows[0].strip() == line.strip() and all(label in menu for label in labels) and not any(label in menu for label in excluded)
-        self.wait(ready, 'menu for '+line)
+            if not rows or not rows[0].strip().startswith(line.strip()):
+                return False
+            suggestion = rows[0].strip().removeprefix(line.strip())
+            return (any(label in suggestion for label in labels)
+                    and not any(label in suggestion for label in excluded))
+        self.wait(ready, 'inline suggestion for '+line)
 
     def test_recursive_help(self):
         for name, full in [('rfigtree', True), ('rfigother', False)]:
@@ -64,17 +67,15 @@ print(help_for([] if path==['loop'] else path))
                 f"complete -c {name} -f -n '__fish_seen_subcommand_from get' -a 'dynamic-item'\n")
             if SHELL=='zsh': self.load_definition('rehash')
             self.type(name+' workers ')
-            self.wait_menu(name+' workers ', ['versions','deploy'])
-            self.assertNotIn('levels', self.current())
+            self.wait_suggestion(name+' workers ', ['versions','deploy'], ['levels'])
             self.keys('C-u'); self.type(name+' workers versions ')
-            self.wait_menu(name+' workers versions ', ['list','get'])
+            self.wait_suggestion(name+' workers versions ', ['list','get'])
             self.keys('C-u'); self.type(name+' workers --role admin versions ')
-            self.wait_menu(name+' workers --role admin versions ', ['list','get'])
+            self.wait_suggestion(name+' workers --role admin versions ', ['list','get'])
             self.keys('C-u'); self.type(name+' workers versions get --')
-            self.wait_menu(name+' workers versions get --', ['--role','--verbose'], ['versions'])
-            self.assertNotIn('versions', '\n'.join(self.current().splitlines()[1:]))
+            self.wait_suggestion(name+' workers versions get --', ['role','verbose'], ['versions'])
             self.keys('C-u'); self.type(name+' workers versions get dyn')
-            self.wait_menu(name+' workers versions get dyn', ['dynamic-item'])
+            self.wait_suggestion(name+' workers versions get dyn', ['item'])
             self.keys('C-c');self.wait(lambda:self.current()=='','cancel leaf')
 
 

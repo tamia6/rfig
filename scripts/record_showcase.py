@@ -30,14 +30,14 @@ EVIDENCE.mkdir(parents=True, exist_ok=True)
 
 def load_font(size: int, symbol: bool = False):
     candidates = (
-        (os.environ.get("RFIG_DEMO_SYMBOL_FONT"), "/System/Library/Fonts/Supplemental/Arial Unicode.ttf")
+        (os.environ.get("RFIG_DEMO_SYMBOL_FONT"), "/System/Library/Fonts/Apple Symbols.ttf")
         if symbol
         else (os.environ.get("RFIG_DEMO_FONT"), "/System/Library/Fonts/Menlo.ttc")
     )
     for candidate in candidates:
         if candidate and Path(candidate).exists():
             return ImageFont.truetype(candidate, size)
-    fallback = "/System/Library/Fonts/Supplemental/Arial Unicode.ttf" if symbol else "/System/Library/Fonts/SFNSMono.ttf"
+    fallback = "/System/Library/Fonts/Apple Symbols.ttf" if symbol else "/System/Library/Fonts/SFNSMono.ttf"
     return ImageFont.truetype(fallback, size)
 
 
@@ -89,7 +89,7 @@ def render(ansi: str, cursor: tuple[int, int], title: str) -> Image.Image:
             draw.text(
                 (38 + col * 13, 82 + row * 27),
                 cell.data,
-                font=SYMBOLS if cell.data in "⌘↳●◇⚑→➜①②③" else FONT,
+                font=SYMBOLS if cell.data in "⌘↳●◇⚑›◷" else FONT,
                 fill=ansi_color(cell.fg),
                 stroke_width=0.25 if cell.bold else 0,
             )
@@ -129,7 +129,7 @@ with tempfile.TemporaryDirectory(prefix="rfig-showcase-") as temp:
     config.mkdir(parents=True)
     # Keep a directory-scoped history fixture for the final cancel state.
     (config / "history.tsv").write_text(f"{work}\x1fnpm run dev\n")
-    # Seed usage so the showcase visibly demonstrates the circled ranking markers.
+    # Seed usage so the showcase demonstrates stable usage-based ordering.
     (config / "usage.log").write_text(
         "C\x1fnpm run\x1fbuild\nC\x1fnpm run\x1fdev\nC\x1fbrew services\x1flist\n"
     )
@@ -208,42 +208,50 @@ with tempfile.TemporaryDirectory(prefix="rfig-showcase-") as temp:
         capture("01 / git · type git", 850)
         key(" checkout", literal=True)
         capture("01 / git · choose checkout", 1100)
-        key("Right")
+        key("Tab")
         capture("01 / git · dynamic branches", 1100)
         key("f", literal=True)
         capture("01 / git · filter the current repository", 1100)
-        key("Right")
+        key("Tab")
         key("Enter")
         time.sleep(0.25)
         capture("01 / git · command executed", 900)
         reset()
 
         key("brew services", literal=True)
-        capture("02 / brew · subcommand menu", 900)
-        key("Right")
+        capture("02 / brew · inline subcommand suggestion", 900)
+        key("Tab")
         capture("02 / brew · service actions", 1100)
         key("l", literal=True)
-        capture("02 / brew · usage-ranked option", 1000)
+        capture("02 / brew · usage-ranked action", 1000)
         reset()
 
         key("npm run", literal=True)
-        capture("03 / npm · history is the first menu row", 900)
-        key("Down")
-        key("Right")
-        capture("03 / npm · dynamic package.json candidates", 1200)
-        key("Down")
-        key("Down")
-        capture("03 / npm · ↓ switches the selection", 850)
-        key("Right")
-        capture("03 / npm · → inserts the selected script", 850)
+        capture("03 / npm · history inline recommendation", 900)
+        key(" ", literal=True)
+        candidates = capture("03 / npm · dynamic package.json candidates", 1400)
+        assert candidates[0] == "npm run ", candidates
+        assert all(script in "\n".join(candidates[2:]) for script in ("build", "dev", "test")), candidates
+        key("M-Down")
+        moved = capture("03 / npm · Option+↓ changes the selection", 1200)
+        assert moved[0] == "npm run " and "2/" in "\n".join(moved[2:]), moved
+        key("M-Down")
+        # Terminal.app forwards Command+2 as ESC+2 (tmux's M-2 sequence).
+        key("M-2")
+        focused = capture("03 / npm · Command+2 selects candidate 2", 1400)
+        assert focused[0] == "npm run " and "2/" in "\n".join(focused[2:]), focused
+        key("Tab")
+        inserted = capture("03 / npm · Tab inserts build without executing", 1200)
+        assert inserted[0].strip() == "npm run build", inserted
         key("Enter")
         time.sleep(0.25)
-        capture("03 / npm · selected script executed", 1000)
+        capture("03 / npm · Enter executes the selected script", 1400)
+        assert "build complete" in records[-1]["screen"], records[-1]
         reset()
 
         key("C-c")
         time.sleep(0.2)
-        capture("04 / menu dismissed after cancel", 1100)
+        capture("04 / suggestion dismissed after cancel", 1100)
     finally:
         subprocess.run(tmux + ["kill-server"], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 

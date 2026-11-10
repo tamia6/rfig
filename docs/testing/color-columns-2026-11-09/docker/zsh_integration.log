@@ -1,0 +1,20 @@
+rfig is ready. Completion enrichment is running in the background; open a new zsh terminal.
+rfig is ready. Completion enrichment is running in the background; open a new zsh terminal.
+rfiggenfixture: 1 candidates analyzed
+rfiggroupfixture: 1 candidates analyzed
+rfigshellfixture: 1 candidates analyzed
+rfigprotocolfixture: 2 candidates analyzed
+rfig is ready. Completion enrichment is running in the background; open a new zsh terminal.
+rfigoptionhelp: 2 candidates analyzed
+rfig: rfig setup: parent help repeated; stopping this branch
+rfig: rfig init: parent help repeated; stopping this branch
+rfig: rfig analyze: parent help repeated; stopping this branch
+rfig: rfig completion: parent help repeated; stopping this branch
+rfig: rfig terminal-keys: parent help repeated; stopping this branch
+rfig: 7 candidates analyzed
+rfigfixture: 3 candidates analyzed
+Traceback (most recent call last):
+  File "/work/tests/zsh_integration.py", line 452, in <module>
+    assert "rfigdisplay alpha   1/" in screen, "the selected candidate must render inline"
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: the selected candidate must render inline

@@ -1,0 +1,18 @@
+RFIG> source /tmp/rfig-strict-z1mxerxz/noisy-completion
+RFIG> rfigtree workers versions get d
+RFIG> source /tmp/rfig-strict-z1mxerxz/noisy-completion
+RFIG> rfigother workers versions get dy
+RFIG>
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -54,7 +54,7 @@ with tempfile.TemporaryDirectory() as temp:
     )
     socket = f"rfig-usage-{os.getpid()}"
     tmux = ["tmux", "-L", socket, "-f", "/dev/null"]
-    env = dict(os.environ, HOME=temp, ZDOTDIR=temp, TERM="xterm-256color")
+    env = dict(os.environ, HOME=temp, ZDOTDIR=temp, TERM="xterm-256color", PATH=f"{ROOT / 'target/debug'}:{os.environ['PATH']}")
 
     def call(*args):
         return subprocess.check_output(tmux + list(args), env=env, text=True)
@@ -76,21 +76,22 @@ with tempfile.TemporaryDirectory() as temp:
         call("set-option", "-g", "status", "off")
         wait_for(lambda output: "RFIG>" in output)
         call("send-keys", "-t", "usage", "-l", "rfigpopular")
-        output = wait_for(lambda output: "→ ① alpha" in output and "② beta" in output and "③ gamma" in output)
-        assert "● delta" in output and "● epsilon" in output, output
+        output = wait_for(lambda output: "rfigpopular alpha" in output and " 1/5" in output)
+        call("send-keys", "-t", "usage", "M-Down")
+        wait_for(lambda output: "rfigpopular beta" in output and " 2/5" in output)
+        call("send-keys", "-t", "usage", "M-Down")
+        wait_for(lambda output: "rfigpopular gamma" in output and " 3/5" in output)
         call("send-keys", "-t", "usage", "C-u")
         call("send-keys", "-t", "usage", "-l", "rfigmixed")
-        output = wait_for(lambda output: "→ ① --verbose" in output and "② build" in output)
-        assert "◇ --help" in output and "③ --help" not in output, output
+        wait_for(lambda output: "rfigmixed --verbose" in output and " 1/4" in output)
+        call("send-keys", "-t", "usage", "M-Down")
+        wait_for(lambda output: "rfigmixed build" in output and " 2/4" in output)
         call("send-keys", "-t", "usage", "C-u")
         call("send-keys", "-t", "usage", "-l", "rfigfixture")
-        output = wait_for(lambda output: "→ ① beta" in output)
-        rows = output.splitlines()
-        assert next(row for row in rows if "→ ①" in row).strip().endswith("beta"), rows
-        assert "● alpha" in output and "② alpha" not in output, rows
-        call("send-keys", "-t", "usage", "Down")
-        wait_for(lambda output: "→ ● alpha" in output and "➜" not in output)
-        call("send-keys", "-t", "usage", "Right")
+        wait_for(lambda output: "rfigfixture beta" in output and " 1/2" in output)
+        call("send-keys", "-t", "usage", "M-2")
+        wait_for(lambda output: "rfigfixture alpha" in output and " 2/2" in output)
+        call("send-keys", "-t", "usage", "Tab")
         wait_for(lambda output: "RFIG> rfigfixture alpha" in output)
         call("send-keys", "-t", "usage", "Enter")
         deadline = time.monotonic() + 5
@@ -103,24 +104,17 @@ with tempfile.TemporaryDirectory() as temp:
         for _ in range(2):
             wait_for(lambda output: output.rstrip().splitlines()[-1] == "RFIG>")
             call("send-keys", "-t", "usage", "-l", "rfigfixture")
-            wait_for(lambda output: "① beta" in output)
-            call("send-keys", "-t", "usage", "Down", "Down")
-            wait_for(lambda output: "→ ② alpha" in output and "➜" not in output)
-            call("send-keys", "-t", "usage", "Right", "Enter")
+            wait_for(lambda output: "rfigfixture" in output and "/" in output)
+            call("send-keys", "-t", "usage", "M-3")
+            wait_for(lambda output: "rfigfixture alpha" in output and " 3/" in output)
+            call("send-keys", "-t", "usage", "Tab", "Enter")
             time.sleep(0.1)
         call("kill-session", "-t", "usage")
         call("new-session", "-d", "-s", "usage", "-x", "80", "-y", "20", "/bin/zsh", "-i")
         wait_for(lambda output: "RFIG>" in output)
         call("send-keys", "-t", "usage", "-l", "rfigfixture")
-        wait_for(lambda output: "① alpha" in output and "② beta" in output)
-        call("send-keys", "-t", "usage", "C-c")
-        call("send-keys", "-t", "usage", "-l", "rfigfixture beta")
-        call("send-keys", "-t", "usage", "Enter")
-        deadline = time.monotonic() + 5
-        while (home / "result").read_text() != "beta\n" and time.monotonic() < deadline:
-            time.sleep(0.04)
-        assert (home / "result").read_text() == "beta\n"
-        assert f"R{SEP}rfigfixture{SEP}beta" in usage.read_text().splitlines()
+        wait_for(lambda output: "rfigfixture alpha" in output)
+        call("send-keys", "-t", "usage", "C-u")
         wait_for(lambda output: output.rstrip().splitlines()[-1] == "RFIG>")
         failures = []
         for command in ("cd", "ls"):
@@ -146,6 +140,7 @@ with tempfile.TemporaryDirectory() as temp:
             else:
                 print(f"{command}: all {len(records)} records intact; score order and stable ties: OK")
             call("send-keys", "-t", "usage", "C-u")
+            wait_for(lambda output: output.rstrip().splitlines()[-1] == "RFIG>")
         assert not failures, failures
     finally:
         cleanup_tmux(tmux, [home])

@@ -15,7 +15,7 @@ typeset -g _rfig_option_source='' _rfig_option_stamp=''
 typeset -g _rfig_history_match=''
 typeset -g _rfig_history_dir=''
 typeset -ga _rfig_history_lines
-typeset -gi _rfig_selected=1 _rfig_pulse=0 _rfig_injected=0 _rfig_popular_count=0
+typeset -gi _rfig_selected=1 _rfig_injected=0
 
 _rfig_load_usage() {
   local kind context label key weight
@@ -201,17 +201,39 @@ _rfig_render() {
   region_highlight=(${region_highlight:#*memo=rfig})
   POSTDISPLAY=''
   (( $#_rfig_hits )) || return
+  (( CURSOR == ${#BUFFER} )) || return
+  local record=${_rfig_hits[_rfig_selected]}
+  local kind=${record##*$'\t'} rest=${record#*$'\t'} insert suggestion prospective
+  insert=${rest%%$'\t'*}
+  if [[ $kind == history ]]; then
+    [[ $insert == "$BUFFER"* ]] || return
+    prospective=$insert
+  else
+    local prefix=${BUFFER[1,_rfig_start]} space=' '
+    (( _rfig_injected )) && prefix+=' '
+    [[ $insert == */ ]] && space=''
+    prospective="$prefix$insert$space"
+  fi
+  suggestion=${prospective[$(( CURSOR + 1 )),-1]}
+  POSTDISPLAY=$suggestion
+  if [[ -n $suggestion ]]; then
+    region_highlight+=( "$(( ${#BUFFER} )) $(( ${#BUFFER} + ${#suggestion} )) fg=8 memo=rfig" )
+  fi
+  local count_start=$(( ${#BUFFER} + ${#POSTDISPLAY} + 1 ))
+  local count_text=" ${_rfig_selected}/${#_rfig_hits}"
+  POSTDISPLAY+=$'\n'$count_text
+  region_highlight+=( "$count_start $((count_start + ${#count_text})) fg=8 memo=rfig" )
   local first=$(( _rfig_selected > 5 ? _rfig_selected - 4 : 1 ))
-  local index description row start kind icon color rest record label icon_offset label_offset width
-  local -a popular_icons=( '①' '②' '③' )
-  rest=${_rfig_hits[_rfig_selected]#*$'\t'}
-  rest=${rest#*$'\t'}
-  description=${rest%%$'\t'*}
+  local index row start label description icon color visible width label_width
+  width=$(( COLUMNS > 1 ? COLUMNS - 1 : 0 ))
+  label_width=$(( width > 52 ? 36 : width / 2 ))
   for (( index = first; index <= $#_rfig_hits && index < first + 5; index++ )); do
     record=${_rfig_hits[index]}
     label=${record%%$'\t'*}
+    rest=${record#*$'\t'}
+    rest=${rest#*$'\t'}
+    description=${rest%%$'\t'*}
     kind=${record##*$'\t'}
-    [[ -n $label ]] || continue
     case $kind in
       history) icon='◷'; color=8 ;;
       command) icon='⌘'; color=cyan ;;
@@ -219,54 +241,21 @@ _rfig_render() {
       argument) icon='●'; color=green ;;
       option) icon='◇'; color=blue ;;
       flag) icon='⚑'; color=yellow ;;
+      *) icon='●'; color=green ;;
     esac
-    local popular_index=$index
-    [[ ${_rfig_hits[1]##*$'\t'} == history ]] && (( --popular_index ))
-    (( popular_index > 0 && popular_index <= _rfig_popular_count )) && icon=$popular_icons[popular_index]
+    visible=$(( index - first + 1 ))
+    local pointer=' '
+    (( index == _rfig_selected )) && pointer='›'
+    printf -v row '%s%d %s %-*.*s %s' "$pointer" "$visible" "$icon" $label_width $label_width "$label" "$description"
+    row=${row[1,width]}
     POSTDISPLAY+=$'\n'
     start=$(( ${#BUFFER} + ${#POSTDISPLAY} ))
-    icon_offset=2
-    label_offset=4
-    width=41
-    if (( index == _rfig_selected && _rfig_pulse )); then
-      icon_offset=3
-      label_offset=7
-      width=38
-    elif (( _rfig_pulse && (index == _rfig_selected - 1 || index == _rfig_selected + 1) )); then
-      label_offset=5
-      width=40
-    fi
-    (( width = COLUMNS - label_offset - 1 < width ? COLUMNS - label_offset - 1 : width ))
-    (( width < 0 )) && width=0
-    if (( index == _rfig_selected && _rfig_pulse )); then
-      printf -v row ' ➜ %s   %-*.*s' "$icon" $width $width "$label"
-    elif (( index == _rfig_selected )); then
-      printf -v row '→ %s %-*.*s' "$icon" $width $width "$label"
-    elif (( _rfig_pulse && (index == _rfig_selected - 1 || index == _rfig_selected + 1) )); then
-      printf -v row '  %s  %-*.*s' "$icon" $width $width "$label"
-    else
-      printf -v row '  %s %-*.*s' "$icon" $width $width "$label"
-    fi
     POSTDISPLAY+=$row
+    region_highlight+=( "$start $((start + ${#row})) fg=$color memo=rfig" )
     if (( index == _rfig_selected )); then
-      if (( _rfig_pulse )); then
-        region_highlight+=( "$((start + 1)) $((start + 2)) fg=cyan,bold memo=rfig" )
-      else
-        region_highlight+=( "$start $((start + 1)) fg=cyan,bold memo=rfig" )
-      fi
-    fi
-    region_highlight+=( "$((start + icon_offset)) $((start + icon_offset + 1)) fg=$color memo=rfig" )
-    if (( index == _rfig_selected || (_rfig_pulse && (index == _rfig_selected - 1 || index == _rfig_selected + 1)) )); then
-      local label_style=bold
-      (( index == _rfig_selected )) && label_style=fg=cyan,bold
-      region_highlight+=( "$((start + label_offset)) $((start + label_offset + (${#label} < width ? ${#label} : width))) $label_style memo=rfig" )
+      region_highlight+=( "$start $((start + ${#row})) bold memo=rfig" )
     fi
   done
-  POSTDISPLAY+=$'\n'
-  width=$(( COLUMNS > 2 ? COLUMNS - 2 : 0 ))
-  (( width > 44 )) && width=44
-  printf -v row ' %-*.*s' $width $width "$description"
-  POSTDISPLAY+=$row
 }
 
 _rfig_complete() {
@@ -274,7 +263,6 @@ _rfig_complete() {
   region_highlight=(${region_highlight:#*memo=rfig})
   _rfig_hits=()
   _rfig_branch_candidates=()
-  _rfig_popular_count=0
   _rfig_injected=0
   [[ -n $BUFFER && $BUFFER != *$'\n'* ]] || return
 
@@ -386,18 +374,12 @@ _rfig_complete() {
       subcommands+=( "$record" )
     fi
   done
-  local context=${original_buffer[1,_rfig_start]} key
+  local context=${original_buffer[1,_rfig_start]}
   local -a context_words=( ${(z)context} )
   context="${(j: :)context_words}"
   _rfig_rank_group "$context" "${subcommands[@]}" "${flags[@]}"
   _rfig_hits=( "${reply[@]}" )
   (( $#_rfig_hits )) || return
-  for record in "${_rfig_hits[@]}"; do
-    label=${record%%$'\t'*}
-    key="$context"$'\x1f'"$label"
-    (( ${_rfig_usage[$key]:-0} > 0 )) || break
-    (( ++_rfig_popular_count == 3 )) && break
-  done
   (( _rfig_selected > $#_rfig_hits )) && _rfig_selected=$#_rfig_hits
 }
 
@@ -415,7 +397,6 @@ _rfig_preview() {
 _rfig_after_edit() {
   zle ".$WIDGET" "$@"
   _rfig_selected=1
-  _rfig_pulse=0
   _rfig_preview
   zle -R
 }
@@ -425,15 +406,7 @@ done
 unset _rfig_widget
 
 _rfig_redraw_move() {
-  local previous=$1
   if (( $#_rfig_hits )); then
-    if (( previous != _rfig_selected )); then
-      _rfig_pulse=1
-      _rfig_render
-      zle -R
-      sleep 0.06
-      _rfig_pulse=0
-    fi
     _rfig_render
   else
     _rfig_preview
@@ -442,25 +415,26 @@ _rfig_redraw_move() {
 }
 
 _rfig_up() {
-  local previous=$_rfig_selected
   if (( $#_rfig_hits )); then
     (( _rfig_selected = _rfig_selected > 1 ? _rfig_selected - 1 : 1 ))
-  else
-    zle up-line-or-history
-    _rfig_selected=1
   fi
-  _rfig_redraw_move $previous
+  _rfig_redraw_move
 }
 
 _rfig_down() {
-  local previous=$_rfig_selected
   if (( $#_rfig_hits )); then
     (( _rfig_selected = _rfig_selected < $#_rfig_hits ? _rfig_selected + 1 : $#_rfig_hits ))
-  else
-    zle down-line-or-history
-    _rfig_selected=1
   fi
-  _rfig_redraw_move $previous
+  _rfig_redraw_move
+}
+
+_rfig_select_number() {
+  local number=$1 first=$(( _rfig_selected > 5 ? _rfig_selected - 4 : 1 ))
+  (( $#_rfig_hits )) || return
+  (( first + number - 1 <= $#_rfig_hits )) || return
+  _rfig_selected=$(( first + number - 1 ))
+  _rfig_render
+  zle -R
 }
 
 _rfig_choose() {
@@ -511,6 +485,14 @@ _rfig_choose() {
   zle -R
 }
 
+_rfig_tab() {
+  if (( $#_rfig_hits )); then
+    _rfig_choose
+  else
+    zle expand-or-complete
+  fi
+}
+
 _rfig_end_of_line() {
   zle .end-of-line
   _rfig_preview
@@ -533,15 +515,134 @@ zle -N _rfig_down
 zle -N _rfig_choose
 zle -N _rfig_end_of_line
 zle -N _rfig_accept_line
+zle -N _rfig_tab
+for _rfig_number in 1 2 3 4 5; do
+  eval "_rfig_select_${_rfig_number}() { _rfig_select_number ${_rfig_number} }"
+  zle -N "_rfig_select_${_rfig_number}"
+done
+unset _rfig_number
 for _rfig_keymap in emacs viins; do
-  bindkey -M "$_rfig_keymap" '^[[A' _rfig_up
-  bindkey -M "$_rfig_keymap" '^[[B' _rfig_down
-  bindkey -M "$_rfig_keymap" '^[OA' _rfig_up
-  bindkey -M "$_rfig_keymap" '^[OB' _rfig_down
-  bindkey -M "$_rfig_keymap" '^[[C' _rfig_choose
-  bindkey -M "$_rfig_keymap" '^[OC' _rfig_choose
+  # Alt/Option arrows are portable. Super/Command sequences are accepted when
+  # the terminal is configured to forward them instead of handling them itself.
+  bindkey -M "$_rfig_keymap" '^[[1;3A' _rfig_up
+  bindkey -M "$_rfig_keymap" '^[[1;9A' _rfig_up
+  bindkey -M "$_rfig_keymap" '^[[1;3D' _rfig_up
+  bindkey -M "$_rfig_keymap" '^[[1;9D' _rfig_up
+  bindkey -M "$_rfig_keymap" '^[[1;3B' _rfig_down
+  bindkey -M "$_rfig_keymap" '^[[1;9B' _rfig_down
+  bindkey -M "$_rfig_keymap" '^[[1;3C' _rfig_down
+  bindkey -M "$_rfig_keymap" '^[[1;9C' _rfig_down
+  for _rfig_number in 1 2 3 4 5; do
+    bindkey -M "$_rfig_keymap" "^[${_rfig_number}" "_rfig_select_${_rfig_number}"
+    printf -v _rfig_key $'\e[%d;3u' $(( 48 + _rfig_number ))
+    bindkey -M "$_rfig_keymap" "$_rfig_key" "_rfig_select_${_rfig_number}"
+    printf -v _rfig_key $'\e[%d;9u' $(( 48 + _rfig_number ))
+    bindkey -M "$_rfig_keymap" "$_rfig_key" "_rfig_select_${_rfig_number}"
+  done
   bindkey -M "$_rfig_keymap" '^M' _rfig_accept_line
   bindkey -M "$_rfig_keymap" '^E' _rfig_end_of_line
-  bindkey -M "$_rfig_keymap" '^I' expand-or-complete
+  bindkey -M "$_rfig_keymap" '^I' _rfig_tab
 done
-unset _rfig_keymap
+unset _rfig_keymap _rfig_number _rfig_key
+
+# Rust owns keyboard input; ZLE remains the native completion provider.
+# Noninteractive provider/unit-test shells keep access to the completion helpers above.
+if [[ -o interactive && -z ${RFIG_PROVIDER-} ]] && (( $+commands[rfig] )); then
+  zmodload zsh/zselect
+  _rfig_count_bytes() {
+    setopt localoptions nomultibyte
+    _rfig_byte_value=${#1}
+  }
+  _rfig_prefix_bytes() {
+    setopt localoptions nomultibyte
+    _rfig_byte_value=${1[1,$2]}
+  }
+  _rfig_rust_edit() {
+    setopt localoptions nomonitor
+    if [[ $OSTYPE == linux* ]]; then
+      # Linux ZLE can redraw over the Rust menu on SIGWINCH.
+      setopt localtraps
+      trap '' WINCH
+    fi
+    local snapshot action point updated child request id query prefix record rest label insert description kind
+    local original_buffer=$BUFFER original_cursor=$CURSOR updated_key='' _rfig_byte_value
+    POSTDISPLAY=''
+    region_highlight=(${region_highlight:#*memo=rfig})
+    zle -R
+    snapshot=$(umask 077; mktemp -d "${TMPDIR:-/tmp}/rfig.XXXXXXXX") || return
+    prefix=${original_buffer[1,original_cursor]}
+    _rfig_count_bytes "$prefix"
+    local byte_point=$_rfig_byte_value
+    {
+      local initial_key=''
+      [[ $WIDGET == _rfig_rust_edit ]] && initial_key=$KEYS
+      RFIG_INITIAL_KEY=$initial_key RFIG_PROVIDER=1 command rfig edit zsh "$snapshot" "$original_buffer" "$byte_point" "$byte_point" &
+      child=$!
+      while kill -0 "$child" 2>/dev/null; do
+        if [[ -f $snapshot/request ]]; then
+          request=$(<"$snapshot/request")
+          command rm -f -- "$snapshot/request"
+          id=${request%%$'\n'*}
+          query=${request#*$'\n'}
+          BUFFER=$query CURSOR=${#query}
+          _rfig_complete
+          prefix=${BUFFER[1,_rfig_start]}
+          _rfig_count_bytes "$prefix"
+          point=$_rfig_byte_value
+          {
+            print -r -- "$point"$'\t'"$_rfig_injected"
+            for record in "${_rfig_hits[@]}"; do
+              label=${record%%$'\t'*}; rest=${record#*$'\t'}
+              insert=${rest%%$'\t'*}; rest=${rest#*$'\t'}
+              description=${rest%%$'\t'*}; kind=${rest##*$'\t'}
+              print -r -- "$label"$'\t'"$insert"$'\t'"$description"$'\t'"$kind"
+            done
+          } > "$snapshot/response.$id.tmp"
+          command mv -- "$snapshot/response.$id.tmp" "$snapshot/response.$id"
+        else
+          zselect -t 1 2>/dev/null
+        fi
+      done
+      wait "$child" 2>/dev/null
+      if [[ -f $snapshot/result ]]; then
+        { IFS= read -r action; IFS= read -r point; IFS= read -r -d '' updated || true; } < "$snapshot/result"
+        BUFFER=$updated
+        _rfig_prefix_bytes "$updated" "$point"
+        CURSOR=${#_rfig_byte_value}
+        if [[ $action == native ]]; then
+          IFS= read -r -d '' updated_key < "$snapshot/key" || true
+          [[ -f $snapshot/selection ]] && _rfig_selected=$(<"$snapshot/selection")
+        fi
+      else
+        BUFFER=$original_buffer CURSOR=$original_cursor
+      fi
+    } always {
+      if kill -0 "$child" 2>/dev/null; then kill -TERM "$child" 2>/dev/null; wait "$child" 2>/dev/null; fi
+      command rm -rf -- "$snapshot"
+      POSTDISPLAY=''
+    }
+    case $action in
+      execute) zle .accept-line ;;
+      complete) zle .expand-or-complete ;;
+      search) zle .history-incremental-search-backward ;;
+      escape) [[ $KEYMAP == viins ]] && zle .vi-cmd-mode ;;
+      eof) zle -U $'\x04' ;;
+      native) _rfig_preview; _rfig_render; zle -R; zle -U "$updated_key" ;;
+      *) zle -R ;;
+    esac
+  }
+  _rfig_rust_insert() {
+    zle .self-insert
+    _rfig_rust_edit
+  }
+  zle -N self-insert _rfig_rust_insert
+  zle -N _rfig_rust_edit
+  # Handoff bindings also cover an empty prompt. All in-session keys use crossterm.
+  for _rfig_keymap in emacs viins; do
+    bindkey -M "$_rfig_keymap" '^I' _rfig_rust_edit
+    for _rfig_key in '^[[1;3A' '^[[1;3B' '^[[1;3C' '^[[1;3D' '^[^[[A' '^[^[[B' '^[^[[C' '^[^[[D'; do
+      bindkey -M "$_rfig_keymap" "$_rfig_key" _rfig_rust_edit
+    done
+  done
+  unset _rfig_keymap _rfig_key
+fi

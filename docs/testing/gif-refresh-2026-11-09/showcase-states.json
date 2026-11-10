@@ -1,0 +1,70 @@
+[
+  {
+    "title": "01 / git \u00b7 type g",
+    "buffer": "g"
+  },
+  {
+    "title": "01 / git \u00b7 type gi",
+    "buffer": "gi"
+  },
+  {
+    "title": "01 / git \u00b7 type git",
+    "buffer": "git"
+  },
+  {
+    "title": "01 / git \u00b7 choose checkout",
+    "buffer": "git checkout"
+  },
+  {
+    "title": "01 / git \u00b7 dynamic branches",
+    "buffer": "git checkout "
+  },
+  {
+    "title": "01 / git \u00b7 filter the current repository",
+    "buffer": "git checkout f"
+  },
+  {
+    "title": "01 / git \u00b7 command executed",
+    "buffer": ""
+  },
+  {
+    "title": "02 / brew \u00b7 inline subcommand suggestion",
+    "buffer": "brew services"
+  },
+  {
+    "title": "02 / brew \u00b7 service actions",
+    "buffer": "brew services "
+  },
+  {
+    "title": "02 / brew \u00b7 usage-ranked action",
+    "buffer": "brew services l"
+  },
+  {
+    "title": "03 / npm \u00b7 history inline recommendation",
+    "buffer": "npm run"
+  },
+  {
+    "title": "03 / npm \u00b7 dynamic package.json candidates",
+    "buffer": "npm run "
+  },
+  {
+    "title": "03 / npm \u00b7 Option+\u2193 changes the selection",
+    "buffer": "npm run "
+  },
+  {
+    "title": "03 / npm \u00b7 Command+2 selects candidate 2",
+    "buffer": "npm run "
+  },
+  {
+    "title": "03 / npm \u00b7 Tab inserts build without executing",
+    "buffer": "npm run build "
+  },
+  {
+    "title": "03 / npm \u00b7 Enter executes the selected script",
+    "buffer": ""
+  },
+  {
+    "title": "04 / suggestion dismissed after cancel",
+    "buffer": ""
+  }
+]

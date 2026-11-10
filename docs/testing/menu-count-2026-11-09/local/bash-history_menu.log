@@ -1,0 +1,27 @@
+Traceback (most recent call last):
+  File "/Users/cscs/Documents/Codex/2026-11-07/rfig/tests/history_menu.py", line 69, in <module>
+    keys('M-3','Tab');wait(lambda:screen().splitlines()[0].startswith('rfigfixture alpha'),'ordinary candidate insertion')
+                      ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/cscs/Documents/Codex/2026-11-07/rfig/tests/history_menu.py", line 47, in wait
+    raise AssertionError(message+'\n'+screen())
+AssertionError: ordinary candidate insertion
+rfigfixture beta
+ 1/2
+›1 ◷ rfigfixture beta                     History
+ 2 ↳ beta
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -22,7 +22,7 @@ with tempfile.TemporaryDirectory(prefix='rfig-path-') as temp:
         '_ignored() { compset -P "*="; compadd -- alpha; }; compdef _ignored ignoredfixture\n'
         '_pathfixture() { _arguments "--path=[path]:path:_files"; }; compdef _pathfixture pathfixture\n'
     )
-    env = dict(os.environ, HOME=temp, ZDOTDIR=temp, TERM='xterm-256color')
+    env = dict(os.environ, HOME=temp, ZDOTDIR=temp, TERM='xterm-256color', PATH=f"{ROOT / 'target/debug'}:{os.environ['PATH']}")
     tmux = ['tmux', '-L', f'rfig-path-{os.getpid()}', '-f', '/dev/null']
     def call(*args):
         return subprocess.check_output(tmux + list(args), env=env, text=True, stderr=subprocess.DEVNULL, timeout=5)
@@ -58,7 +58,7 @@ with tempfile.TemporaryDirectory(prefix='rfig-path-') as temp:
             label = hits[0].split('\t')[0]
             # Labels stay short; inserted words retain the original path context.
             assert '/' not in label.rstrip('/'), (typed, label)
-            call('send-keys', '-t', 'test', 'Right')
+            call('send-keys', '-t', 'test', 'Tab')
             after, _ = snapshot()
             raw = label.rstrip('/')
             quoted = raw.replace(' ', '\\ ')
@@ -75,7 +75,7 @@ with tempfile.TemporaryDirectory(prefix='rfig-path-') as temp:
             call('send-keys', '-t', 'test', 'C-u')
             call('send-keys', '-t', 'test', '-l', typed)
             assert snapshot()[1], typed
-            call('send-keys', '-t', 'test', 'Right')
+            call('send-keys', '-t', 'test', 'Tab')
             assert snapshot()[0] == expected, (typed, snapshot()[0], expected)
     finally:
         assert not cleanup_tmux(tmux, [home]), 'test processes survived cleanup'

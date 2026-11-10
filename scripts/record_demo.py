@@ -26,7 +26,7 @@ EVIDENCE.mkdir(parents=True, exist_ok=True)
 FONT = os.environ.get("RFIG_DEMO_FONT", "/System/Library/Fonts/Menlo.ttc")
 font = ImageFont.truetype(FONT, 22)
 small = ImageFont.truetype(FONT, 16)
-symbols = ImageFont.truetype(os.environ.get("RFIG_DEMO_SYMBOL_FONT", "/System/Library/Fonts/Supplemental/Arial Unicode.ttf"), 22)
+symbols = ImageFont.truetype(os.environ.get("RFIG_DEMO_SYMBOL_FONT", "/System/Library/Fonts/Apple Symbols.ttf"), 22)
 BG, FG = "#262633", "#d5d8ed"
 COLORS = dict(zip(
     ["black", "red", "green", "brown", "blue", "magenta", "cyan", "white",
@@ -63,7 +63,7 @@ def render(ansi, cursor, title):
             if not cell.data.strip():
                 continue
             fg = color(cell.fg, FG)
-            draw.text((48+col*14, 93+row*30), cell.data, font=symbols if cell.data in "①②③" else font, fill=fg,
+            draw.text((48+col*14, 93+row*30), cell.data, font=symbols if cell.data in "⌘↳●◇⚑›◷" else font, fill=fg,
                       stroke_width=0.25 if cell.bold else 0)
     x, y = cursor
     draw.line((48+x*14, 96+y*30, 48+x*14, 120+y*30), fill=FG, width=2)
@@ -136,10 +136,10 @@ with tempfile.TemporaryDirectory(prefix="rfig-demo-") as temp:
         time.sleep(0.5)
         capture("01 / Command completion", 500)
         key("git stat", True)
-        capture("01 / Type to filter the menu", 1200)
-        key("Down")
-        key("Right")
-        selected = capture("01 / Right arrow inserts the candidate", 1000)
+        capture("01 / Type to refine the suggestion", 1200)
+        key("M-Down")
+        key("Tab")
+        selected = capture("01 / Tab inserts the selected candidate", 1000)
         assert selected[0].strip() == "git status", selected
         key("Enter")
         time.sleep(0.3)
@@ -147,8 +147,8 @@ with tempfile.TemporaryDirectory(prefix="rfig-demo-") as temp:
         reset()
         key("cd s", True)
         capture("02 / Paths from the working directory", 1000)
-        key("Right")
-        selected = capture("02 / Right arrow completes the path", 1000)
+        key("Tab")
+        selected = capture("02 / Tab completes the path", 1000)
         assert selected[0].strip().rstrip("/") == "cd src", selected
         reset()
         # Earlier execution added a newer history entry; reload the fixture for this scene.
@@ -162,11 +162,11 @@ with tempfile.TemporaryDirectory(prefix="rfig-demo-") as temp:
         key("i", True)
         suggested = capture("03 / Only 'gi' is typed; the rest is suggested", 2400)
         assert suggested[0] == "gi" and suggested[1] == history_command, suggested
-        assert "git" in "\n".join(suggested[3:]), suggested
-        assert "◷ " + history_command in "\n".join(suggested[2:]), suggested
+        assert "git" in "\n".join(suggested[1:]), suggested
+        assert "status --short" in "\n".join(suggested[2:]), suggested
         frames[-1].save(EVIDENCE / "history-suggestion.png")
-        key("Right")
-        accepted = capture("03 / Right accepts history without executing", 1800)
+        key("Tab")
+        accepted = capture("03 / Tab accepts history without executing", 1800)
         assert accepted[0] == history_command and not accepted[1], accepted
         frames[-1].save(EVIDENCE / "history-accepted.png")
         key("Enter")

@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/work/tests/zsh_usage.py", line 79, in <module>
+    output = wait_for(lambda output: "rfigpopular alpha   1/5" in output)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/tests/zsh_usage.py", line 72, in wait_for
+    raise AssertionError(f"timed out; screen: {output!r}")
+AssertionError: timed out; screen: "rest=$'rfigpopular\\t\\tcommand'\nkind=command\norecord=$'rfigpopular\\trfigpopular\\t\\tcommand'\nrest=$'rfigpopular\\t\\tcommand'\nkind=command\nprecord=$'rfigpopular\\trfigpopular\\t\\tcommand'\nrest=$'rfigpopular\\t\\tcommand'\nkind=command\nurecord=$'rfigpopular\\trfigpopular\\t\\tcommand'\nrest=$'rfigpopular\\t\\tcommand'\nkind=command\nlrecord=$'rfigpopular\\trfigpopular\\t\\tcommand'\nrest=$'rfigpopular\\t\\tcommand'\nkind=command\narecord=$'alpha\\talpha\\t\\targument'\nrest=$'alpha\\t\\targument'\nkind=argument\n 3 ● gamma\n 4 ● delta\n 5 ● epsilon\n"

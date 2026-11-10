@@ -92,6 +92,10 @@ source {ROOT}/rfig.zsh
         return text in screen or ''.join('\\'+c if c in ' ;$()' else c for c in text) in screen
     def current(self):return self.screen().rsplit('RFIG>',1)[-1].strip()
     def keys(self,*args):self.call('send-keys','-t','test',*args)
+    def command_key(self,direction):
+        suffix={'Up':'A','Down':'B','Left':'D','Right':'C'}[direction]
+        sequence=b'\x1b[1;9'+suffix.encode()
+        self.call('send-keys','-H','-t','test',*(f'{byte:02x}' for byte in sequence))
     def type(self,text):self.keys('-l',text)
     def wait(self,predicate,message,seconds=3):
         start=time.monotonic()
@@ -139,11 +143,21 @@ source {ROOT}/rfig.zsh
         for n,(prefix,expected) in enumerate([('spa','space value'),('semi','semi;colon'),('dollar','dollar$(touch PWN)'),('中文','中文 分支')],1):
             self.type('rfigprobe '+prefix)
             self.wait(lambda:self.label_visible(expected),'literal candidate '+expected)
-            self.keys('Right'); time.sleep(.08); self.keys('Enter')
+            self.keys('Tab'); time.sleep(.08); self.keys('Enter')
             self.wait(lambda:len(self.executed())==n,'literal candidate execution')
             self.assertEqual(self.executed()[-1],[expected])
             self.wait(lambda:self.current()=='','prompt after literal')
         self.assertFalse((self.home/'PWN').exists(),'candidate was evaluated as shell code')
+
+    def test_command_arrow_selects_inline_suggestion(self):
+        self.type('rfigprobe ')
+        self.wait(lambda:'1/4' in self.current(),'first inline recommendation')
+        before=self.current()
+        self.command_key('Down')
+        self.wait(lambda:'2/4' in self.current() and self.current()!=before,'Command+Down recommendation')
+        self.keys('Tab','Enter')
+        self.wait(lambda:len(self.executed())==1,'Command selection execution')
+        self.wait(lambda:self.current()=='','prompt after Command selection')
 
     def test_rapid_input_delete_and_wrapping(self):
         self.type('rfigprobe '+'x'*220)
@@ -156,7 +170,7 @@ source {ROOT}/rfig.zsh
 
     def test_multiline_bracketed_paste(self):
         self.type('rfigprobe ')
-        self.wait(lambda:self.label_visible('space value'),'menu before paste')
+        self.wait(lambda:'1/4' in self.current(),'inline suggestion before paste')
         self.call('set-buffer','--','one\nrfigprobe two')
         self.call('paste-buffer','-p','-t','test')
         time.sleep(.25)
@@ -182,8 +196,8 @@ source {ROOT}/rfig.zsh
         (target / 'nested').mkdir(parents=True)
         for prefix in (str(parent) + '/', './path-root/', '~/path-root/'):
             self.type('cd ' + prefix + 'ch')
-            self.wait(lambda:'→' in self.current(), 'directory candidate')
-            self.keys('Right')
+            self.wait(lambda:'child' in self.current() and 'dir/' in self.current(), 'directory candidate')
+            self.keys('Tab')
             self.wait(lambda:'child' in self.current() and 'dir/' in self.current(), 'directory slash')
             self.keys('Enter')
             self.wait(lambda:Path(self.call('display-message','-p','-t','test','#{pane_current_path}').strip()).resolve() == target.resolve() and self.current() == '', 'selected directory execution')
@@ -220,11 +234,13 @@ source {ROOT}/rfig.zsh
         self.wait(lambda:self.screen()=='<session exited>','Ctrl+D did not exit on empty line')
 
     def test_editor_sigterm_cleanup(self):
-        if SHELL=='zsh':self.skipTest('zsh uses ZLE rather than a separate editor process')
-        self.type('rfigslow ');self.wait(lambda:self.slow_pids(),'provider start')
+        if SHELL=='zsh':
+            self.type('rfigprobe spa');self.wait(lambda:self.label_visible('space value'),'native completion before SIGTERM')
+        else:
+            self.type('rfigslow ');self.wait(lambda:self.slow_pids(),'provider start')
         pids=self.editor_pids();self.assertEqual(len(pids),1)
         os.kill(pids[0],signal.SIGTERM)
-        self.wait(lambda:not any(self.alive(p) for p in self.slow_pids()),'SIGTERM left completion processes running',seconds=.75)
+        self.wait(lambda:not self.editor_pids() and not any(self.alive(p) for p in self.slow_pids()),'SIGTERM left editor or completion processes running',seconds=.75)
         self.keys('C-u');self.type('rfigprobe recovered');self.keys('Enter')
         self.wait(lambda:self.executed()==[['recovered']],'terminal did not recover after SIGTERM')
 

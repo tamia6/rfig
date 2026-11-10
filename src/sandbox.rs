@@ -6,8 +6,13 @@ use std::{io, process::Command};
 pub fn check() -> io::Result<()> {
     #[cfg(target_os = "linux")]
     return linux::check();
-    #[cfg(not(target_os = "linux"))]
-    Ok(())
+    #[cfg(target_os = "macos")]
+    return Ok(());
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    Err(io::Error::new(
+        io::ErrorKind::Unsupported,
+        "automatic help probing is unavailable on this platform",
+    ))
 }
 
 pub fn command(name: &str) -> Command {
